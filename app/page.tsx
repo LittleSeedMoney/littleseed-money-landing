@@ -9,7 +9,7 @@ const productAreas = [
     number: "01",
     title: "Financial Health Report",
     description:
-      "A clear picture of where you are today, the risks to watch, and the next wise step.",
+      "A clear picture of where you are today, supported by transparent calculations and assumptions.",
   },
   {
     number: "02",
@@ -45,7 +45,7 @@ const productAreas = [
     number: "07",
     title: "Tax Snapshot",
     description:
-      "Learn how taxes shape your income, choices, and opportunities to plan ahead.",
+      "Explore how tax assumptions may shape income and planning scenarios.",
   },
   {
     number: "08",
@@ -74,7 +74,7 @@ const roadmap = [
   {
     phase: "Phase 4",
     title: "AI Explanation Layer",
-    description: "Plain-language guidance built on calculated results.",
+    description: "Plain-language explanations grounded in calculated results.",
   },
 ];
 
@@ -90,7 +90,7 @@ export default function Home() {
           <div className="max-w-3xl">
             <p className="mb-6 flex items-center gap-2 text-sm font-semibold text-seed-700">
               <span className="h-px w-8 bg-earth-500" />
-              Financial clarity for ordinary people
+              Financial clarity for everyone
             </p>
             <h1 className="font-display text-balance text-5xl font-medium leading-[1.05] tracking-[-0.03em] text-seed-950 sm:text-6xl lg:text-7xl">
               Small steps.
@@ -98,9 +98,9 @@ export default function Home() {
               <span className="text-seed-600">Wise growth.</span>
             </h1>
             <p className="mt-7 max-w-2xl text-lg leading-8 text-seed-800/80 sm:text-xl">
-              LittleSeed Money helps ordinary people understand money, make
-              better financial decisions, and grow what they have been given
-              with wisdom and purpose.
+              LittleSeed Money helps people understand money, make clearer
+              financial decisions, and grow what they have been given with
+              wisdom and purpose.
             </p>
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
               <a
@@ -141,17 +141,18 @@ export default function Home() {
           </p>
           <div>
             <h2 className="font-display text-balance text-3xl font-medium leading-tight sm:text-4xl lg:text-5xl">
-              The economy is moving faster than financial understanding.
+              Financial life keeps changing. Understanding it should not feel
+              out of reach.
             </h2>
             <div className="mt-8 grid gap-6 text-lg leading-8 text-seed-100/75 sm:grid-cols-2">
               <p>
-                AI, capital, automation, and financial markets are changing how
-                opportunity grows and who gets access to it.
+                The ways people earn, spend, save, invest, and build security
+                continue to evolve across generations and economic cycles.
               </p>
               <p>
-                Many ordinary people are being left behind, not because they
-                are lazy, but because the system is confusing and trustworthy
-                guidance is hard to find.
+                New technologies, including AI, automation, and digital assets,
+                add new possibilities and risks to financial choices that were
+                already complex.
               </p>
             </div>
           </div>
@@ -162,8 +163,8 @@ export default function Home() {
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <SectionHeading
             eyebrow="Our mission"
-            title="End financial illiteracy in the age of AI capitalism."
-            description="LittleSeed Money is being built education-first and evidence-based. Calculations, transparent assumptions, and reliable data should come before confident-sounding advice."
+            title="Make financial understanding accessible to everyone."
+            description="LittleSeed Money is being built education-first and evidence-based. Calculations, visible assumptions, and reliable sources should come before confident-sounding advice."
           />
           <div className="mt-14 grid gap-px overflow-hidden rounded-3xl border border-seed-900/10 bg-seed-900/10 md:grid-cols-3">
             {[
@@ -197,9 +198,9 @@ export default function Home() {
             </h2>
             <p className="mt-7 text-lg leading-8 text-seed-900/75">
               LittleSeed comes from the belief that small beginnings can grow
-              when planted with faith, wisdom, and patience. A seed may look
-              small, but over time it can provide shade, fruit, and blessing
-              for others.
+              when planted with wisdom, patience, and care. A seed may look
+              small, but over time it can provide shade, fruit, and something
+              meaningful for others.
             </p>
             <p className="mt-5 border-l-2 border-earth-400 pl-6 font-display text-xl leading-9 text-seed-900 sm:text-2xl">
               Money is not the master. It is a seed, something entrusted to us,
@@ -286,7 +287,7 @@ export default function Home() {
               </h2>
               <p className="mt-5 max-w-xl text-lg leading-8 text-seed-100/75">
                 Join the waitlist and follow LittleSeed Money as we build
-                clearer, wiser financial tools for ordinary people.
+                clearer, wiser financial tools for real life.
               </p>
             </div>
             <WaitlistForm />
