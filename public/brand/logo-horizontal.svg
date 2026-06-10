@@ -1,0 +1,10 @@
+<svg width="1600" height="400" viewBox="0 0 1600 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>LittleSeed Money horizontal logo</title>
+  <g transform="translate(54 34) scale(.65)">
+    <path d="M256 416V202" stroke="#4F6D38" stroke-width="28" stroke-linecap="round"/>
+    <path d="M256 247C189 247 139 208 122 135C189 124 250 158 256 247Z" fill="#5C7D42"/>
+    <path d="M256 303C334 303 390 258 407 174C323 163 262 213 256 303Z" fill="#4F6D38"/>
+    <path d="M155 416H357" stroke="#4F6D38" stroke-width="28" stroke-linecap="round"/>
+  </g>
+  <text x="420" y="242" fill="#162013" font-family="Avenir Next, Avenir, Segoe UI, Helvetica, Arial, sans-serif" font-size="128" font-weight="650" letter-spacing="-4">LittleSeed Money</text>
+</svg>

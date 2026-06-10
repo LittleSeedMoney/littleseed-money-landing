@@ -1,0 +1,12 @@
+<svg width="1080" height="1080" viewBox="0 0 1080 1080" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <title>LittleSeed Money social profile image</title>
+  <rect width="1080" height="1080" rx="220" fill="#FDFAF4"/>
+  <circle cx="540" cy="540" r="350" fill="#F6F8F1"/>
+  <circle cx="540" cy="540" r="348" stroke="#D3DDC3" stroke-width="4"/>
+  <g transform="translate(284 284)">
+    <path d="M256 416V202" stroke="#4F6D38" stroke-width="28" stroke-linecap="round"/>
+    <path d="M256 247C189 247 139 208 122 135C189 124 250 158 256 247Z" fill="#5C7D42"/>
+    <path d="M256 303C334 303 390 258 407 174C323 163 262 213 256 303Z" fill="#4F6D38"/>
+    <path d="M155 416H357" stroke="#4F6D38" stroke-width="28" stroke-linecap="round"/>
+  </g>
+</svg>
