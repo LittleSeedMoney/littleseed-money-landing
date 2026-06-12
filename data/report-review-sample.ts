@@ -6,6 +6,7 @@ export type Provenance =
   | "missing";
 
 export type SummaryMetric = {
+  id: string;
   label: string;
   value: string;
   detail: string;
@@ -86,36 +87,42 @@ export const reportReviewSample: ReportReviewSample = {
     "This review surface is educational and uses sample data. It is not individualized legal, tax, or investment advice.",
   summaryMetrics: [
     {
+      id: "monthly_cash_flow",
       label: "Monthly cash flow",
       value: "$1,280 left",
       detail: "After living expenses, debt payments, and contributions.",
       provenance: "calculated",
     },
     {
+      id: "emergency_coverage",
       label: "Emergency coverage",
       value: "3.46 months",
       detail: "Reported cash divided by required monthly outflows.",
       provenance: "calculated",
     },
     {
+      id: "debt_pressure",
       label: "Debt pressure",
       value: "$35,000 debt",
       detail: "$2,000 meets the high-interest review rule.",
       provenance: "calculated",
     },
     {
+      id: "net_worth",
       label: "Net worth",
       value: "$33,000",
       detail: "$68,000 assets minus $35,000 liabilities.",
       provenance: "calculated",
     },
     {
+      id: "known_contributions",
       label: "Known contributions",
       value: "$700 / month",
       detail: "Employee and employer contributions reported.",
       provenance: "user-entered",
     },
     {
+      id: "data_completeness",
       label: "Data completeness",
       value: "Partial",
       detail: "Some recurring obligations may be hidden in aggregate inputs.",
@@ -302,24 +309,28 @@ export const reportReviewSample: ReportReviewSample = {
   assetSnapshot: {
     totals: [
       {
+        id: "total_assets",
         label: "Total assets",
         value: "$68,000",
         detail: "Cash, retirement, brokerage, and other assets.",
         provenance: "user-entered",
       },
       {
+        id: "emergency_eligible_cash",
         label: "Emergency-eligible cash",
         value: "$12,000",
         detail: "Cash currently counted for interruption coverage.",
         provenance: "user-entered",
       },
       {
+        id: "total_liabilities",
         label: "Total liabilities",
         value: "$35,000",
         detail: "Student loan, auto loan, and credit-card debt.",
         provenance: "user-entered",
       },
       {
+        id: "liquid_net_worth",
         label: "Liquid net worth",
         value: "-$15,000",
         detail: "Cash plus brokerage minus total liabilities.",

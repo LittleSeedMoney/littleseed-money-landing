@@ -46,33 +46,33 @@ const metricDetails: Record<
     measures: string;
   }
 > = {
-  "Monthly cash flow": {
+  monthly_cash_flow: {
     measures: "Money left after reported monthly outflows and contributions.",
     calculation:
       "Reported income minus living expenses, debt payments, and contributions.",
     limitation: "Irregular income and expenses are not normalized here.",
   },
-  "Emergency coverage": {
+  emergency_coverage: {
     measures: "How many months reported cash could cover required outflows.",
     calculation: "Emergency-eligible cash divided by required monthly outflows.",
     limitation: "This preview does not set a personalized emergency target.",
   },
-  "Debt pressure": {
+  debt_pressure: {
     measures: "Total reported debt and debt areas that triggered review.",
     calculation: "Reported liability balances grouped by debt type.",
     limitation: "This is not a repayment priority or underwriting ratio.",
   },
-  "Net worth": {
+  net_worth: {
     measures: "Reported assets minus reported liabilities.",
     calculation: "Total assets minus total liabilities.",
     limitation: "Taxes, selling costs, penalties, and market movement are excluded.",
   },
-  "Known contributions": {
+  known_contributions: {
     measures: "Employee and employer contributions in the sample profile.",
     calculation: "Monthly employee and employer contributions summed together.",
     limitation: "Eligibility, limits, vesting, and tax treatment are not validated.",
   },
-  "Data completeness": {
+  data_completeness: {
     measures: "Whether unknown inputs limit the interpretation.",
     calculation: "Known missing fields and unmeasured categories reviewed together.",
     limitation: "Missing optional values are not treated as zero.",
@@ -193,7 +193,7 @@ function TunedOverview({ report }: { report: ReportReviewSample }) {
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {report.summaryMetrics.map((metric) => (
-          <MetricCard key={metric.label} metric={metric} />
+          <MetricCard key={metric.id} metric={metric} />
         ))}
       </div>
     </section>
@@ -201,7 +201,7 @@ function TunedOverview({ report }: { report: ReportReviewSample }) {
 }
 
 function MetricCard({ metric }: { metric: SummaryMetric }) {
-  const detail = metricDetails[metric.label];
+  const detail = metricDetails[metric.id];
 
   return (
     <article className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm">
@@ -216,7 +216,7 @@ function MetricCard({ metric }: { metric: SummaryMetric }) {
 
       {detail ? (
         <details className="mt-4 rounded-lg border border-stone-200 bg-stone-50">
-          <summary className="cursor-pointer list-none rounded-lg px-3 py-2 text-sm font-semibold text-seed-800 outline-none focus:ring-2 focus:ring-seed-500">
+          <summary className="cursor-pointer rounded-lg px-3 py-2 text-sm font-semibold text-seed-800 outline-none focus:ring-2 focus:ring-seed-500">
             Metric details
           </summary>
           <dl className="space-y-3 border-t border-stone-200 px-3 py-3 text-sm leading-6">
@@ -233,8 +233,16 @@ function MetricCard({ metric }: { metric: SummaryMetric }) {
 function TunedRail({ report }: { report: ReportReviewSample }) {
   return (
     <aside className="min-w-0 space-y-4">
-      <section className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm">
-        <h2 className="text-sm font-semibold text-stone-950">Review state</h2>
+      <section
+        aria-labelledby="tuned-review-state-heading"
+        className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm"
+      >
+        <h2
+          id="tuned-review-state-heading"
+          className="text-sm font-semibold text-stone-950"
+        >
+          Review state
+        </h2>
         <dl className="mt-4 space-y-3 text-sm">
           <MetaItem label="Data mode" value={report.dataMode} />
           <MetaItem label="Completeness" value={report.dataCompleteness.status} />
@@ -245,12 +253,20 @@ function TunedRail({ report }: { report: ReportReviewSample }) {
         </p>
       </section>
 
-      <section className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm">
-        <h2 className="text-sm font-semibold text-stone-950">Missing context</h2>
+      <section
+        aria-labelledby="tuned-missing-context-heading"
+        className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm"
+      >
+        <h2
+          id="tuned-missing-context-heading"
+          className="text-sm font-semibold text-stone-950"
+        >
+          Missing context
+        </h2>
         {report.dataCompleteness.missingContext.length > 0 ? (
           <ul className="mt-3 space-y-2 text-sm leading-6 text-stone-700">
-            {report.dataCompleteness.missingContext.map((item) => (
-              <li key={item}>{item}</li>
+            {report.dataCompleteness.missingContext.map((item, index) => (
+              <li key={`${item}-${index}`}>{item}</li>
             ))}
           </ul>
         ) : (
@@ -260,11 +276,19 @@ function TunedRail({ report }: { report: ReportReviewSample }) {
         )}
       </section>
 
-      <section className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm">
-        <h2 className="text-sm font-semibold text-stone-950">Uncertainty</h2>
+      <section
+        aria-labelledby="tuned-uncertainty-heading"
+        className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm"
+      >
+        <h2
+          id="tuned-uncertainty-heading"
+          className="text-sm font-semibold text-stone-950"
+        >
+          Uncertainty
+        </h2>
         <ul className="mt-3 space-y-2 text-sm leading-6 text-stone-700">
-          {report.dataCompleteness.uncertainty.map((item) => (
-            <li key={item}>{item}</li>
+          {report.dataCompleteness.uncertainty.map((item, index) => (
+            <li key={`${item}-${index}`}>{item}</li>
           ))}
         </ul>
       </section>

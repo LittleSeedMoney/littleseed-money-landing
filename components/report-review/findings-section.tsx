@@ -1,6 +1,6 @@
 import type { Finding } from "@/data/report-review-sample";
 
-import { InfoList, SectionHeading, StatusPill } from "./shared";
+import { InfoList, ReviewSectionHeading, StatusPill } from "./shared";
 
 export function FindingsSection({ findings }: { findings: Finding[] }) {
   return (
@@ -9,7 +9,7 @@ export function FindingsSection({ findings }: { findings: Finding[] }) {
       aria-labelledby="findings-heading"
       className="space-y-3"
     >
-      <SectionHeading
+      <ReviewSectionHeading
         eyebrow="Review queue"
         title="Findings"
         description="Findings identify areas to review. They do not rank actions or turn education into personalized advice."
@@ -23,7 +23,7 @@ export function FindingsSection({ findings }: { findings: Finding[] }) {
         >
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <h3 className="text-lg font-semibold text-earth-950">
+              <h3 className="text-lg font-semibold text-seed-950">
                 {finding.title}
               </h3>
               <p className="mt-2 text-sm leading-6 text-earth-700">

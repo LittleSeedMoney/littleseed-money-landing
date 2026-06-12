@@ -3,7 +3,7 @@ import type {
   SnapshotItem,
 } from "@/data/report-review-sample";
 
-import { provenanceLabels, SectionHeading } from "./shared";
+import { provenanceLabels, ReviewSectionHeading } from "./shared";
 
 export function InputsSection({
   snapshot,
@@ -16,7 +16,7 @@ export function InputsSection({
       aria-labelledby="inputs-heading"
       className="space-y-3"
     >
-      <SectionHeading
+      <ReviewSectionHeading
         eyebrow="Inputs"
         title="Snapshot and uncertainty"
         description="The surface keeps known values, missing context, and unmeasured categories separate."
@@ -27,13 +27,13 @@ export function InputsSection({
         <div className="grid gap-3 sm:grid-cols-3">
           {snapshot.totals.map((metric) => (
             <article
-              key={metric.label}
+              key={metric.id}
               className="rounded-lg border border-stone-200 bg-stone-50 p-4"
             >
               <h3 className="text-sm font-medium text-earth-700">
                 {metric.label}
               </h3>
-              <p className="mt-2 text-xl font-semibold text-earth-950">
+              <p className="mt-2 text-xl font-semibold text-seed-950">
                 {metric.value}
               </p>
               <p className="mt-2 text-sm leading-6 text-earth-700">
@@ -61,7 +61,7 @@ function SnapshotTable({
 }) {
   return (
     <div>
-      <h3 className="text-sm font-semibold text-earth-950">{title}</h3>
+      <h3 className="text-sm font-semibold text-seed-950">{title}</h3>
       <div className="mt-3 overflow-x-auto rounded-lg border border-stone-200">
         <table className="min-w-full divide-y divide-stone-200 text-left text-sm">
           <thead className="bg-stone-50 text-xs uppercase tracking-[0.12em] text-earth-500">
@@ -84,12 +84,12 @@ function SnapshotTable({
             {items.map((item) => (
               <tr key={item.name}>
                 <td className="px-3 py-3 align-top">
-                  <div className="font-medium text-earth-950">{item.name}</div>
+                  <div className="font-medium text-seed-950">{item.name}</div>
                   <div className="mt-1 text-xs text-earth-600">
                     {item.category}
                   </div>
                 </td>
-                <td className="px-3 py-3 align-top font-medium text-earth-950">
+                <td className="px-3 py-3 align-top font-medium text-seed-950">
                   {item.value}
                 </td>
                 <td className="px-3 py-3 align-top text-earth-700">

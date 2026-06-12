@@ -65,7 +65,7 @@ export function ProvenanceTag({ provenance }: { provenance: Provenance }) {
   );
 }
 
-export function SectionHeading({
+export function ReviewSectionHeading({
   eyebrow,
   title,
   description,
@@ -81,7 +81,7 @@ export function SectionHeading({
       <p className="text-sm font-medium uppercase tracking-[0.16em] text-seed-700">
         {eyebrow}
       </p>
-      <h2 id={id} className="mt-1 text-xl font-semibold text-earth-950">
+      <h2 id={id} className="mt-1 text-xl font-semibold text-seed-950">
         {title}
       </h2>
       <p className="mt-2 max-w-3xl text-sm leading-6 text-earth-700">
@@ -94,10 +94,10 @@ export function SectionHeading({
 export function InfoList({ title, items }: { title: string; items: string[] }) {
   return (
     <div>
-      <h4 className="text-sm font-semibold text-earth-950">{title}</h4>
+      <h4 className="text-sm font-semibold text-seed-950">{title}</h4>
       <ul className="mt-2 space-y-2 text-sm leading-6 text-earth-700">
-        {items.map((item) => (
-          <li key={item}>{item}</li>
+        {items.map((item, index) => (
+          <li key={`${item}-${index}`}>{item}</li>
         ))}
       </ul>
     </div>

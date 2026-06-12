@@ -22,7 +22,7 @@ export function OverviewSection({
           </p>
           <h2
             id="overview-heading"
-            className="mt-1 text-2xl font-semibold text-earth-950"
+            className="mt-1 text-2xl font-semibold text-seed-950"
           >
             Financial health report review
           </h2>
@@ -49,7 +49,7 @@ export function OverviewSection({
       <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {report.summaryMetrics.map((metric) => (
           <article
-            key={metric.label}
+            key={metric.id}
             className="rounded-lg border border-stone-200 bg-stone-50 p-4"
           >
             <div className="flex items-start justify-between gap-3">
@@ -58,7 +58,7 @@ export function OverviewSection({
               </h3>
               <ProvenanceTag provenance={metric.provenance} />
             </div>
-            <p className="mt-3 text-2xl font-semibold text-earth-950">
+            <p className="mt-3 text-2xl font-semibold text-seed-950">
               {metric.value}
             </p>
             <p className="mt-2 text-sm leading-6 text-earth-700">

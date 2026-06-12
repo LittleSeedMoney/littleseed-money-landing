@@ -3,7 +3,7 @@ import type {
   ReportSection,
 } from "@/data/report-review-sample";
 
-import { SectionHeading } from "./shared";
+import { ReviewSectionHeading } from "./shared";
 
 export function ReportSections({
   sections,
@@ -18,7 +18,7 @@ export function ReportSections({
       aria-labelledby="sections-heading"
       className="space-y-3"
     >
-      <SectionHeading
+      <ReviewSectionHeading
         eyebrow="Report body"
         title="Question-led sections"
         description="Each block starts with the user question, then separates the answer, source footing, and limitations."
@@ -35,7 +35,7 @@ export function ReportSections({
               <p className="text-sm font-medium uppercase tracking-[0.16em] text-seed-700">
                 {section.evidenceLevel}
               </p>
-              <h3 className="mt-1 text-lg font-semibold text-earth-950">
+              <h3 className="mt-1 text-lg font-semibold text-seed-950">
                 {section.question}
               </h3>
             </div>
@@ -51,12 +51,12 @@ export function ReportSections({
           <div className="mt-4 grid gap-4 border-t border-stone-200 pt-4 md:grid-cols-2">
             <SourceFooting section={section} sourceById={sourceById} />
             <div>
-              <h4 className="text-sm font-semibold text-earth-950">
+              <h4 className="text-sm font-semibold text-seed-950">
                 Limitations
               </h4>
               <ul className="mt-2 space-y-2 text-sm leading-6 text-earth-700">
-                {section.limitations.map((limitation) => (
-                  <li key={limitation}>{limitation}</li>
+                {section.limitations.map((limitation, index) => (
+                  <li key={`${limitation}-${index}`}>{limitation}</li>
                 ))}
               </ul>
             </div>
@@ -76,7 +76,7 @@ function SourceFooting({
 }) {
   return (
     <div>
-      <h4 className="text-sm font-semibold text-earth-950">Source footing</h4>
+      <h4 className="text-sm font-semibold text-seed-950">Source footing</h4>
       {section.evidenceSourceIds.length > 0 ? (
         <ul className="mt-2 space-y-2 text-sm leading-6 text-earth-700">
           {section.evidenceSourceIds.map((sourceId) => {

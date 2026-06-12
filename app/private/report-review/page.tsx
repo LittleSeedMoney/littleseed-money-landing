@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+
 import { EvidenceSection } from "@/components/report-review/evidence-section";
 import { FindingsSection } from "@/components/report-review/findings-section";
 import { InputsSection } from "@/components/report-review/inputs-section";
@@ -8,7 +10,7 @@ import { ReportSections } from "@/components/report-review/report-sections";
 import { ReviewRail } from "@/components/report-review/review-rail";
 import { reportReviewSample } from "@/data/report-review-sample";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Report review | LittleSeed Money",
   description:
     "Private report review surface for validating financial health report structure, evidence, and uncertainty.",

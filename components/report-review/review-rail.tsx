@@ -11,7 +11,7 @@ export function ReviewRail({ report }: { report: ReportReviewSample }) {
       >
         <h2
           id="review-state-heading"
-          className="text-sm font-semibold text-earth-950"
+          className="text-sm font-semibold text-seed-950"
         >
           Review state
         </h2>
@@ -31,14 +31,14 @@ export function ReviewRail({ report }: { report: ReportReviewSample }) {
       >
         <h2
           id="missing-context-heading"
-          className="text-sm font-semibold text-earth-950"
+          className="text-sm font-semibold text-seed-950"
         >
           Missing context
         </h2>
         {report.dataCompleteness.missingContext.length > 0 ? (
           <ul className="mt-3 space-y-2 text-sm leading-6 text-earth-700">
-            {report.dataCompleteness.missingContext.map((item) => (
-              <li key={item}>{item}</li>
+            {report.dataCompleteness.missingContext.map((item, index) => (
+              <li key={`${item}-${index}`}>{item}</li>
             ))}
           </ul>
         ) : (
@@ -54,13 +54,13 @@ export function ReviewRail({ report }: { report: ReportReviewSample }) {
       >
         <h2
           id="uncertainty-heading"
-          className="text-sm font-semibold text-earth-950"
+          className="text-sm font-semibold text-seed-950"
         >
           Uncertainty
         </h2>
         <ul className="mt-3 space-y-2 text-sm leading-6 text-earth-700">
-          {report.dataCompleteness.uncertainty.map((item) => (
-            <li key={item}>{item}</li>
+          {report.dataCompleteness.uncertainty.map((item, index) => (
+            <li key={`${item}-${index}`}>{item}</li>
           ))}
         </ul>
       </section>
@@ -71,13 +71,13 @@ export function ReviewRail({ report }: { report: ReportReviewSample }) {
       >
         <h2
           id="unmeasured-heading"
-          className="text-sm font-semibold text-earth-950"
+          className="text-sm font-semibold text-seed-950"
         >
           Possibly unmeasured
         </h2>
         <ul className="mt-3 space-y-2 text-sm leading-6 text-earth-700">
-          {report.dataCompleteness.potentiallyUnmeasuredCategories.map((item) => (
-            <li key={item}>{item}</li>
+          {report.dataCompleteness.potentiallyUnmeasuredCategories.map((item, index) => (
+            <li key={`${item}-${index}`}>{item}</li>
           ))}
         </ul>
       </section>
@@ -88,7 +88,7 @@ export function ReviewRail({ report }: { report: ReportReviewSample }) {
       >
         <h2
           id="quick-sources-heading"
-          className="text-sm font-semibold text-earth-950"
+          className="text-sm font-semibold text-seed-950"
         >
           Quick sources
         </h2>

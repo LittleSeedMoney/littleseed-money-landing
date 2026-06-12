@@ -1,6 +1,6 @@
 import type { EvidenceSource } from "@/data/report-review-sample";
 
-import { InfoList, MetaItem, SectionHeading } from "./shared";
+import { InfoList, MetaItem, ReviewSectionHeading } from "./shared";
 
 export function EvidenceSection({ sources }: { sources: EvidenceSource[] }) {
   return (
@@ -9,7 +9,7 @@ export function EvidenceSection({ sources }: { sources: EvidenceSource[] }) {
       aria-labelledby="evidence-heading"
       className="space-y-3"
     >
-      <SectionHeading
+      <ReviewSectionHeading
         eyebrow="Traceability"
         title="Evidence sources"
         description="Source cards make the publisher, reviewed date, support, and limitation visible before report copy is considered complete."
@@ -29,7 +29,7 @@ function EvidenceCard({ source }: { source: EvidenceSource }) {
   return (
     <article className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
       <p className="text-sm font-medium text-seed-700">{source.publisher}</p>
-      <h3 className="mt-1 text-base font-semibold text-earth-950">
+      <h3 className="mt-1 text-base font-semibold text-seed-950">
         <a
           href={source.url}
           className="underline-offset-4 hover:underline focus:outline-none focus:ring-2 focus:ring-seed-500"
