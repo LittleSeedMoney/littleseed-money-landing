@@ -3,6 +3,7 @@ import type { Provenance } from "@/data/report-review-sample";
 export const reportReviewNavItems = [
   ["Overview", "#overview"],
   ["Sections", "#sections"],
+  ["Portfolio", "#portfolio"],
   ["Findings", "#findings"],
   ["Evidence", "#evidence"],
   ["Inputs", "#inputs"],
@@ -12,6 +13,7 @@ export const provenanceLabels: Record<Provenance, string> = {
   sample: "Sample",
   "user-entered": "User-entered",
   calculated: "Calculated",
+  estimated: "Estimated",
   "source-backed": "Source-backed",
   missing: "Missing context",
 };

@@ -2,8 +2,16 @@ export type Provenance =
   | "sample"
   | "user-entered"
   | "calculated"
+  | "estimated"
   | "source-backed"
   | "missing";
+
+export type MetricDisclosure = {
+  measures: string;
+  calculation: string;
+  assumptions: string[];
+  limitations: string[];
+};
 
 export type SummaryMetric = {
   id: string;
@@ -11,6 +19,7 @@ export type SummaryMetric = {
   value: string;
   detail: string;
   provenance: Provenance;
+  disclosure?: MetricDisclosure;
 };
 
 export type ReportSection = {
@@ -44,12 +53,42 @@ export type EvidenceSource = {
 };
 
 export type SnapshotItem = {
+  id: string;
   name: string;
   category: string;
   value: string;
   liquidity: string;
   provenance: Provenance;
   emergencyEligible: boolean;
+};
+
+export type PortfolioNote = {
+  id: string;
+  title: string;
+  body: string;
+};
+
+export type DecisionReadinessInput = {
+  id: string;
+  label: string;
+  value: string;
+  provenance: Provenance;
+};
+
+export type DecisionReadinessMissingInput = {
+  id: string;
+  label: string;
+  whyItMatters: string;
+};
+
+export type DecisionReadiness = {
+  id: string;
+  title: string;
+  status: string;
+  explanation: string;
+  availableInputs: DecisionReadinessInput[];
+  missingInputs: DecisionReadinessMissingInput[];
+  limitations: string[];
 };
 
 export type ReportReviewSample = {
@@ -70,11 +109,13 @@ export type ReportReviewSample = {
     missingContext: string[];
     potentiallyUnmeasuredCategories: string[];
   };
-  assetSnapshot: {
+  assetPortfolio: {
     totals: SummaryMetric[];
     assets: SnapshotItem[];
     liabilities: SnapshotItem[];
+    notes: PortfolioNote[];
   };
+  decisionReadiness: DecisionReadiness;
 };
 
 export const reportReviewSample: ReportReviewSample = {
@@ -92,6 +133,19 @@ export const reportReviewSample: ReportReviewSample = {
       value: "$1,280 left",
       detail: "After living expenses, debt payments, and contributions.",
       provenance: "calculated",
+      disclosure: {
+        measures:
+          "Money left after reported monthly outflows and known contributions.",
+        calculation:
+          "Reported take-home income minus living expenses, debt payments, and contributions.",
+        assumptions: [
+          "The monthly take-home income value was provided by the user.",
+          "Irregular income and expenses are not normalized in this preview.",
+        ],
+        limitations: [
+          "This is not a recommendation about what to do with remaining cash.",
+        ],
+      },
     },
     {
       id: "emergency_coverage",
@@ -99,6 +153,19 @@ export const reportReviewSample: ReportReviewSample = {
       value: "3.46 months",
       detail: "Reported cash divided by required monthly outflows.",
       provenance: "calculated",
+      disclosure: {
+        measures:
+          "How many months reported emergency-eligible cash could cover required monthly outflows.",
+        calculation:
+          "Emergency-eligible cash divided by required monthly outflows.",
+        assumptions: [
+          "Retirement and brokerage assets are excluded from emergency cash.",
+          "Required outflows use the obligations included in the sample report.",
+        ],
+        limitations: [
+          "This preview does not set a personalized emergency-fund target.",
+        ],
+      },
     },
     {
       id: "debt_pressure",
@@ -106,6 +173,17 @@ export const reportReviewSample: ReportReviewSample = {
       value: "$35,000 debt",
       detail: "$2,000 meets the high-interest review rule.",
       provenance: "calculated",
+      disclosure: {
+        measures:
+          "Total reported debt and debts that triggered an evidence-linked review finding.",
+        calculation: "Reported liability balances grouped by debt type.",
+        assumptions: [
+          "Debt balances and payment amounts are user-entered sample values.",
+        ],
+        limitations: [
+          "This is not a repayment priority or underwriting ratio.",
+        ],
+      },
     },
     {
       id: "net_worth",
@@ -113,6 +191,16 @@ export const reportReviewSample: ReportReviewSample = {
       value: "$33,000",
       detail: "$68,000 assets minus $35,000 liabilities.",
       provenance: "calculated",
+      disclosure: {
+        measures: "Reported assets minus reported liabilities.",
+        calculation: "Total assets minus total liabilities.",
+        assumptions: [
+          "Asset values are sample user-entered balances, not live market data.",
+        ],
+        limitations: [
+          "Taxes, selling costs, penalties, and market movement are excluded.",
+        ],
+      },
     },
     {
       id: "known_contributions",
@@ -120,6 +208,18 @@ export const reportReviewSample: ReportReviewSample = {
       value: "$700 / month",
       detail: "Employee and employer contributions reported.",
       provenance: "user-entered",
+      disclosure: {
+        measures:
+          "Known monthly employee and employer contributions in the sample profile.",
+        calculation:
+          "Monthly employee contribution plus monthly employer contribution.",
+        assumptions: [
+          "The sample treats the contribution amount as already known.",
+        ],
+        limitations: [
+          "Eligibility, limits, vesting, and tax treatment are not validated.",
+        ],
+      },
     },
     {
       id: "data_completeness",
@@ -127,6 +227,18 @@ export const reportReviewSample: ReportReviewSample = {
       value: "Partial",
       detail: "Some recurring obligations may be hidden in aggregate inputs.",
       provenance: "missing",
+      disclosure: {
+        measures:
+          "Whether unknown or aggregated inputs limit report interpretation.",
+        calculation:
+          "Known missing fields and possibly unmeasured categories reviewed together.",
+        assumptions: [
+          "Missing optional values are preserved as missing, not converted to zero.",
+        ],
+        limitations: [
+          "A partial data state can still support calculations while limiting interpretation.",
+        ],
+      },
     },
   ],
   sections: [
@@ -306,7 +418,7 @@ export const reportReviewSample: ReportReviewSample = {
       "property taxes or HOA not in housing cost",
     ],
   },
-  assetSnapshot: {
+  assetPortfolio: {
     totals: [
       {
         id: "total_assets",
@@ -314,6 +426,17 @@ export const reportReviewSample: ReportReviewSample = {
         value: "$68,000",
         detail: "Cash, retirement, brokerage, and other assets.",
         provenance: "user-entered",
+        disclosure: {
+          measures: "Total sample asset balances entered for the household.",
+          calculation:
+            "Checking and savings plus retirement accounts plus brokerage plus other assets.",
+          assumptions: [
+            "Balances are sample values and are not refreshed from linked accounts.",
+          ],
+          limitations: [
+            "The total does not model liquidity, taxes, penalties, or sale costs.",
+          ],
+        },
       },
       {
         id: "emergency_eligible_cash",
@@ -321,6 +444,17 @@ export const reportReviewSample: ReportReviewSample = {
         value: "$12,000",
         detail: "Cash currently counted for interruption coverage.",
         provenance: "user-entered",
+        disclosure: {
+          measures:
+            "Cash-like balances currently counted in emergency coverage calculations.",
+          calculation: "Sum of asset rows marked emergency eligible.",
+          assumptions: [
+            "Only checking and savings are marked emergency eligible in this sample.",
+          ],
+          limitations: [
+            "Eligibility can change with access restrictions, holds, or household context.",
+          ],
+        },
       },
       {
         id: "total_liabilities",
@@ -328,6 +462,16 @@ export const reportReviewSample: ReportReviewSample = {
         value: "$35,000",
         detail: "Student loan, auto loan, and credit-card debt.",
         provenance: "user-entered",
+        disclosure: {
+          measures: "Total sample liability balances entered for the household.",
+          calculation: "Student loan plus auto loan plus credit-card debt.",
+          assumptions: [
+            "Balances are sample values and are not refreshed from linked accounts.",
+          ],
+          limitations: [
+            "The total does not include accrued interest, fees, or payoff quotes.",
+          ],
+        },
       },
       {
         id: "liquid_net_worth",
@@ -335,10 +479,23 @@ export const reportReviewSample: ReportReviewSample = {
         value: "-$15,000",
         detail: "Cash plus brokerage minus total liabilities.",
         provenance: "calculated",
+        disclosure: {
+          measures:
+            "A narrower net worth view using cash and brokerage before retirement assets.",
+          calculation:
+            "Emergency-eligible cash plus brokerage balance minus total liabilities.",
+          assumptions: [
+            "Retirement assets are excluded from this liquidity-oriented view.",
+          ],
+          limitations: [
+            "This is a review metric, not a liquidation recommendation.",
+          ],
+        },
       },
     ],
     assets: [
       {
+        id: "checking_savings",
         name: "Checking and savings",
         category: "Cash",
         value: "$12,000",
@@ -347,6 +504,7 @@ export const reportReviewSample: ReportReviewSample = {
         emergencyEligible: true,
       },
       {
+        id: "retirement_accounts",
         name: "Retirement accounts",
         category: "Retirement",
         value: "$45,000",
@@ -355,6 +513,7 @@ export const reportReviewSample: ReportReviewSample = {
         emergencyEligible: false,
       },
       {
+        id: "brokerage_account",
         name: "Brokerage account",
         category: "Brokerage",
         value: "$8,000",
@@ -363,6 +522,7 @@ export const reportReviewSample: ReportReviewSample = {
         emergencyEligible: false,
       },
       {
+        id: "other_assets",
         name: "Other assets",
         category: "Other",
         value: "$3,000",
@@ -373,6 +533,7 @@ export const reportReviewSample: ReportReviewSample = {
     ],
     liabilities: [
       {
+        id: "student_loan",
         name: "Student loan",
         category: "Student loan",
         value: "$18,000",
@@ -381,6 +542,7 @@ export const reportReviewSample: ReportReviewSample = {
         emergencyEligible: false,
       },
       {
+        id: "auto_loan",
         name: "Auto loan",
         category: "Auto loan",
         value: "$15,000",
@@ -389,6 +551,7 @@ export const reportReviewSample: ReportReviewSample = {
         emergencyEligible: false,
       },
       {
+        id: "credit_card",
         name: "Credit card",
         category: "Credit card",
         value: "$2,000",
@@ -396,6 +559,69 @@ export const reportReviewSample: ReportReviewSample = {
         provenance: "sample",
         emergencyEligible: false,
       },
+    ],
+    notes: [
+      {
+        id: "manual_snapshot",
+        title: "Manual snapshot",
+        body: "These balances are sample values for a review session. No account history or saved portfolio record exists in this slice.",
+      },
+      {
+        id: "liquidity_boundary",
+        title: "Liquidity boundary",
+        body: "Emergency coverage uses cash-like balances only. Invested or restricted assets remain visible but are not treated as emergency cash.",
+      },
+    ],
+  },
+  decisionReadiness: {
+    id: "emergency_fund_target_v0",
+    title: "Emergency Fund Target v0 readiness",
+    status: "Inputs partially available",
+    explanation:
+      "This preview shows which values are available for the first decision slice. It does not calculate a personalized target yet.",
+    availableInputs: [
+      {
+        id: "emergency_eligible_cash",
+        label: "Emergency-eligible cash",
+        value: "$12,000",
+        provenance: "user-entered",
+      },
+      {
+        id: "required_monthly_outflows",
+        label: "Required monthly outflows",
+        value: "$3,470",
+        provenance: "calculated",
+      },
+      {
+        id: "income_pattern",
+        label: "Income pattern",
+        value: "Mostly stable",
+        provenance: "sample",
+      },
+    ],
+    missingInputs: [
+      {
+        id: "dependents",
+        label: "Dependents",
+        whyItMatters:
+          "Household dependents may change the appropriate interpretation of cash resilience.",
+      },
+      {
+        id: "insurance_context",
+        label: "Insurance context",
+        whyItMatters:
+          "Major uncovered risks can limit ordinary emergency-fund interpretation.",
+      },
+      {
+        id: "support_access",
+        label: "Access to other support",
+        whyItMatters:
+          "Other reliable support may change scenario assumptions, but it should be optional context.",
+      },
+    ],
+    limitations: [
+      "No target range is shown until the rule contract and assumptions are approved.",
+      "Missing optional context is not treated as zero or as a negative signal.",
     ],
   },
 };

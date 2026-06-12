@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { AssetPortfolioSection } from "@/components/report-review/asset-portfolio-section";
 import { EvidenceSection } from "@/components/report-review/evidence-section";
 import { FindingsSection } from "@/components/report-review/findings-section";
 import { InputsSection } from "@/components/report-review/inputs-section";
@@ -43,9 +44,13 @@ export default function ReportReviewPage() {
             sections={reportReviewSample.sections}
             sourceById={sourceById}
           />
+          <AssetPortfolioSection
+            decisionReadiness={reportReviewSample.decisionReadiness}
+            portfolio={reportReviewSample.assetPortfolio}
+          />
           <FindingsSection findings={reportReviewSample.findings} />
           <EvidenceSection sources={reportReviewSample.evidenceSources} />
-          <InputsSection snapshot={reportReviewSample.assetSnapshot} />
+          <InputsSection dataCompleteness={reportReviewSample.dataCompleteness} />
         </div>
 
         <ReviewRail report={reportReviewSample} />
