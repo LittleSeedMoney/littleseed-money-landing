@@ -42,14 +42,16 @@ export function AssetPortfolioSection({
 
         <div className="mt-5 grid gap-5 xl:grid-cols-2">
           <SnapshotTable
-            title="Assets"
             description="Current asset balances grouped by liquidity."
+            descriptionId="assets-snapshot-description"
             items={portfolio.assets}
+            title="Assets"
           />
           <SnapshotTable
-            title="Liabilities"
             description="Current debt balances grouped by obligation type."
+            descriptionId="liabilities-snapshot-description"
             items={portfolio.liabilities}
+            title="Liabilities"
           />
         </div>
 
@@ -82,15 +84,15 @@ function PortfolioMetricCard({ metric }: { metric: SummaryMetric }) {
 
 function SnapshotTable({
   description,
+  descriptionId,
   items,
   title,
 }: {
   description: string;
+  descriptionId: string;
   items: SnapshotItem[];
   title: string;
 }) {
-  const descriptionId = `${title.toLowerCase()}-snapshot-description`;
-
   return (
     <div>
       <h3 className="text-sm font-semibold text-seed-950">{title}</h3>
