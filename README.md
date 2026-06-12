@@ -31,13 +31,3 @@ Production build:
 ```bash
 npm run build
 ```
-
-Private report-review API integration:
-
-```bash
-LITTLESEED_PLATFORM_API_URL=http://127.0.0.1:8000 npm run dev
-```
-
-`LITTLESEED_PLATFORM_API_URL` is server-side only. When it is unset or the
-platform request fails, `/private/report-review` falls back to sample data and
-shows the connection state in the page.

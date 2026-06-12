@@ -97,11 +97,7 @@ export type ReportReviewSample = {
   generatedAt: string;
   schemaVersion: string;
   disclaimer: string;
-  dataMode: string;
-  connectionNotice: {
-    tone: "amber" | "red" | "seed";
-    message: string;
-  };
+  dataMode: "sample";
   summaryMetrics: SummaryMetric[];
   sections: ReportSection[];
   findings: Finding[];
@@ -127,12 +123,7 @@ export const reportReviewSample: ReportReviewSample = {
   reportStatus: "Complete",
   generatedAt: "2026-06-12T03:12:55Z",
   schemaVersion: "financial_health_report_v0_3",
-  dataMode: "Sample",
-  connectionNotice: {
-    tone: "amber",
-    message:
-      "Platform API connector is not configured in this environment. Showing sample report data for layout review. No user data was sent or saved.",
-  },
+  dataMode: "sample",
   disclaimer:
     "This review surface is educational and uses sample data. It is not individualized legal, tax, or investment advice.",
   summaryMetrics: [

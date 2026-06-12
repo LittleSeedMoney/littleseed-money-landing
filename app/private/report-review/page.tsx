@@ -9,7 +9,7 @@ import { ReportReviewHeader } from "@/components/report-review/report-review-hea
 import { ReportReviewNav } from "@/components/report-review/report-review-nav";
 import { ReportSections } from "@/components/report-review/report-sections";
 import { ReviewRail } from "@/components/report-review/review-rail";
-import { getReportReviewData } from "@/lib/report-review/platform-report";
+import { reportReviewSample } from "@/data/report-review-sample";
 
 export const metadata: Metadata = {
   title: "Report review | LittleSeed Money",
@@ -17,19 +17,17 @@ export const metadata: Metadata = {
     "Private report review surface for validating financial health report structure, evidence, and uncertainty.",
 };
 
-export const dynamic = "force-dynamic";
+const generatedAt = new Intl.DateTimeFormat("en", {
+  dateStyle: "medium",
+  timeStyle: "short",
+  timeZone: "UTC",
+}).format(new Date(reportReviewSample.generatedAt));
 
-export default async function ReportReviewPage() {
-  const report = await getReportReviewData();
-  const generatedAt = new Intl.DateTimeFormat("en", {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: "UTC",
-  }).format(new Date(report.generatedAt));
-  const sourceById = new Map(
-    report.evidenceSources.map((source) => [source.id, source]),
-  );
+const sourceById = new Map(
+  reportReviewSample.evidenceSources.map((source) => [source.id, source]),
+);
 
+export default function ReportReviewPage() {
   return (
     <main className="min-h-screen bg-stone-50 text-earth-900">
       <ReportReviewHeader />
@@ -37,45 +35,26 @@ export default async function ReportReviewPage() {
       <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[220px_minmax(0,1fr)_280px] lg:px-8">
         <ReportReviewNav />
 
-        {hasReportContent(report) ? (
-          <div className="min-w-0 space-y-6">
-            <OverviewSection generatedAt={generatedAt} report={report} />
-            <ReportSections sections={report.sections} sourceById={sourceById} />
-            <AssetPortfolioSection
-              decisionReadiness={report.decisionReadiness}
-              portfolio={report.assetPortfolio}
-            />
-            <FindingsSection findings={report.findings} />
-            <EvidenceSection sources={report.evidenceSources} />
-            <InputsSection dataCompleteness={report.dataCompleteness} />
-          </div>
-        ) : (
-          <EmptyReportState />
-        )}
+        <div className="min-w-0 space-y-6">
+          <OverviewSection
+            generatedAt={generatedAt}
+            report={reportReviewSample}
+          />
+          <ReportSections
+            sections={reportReviewSample.sections}
+            sourceById={sourceById}
+          />
+          <AssetPortfolioSection
+            decisionReadiness={reportReviewSample.decisionReadiness}
+            portfolio={reportReviewSample.assetPortfolio}
+          />
+          <FindingsSection findings={reportReviewSample.findings} />
+          <EvidenceSection sources={reportReviewSample.evidenceSources} />
+          <InputsSection dataCompleteness={reportReviewSample.dataCompleteness} />
+        </div>
 
-        <ReviewRail report={report} />
+        <ReviewRail report={reportReviewSample} />
       </div>
     </main>
-  );
-}
-
-function hasReportContent(report: Awaited<ReturnType<typeof getReportReviewData>>) {
-  return report.summaryMetrics.length > 0 || report.sections.length > 0;
-}
-
-function EmptyReportState() {
-  return (
-    <section className="rounded-lg border border-stone-200 bg-white p-6 shadow-sm">
-      <p className="text-sm font-medium uppercase tracking-[0.16em] text-seed-700">
-        Review state
-      </p>
-      <h2 className="mt-2 text-xl font-semibold text-seed-950">
-        No report data returned
-      </h2>
-      <p className="mt-3 text-sm leading-6 text-earth-700">
-        The platform response did not include renderable report sections or
-        summary metrics for this session.
-      </p>
-    </section>
   );
 }

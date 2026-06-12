@@ -44,11 +44,10 @@ export function OverviewSection({
 
       <div
         role="status"
-        className={`mt-5 rounded-lg border px-4 py-3 text-sm leading-6 ${noticeToneClass(
-          report.connectionNotice.tone,
-        )}`}
+        className="mt-5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950"
       >
-        {report.connectionNotice.message}
+        Platform API connector is not configured in this slice. Showing sample
+        report data for layout review. No user data was sent or saved.
       </div>
 
       <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -58,14 +57,6 @@ export function OverviewSection({
       </div>
     </section>
   );
-}
-
-function noticeToneClass(tone: ReportReviewSample["connectionNotice"]["tone"]) {
-  return {
-    amber: "border-amber-200 bg-amber-50 text-amber-950",
-    red: "border-red-200 bg-red-50 text-red-950",
-    seed: "border-seed-200 bg-seed-50 text-seed-950",
-  }[tone];
 }
 
 function MetricCard({ metric }: { metric: SummaryMetric }) {
