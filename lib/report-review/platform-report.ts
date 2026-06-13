@@ -11,130 +11,18 @@ import {
 } from "@/data/report-review-sample";
 
 import { sampleFinancialProfile } from "./sample-profile";
-
-type DecimalValue = string | number | null | undefined;
-
-type PlatformWorkspaceReportResponse = {
-  report: PlatformReport;
-  workspace_snapshot: PlatformWorkspaceSnapshot;
-};
-
-type PlatformReport = {
-  report_schema_version: string;
-  report_status: string;
-  calculated_at: string;
-  disclaimer: { text: string };
-  sections: PlatformReportSection[];
-  findings: PlatformFinding[];
-  evidence_sources: PlatformEvidenceSource[];
-  data_completeness: {
-    status: string;
-    explanation: string;
-    missing_context: string[];
-    potentially_unmeasured_categories: string[];
-  };
-  report_context: {
-    uncertainty: string[];
-  };
-  net_worth: {
-    gross_assets: DecimalValue;
-    total_liabilities: DecimalValue;
-    net_worth: DecimalValue;
-    liquid_net_worth: DecimalValue;
-  };
-  cash_flow: {
-    monthly_required_outflows: DecimalValue;
-    monthly_surplus_after_investing: DecimalValue;
-  };
-  debt_risk: {
-    total_debt_balance: DecimalValue;
-    confirmed_high_interest_balance: DecimalValue;
-  };
-  long_term_contribution: {
-    known_monthly_total_contribution: DecimalValue;
-  };
-};
-
-type PlatformReportSection = {
-  section_id: string;
-  question: string;
-  answer: string;
-  evidence_level: string;
-  evidence_source_ids: string[];
-  limitations: string[];
-};
-
-type PlatformFinding = {
-  finding_id: string;
-  title: string;
-  summary: string;
-  why_it_matters: string;
-  options: string[];
-  limitations: string[];
-  education_topics: string[];
-  evidence_source_ids: string[];
-};
-
-type PlatformEvidenceSource = {
-  source_id: string;
-  publisher: string;
-  title: string;
-  url: string;
-  reviewed_on: string;
-  supports: string;
-  limitations: string[];
-};
-
-type PlatformWorkspaceSnapshot = {
-  inputs: {
-    emergency_fund_target: {
-      monthly_essential_expenses: DecimalValue;
-      cash_liquid_balance: DecimalValue;
-      income_pattern: string | null;
-      dependents: number | null;
-      job_stability: string | null;
-    };
-    assets: PlatformWorkspaceAsset[];
-    liabilities: PlatformWorkspaceLiability[];
-  };
-  eft_result: {
-    applicability: string;
-    target_months_range: {
-      min_months: DecimalValue;
-      max_months: DecimalValue;
-    } | null;
-    target_amount_range: {
-      min_amount: DecimalValue;
-      max_amount: DecimalValue;
-    } | null;
-    current_months_covered: DecimalValue;
-    gap_amount_range: {
-      min_amount: DecimalValue;
-      max_amount: DecimalValue;
-    } | null;
-    missing_context: string[];
-    assumptions: string[];
-    limitations: string[];
-  };
-};
-
-type PlatformWorkspaceAsset = {
-  asset_id: string;
-  name: string;
-  category: string;
-  balance: DecimalValue;
-  liquidity: string;
-  provenance: string;
-  emergency_fund_eligible: boolean;
-};
-
-type PlatformWorkspaceLiability = {
-  liability_id: string;
-  name: string;
-  category: string;
-  balance: DecimalValue;
-  provenance: string;
-};
+import {
+  parseWorkspaceReportResponse,
+  type DecimalValue,
+  type PlatformEvidenceSource,
+  type PlatformFinding,
+  type PlatformReport,
+  type PlatformReportSection,
+  type PlatformWorkspaceAsset,
+  type PlatformWorkspaceLiability,
+  type PlatformWorkspaceReportResponse,
+  type PlatformWorkspaceSnapshot,
+} from "./platform-workspace-response";
 
 const PLATFORM_API_URL = process.env.LITTLESEED_PLATFORM_API_URL?.trim();
 const PLATFORM_REQUEST_TIMEOUT_MS = 4_000;
@@ -170,8 +58,7 @@ export async function getReportReviewData(): Promise<ReportReviewSample> {
       throw new Error(`Platform API returned ${response.status}`);
     }
 
-    const payload =
-      (await response.json()) as PlatformWorkspaceReportResponse;
+    const payload = parseWorkspaceReportResponse(await response.json());
     return mapPlatformReport(payload);
   } catch (error) {
     return fallbackReport(error);
