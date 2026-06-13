@@ -98,29 +98,34 @@ export function ReportReviewWorkspace({
       <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[220px_minmax(0,1fr)_280px] lg:px-8">
         <ReportReviewNav />
 
-        {hasReportContent(report) ? (
-          <div className="min-w-0 space-y-6">
-            <ManualInputSection
-              errorMessage={errorMessage}
-              onReset={resetToSampleValues}
-              onSubmit={submitManualProfile}
-              onUpdate={updateValue}
-              requestState={requestState}
-              values={values}
-            />
-            <OverviewSection generatedAt={generatedAt} report={report} />
-            <ReportSections sections={report.sections} sourceById={sourceById} />
-            <AssetPortfolioSection
-              decisionReadiness={report.decisionReadiness}
-              portfolio={report.assetPortfolio}
-            />
-            <FindingsSection findings={report.findings} />
-            <EvidenceSection sources={report.evidenceSources} />
-            <InputsSection dataCompleteness={report.dataCompleteness} />
-          </div>
-        ) : (
-          <EmptyReportState />
-        )}
+        <div className="min-w-0 space-y-6">
+          <ManualInputSection
+            errorMessage={errorMessage}
+            onReset={resetToSampleValues}
+            onSubmit={submitManualProfile}
+            onUpdate={updateValue}
+            requestState={requestState}
+            values={values}
+          />
+          {hasReportContent(report) ? (
+            <>
+              <OverviewSection generatedAt={generatedAt} report={report} />
+              <ReportSections
+                sections={report.sections}
+                sourceById={sourceById}
+              />
+              <AssetPortfolioSection
+                decisionReadiness={report.decisionReadiness}
+                portfolio={report.assetPortfolio}
+              />
+              <FindingsSection findings={report.findings} />
+              <EvidenceSection sources={report.evidenceSources} />
+              <InputsSection dataCompleteness={report.dataCompleteness} />
+            </>
+          ) : (
+            <EmptyReportState />
+          )}
+        </div>
 
         <ReviewRail report={report} />
       </div>

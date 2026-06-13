@@ -25,6 +25,13 @@ export type ManualProfileRequest = {
   userTargetMonths?: string;
 };
 
+export class ManualProfileValidationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ManualProfileValidationError";
+  }
+}
+
 const REQUIRED_DECIMAL_FIELDS: Array<keyof ManualProfileValues> = [
   "monthlyTakeHomeIncome",
   "monthlyHousingCost",
@@ -133,7 +140,7 @@ function buildDebts(values: ManualProfileValues): Array<Record<string, unknown>>
 
   if (balance === 0) {
     if (annualInterestRate !== 0 || monthlyPayment !== 0) {
-      throw new Error(
+      throw new ManualProfileValidationError(
         "When credit-card balance is 0, APR and monthly payment must also be 0.",
       );
     }
@@ -179,23 +186,27 @@ function validateManualProfileValues(values: ManualProfileValues): void {
 
 function requireDecimal(value: string, field: keyof ManualProfileValues): void {
   if (!value) {
-    throw new Error(`${labelField(field)} is required.`);
+    throw new ManualProfileValidationError(`${labelField(field)} is required.`);
   }
 
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed < 0) {
-    throw new Error(`${labelField(field)} must be a non-negative number.`);
+    throw new ManualProfileValidationError(
+      `${labelField(field)} must be a non-negative number.`,
+    );
   }
 }
 
 function requireInteger(value: string, field: keyof ManualProfileValues): void {
   if (!value) {
-    throw new Error(`${labelField(field)} is required.`);
+    throw new ManualProfileValidationError(`${labelField(field)} is required.`);
   }
 
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed < 0) {
-    throw new Error(`${labelField(field)} must be a non-negative whole number.`);
+    throw new ManualProfileValidationError(
+      `${labelField(field)} must be a non-negative whole number.`,
+    );
   }
 }
 
