@@ -4,7 +4,11 @@ import { SeedMark } from "@/components/seed-mark";
 
 import { StatusPill } from "./shared";
 
-export function ReportReviewHeader() {
+export function ReportReviewHeader({
+  dataLabel = "Sample data",
+}: {
+  dataLabel?: string;
+}) {
   return (
     <header className="border-b border-stone-200 bg-white">
       <div className="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-5 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
@@ -27,7 +31,7 @@ export function ReportReviewHeader() {
         <div className="flex flex-wrap items-center gap-2 text-sm">
           <StatusPill label="Private review" tone="earth" />
           <StatusPill label="In-session only" tone="seed" />
-          <StatusPill label="Sample data" tone="stone" />
+          <StatusPill label={dataLabel} tone="stone" />
         </div>
       </div>
     </header>
