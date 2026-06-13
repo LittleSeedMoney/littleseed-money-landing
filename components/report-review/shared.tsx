@@ -1,6 +1,7 @@
 import type { Provenance } from "@/data/report-review-sample";
 
 export const reportReviewNavItems = [
+  ["Manual input", "#manual-input"],
   ["Overview", "#overview"],
   ["Sections", "#sections"],
   ["Portfolio", "#portfolio"],

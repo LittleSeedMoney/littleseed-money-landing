@@ -27,11 +27,74 @@ import {
 const PLATFORM_API_URL = process.env.LITTLESEED_PLATFORM_API_URL?.trim();
 const PLATFORM_REQUEST_TIMEOUT_MS = 4_000;
 
+type WorkspaceReportRequest = {
+  profile: unknown;
+  reportId: string;
+  snapshotId: string;
+  userTargetMonths?: string;
+};
+
+type ReportMappingOptions = {
+  connectionMessage: string;
+  dataMode: string;
+  profileName: string;
+};
+
 export async function getReportReviewData(): Promise<ReportReviewSample> {
   if (!PLATFORM_API_URL) {
     return reportReviewSample;
   }
 
+  try {
+    const payload = await requestWorkspaceReport({
+      profile: sampleFinancialProfile,
+      snapshotId: "landing-review-sample-workspace",
+      reportId: "landing-review-sample-report",
+    });
+
+    return mapPlatformReport(payload, {
+      profileName: "Platform sample profile",
+      dataMode: "Platform API",
+      connectionMessage:
+        "Loaded from the platform workspace-report API using the sample review profile. The route is in-session only and does not save the profile, report, or snapshot.",
+    });
+  } catch (error) {
+    return fallbackReport(error);
+  }
+}
+
+export async function getManualReportReviewData({
+  profile,
+  reportId,
+  snapshotId,
+  userTargetMonths,
+}: WorkspaceReportRequest): Promise<ReportReviewSample> {
+  if (!PLATFORM_API_URL) {
+    throw new Error("Platform API URL is not configured.");
+  }
+
+  const payload = await requestWorkspaceReport({
+    profile,
+    reportId,
+    snapshotId,
+    userTargetMonths,
+  });
+
+  return mapPlatformReport(payload, {
+    profileName: "Manual review profile",
+    dataMode: "User-entered Platform API",
+    connectionMessage:
+      "Loaded from the platform workspace-report API using the current manual inputs. The route is in-session only and does not save the profile, report, or snapshot.",
+  });
+}
+
+async function requestWorkspaceReport({
+  profile,
+  reportId,
+  snapshotId,
+  userTargetMonths,
+}: WorkspaceReportRequest): Promise<PlatformWorkspaceReportResponse> {
+  const platformApiUrl = requirePlatformApiUrl();
   const controller = new AbortController();
   const timeout = setTimeout(
     () => controller.abort(),
@@ -39,16 +102,22 @@ export async function getReportReviewData(): Promise<ReportReviewSample> {
   );
 
   try {
+    const requestBody: Record<string, unknown> = {
+      profile,
+      snapshot_id: snapshotId,
+      report_id: reportId,
+    };
+
+    if (userTargetMonths) {
+      requestBody.user_target_months = userTargetMonths;
+    }
+
     const response = await fetch(
-      `${PLATFORM_API_URL.replace(/\/$/, "")}/v1/phase3/workspace-report`,
+      `${platformApiUrl.replace(/\/$/, "")}/v1/phase3/workspace-report`,
       {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          profile: sampleFinancialProfile,
-          snapshot_id: "landing-review-sample-workspace",
-          report_id: "landing-review-sample-report",
-        }),
+        body: JSON.stringify(requestBody),
         cache: "no-store",
         signal: controller.signal,
       },
@@ -58,13 +127,17 @@ export async function getReportReviewData(): Promise<ReportReviewSample> {
       throw new Error(`Platform API returned ${response.status}`);
     }
 
-    const payload = parseWorkspaceReportResponse(await response.json());
-    return mapPlatformReport(payload);
-  } catch (error) {
-    return fallbackReport(error);
+    return parseWorkspaceReportResponse(await response.json());
   } finally {
     clearTimeout(timeout);
   }
+}
+
+function requirePlatformApiUrl(): string {
+  if (!PLATFORM_API_URL) {
+    throw new Error("Platform API URL is not configured.");
+  }
+  return PLATFORM_API_URL;
 }
 
 function fallbackReport(error: unknown): ReportReviewSample {
@@ -84,20 +157,20 @@ function fallbackReport(error: unknown): ReportReviewSample {
 
 function mapPlatformReport(
   payload: PlatformWorkspaceReportResponse,
+  options: ReportMappingOptions,
 ): ReportReviewSample {
   const { report, workspace_snapshot: snapshot } = payload;
 
   return {
-    profileName: "Platform sample profile",
+    profileName: options.profileName,
     reportStatus: titleCase(report.report_status),
     generatedAt: report.calculated_at,
     schemaVersion: report.report_schema_version,
     disclaimer: report.disclaimer.text,
-    dataMode: "Platform API",
+    dataMode: options.dataMode,
     connectionNotice: {
       tone: "seed",
-      message:
-        "Loaded from the platform workspace-report API using the sample review profile. The route is in-session only and does not save the profile, report, or snapshot.",
+      message: options.connectionMessage,
     },
     summaryMetrics: buildSummaryMetrics(report, snapshot),
     sections: report.sections.map(mapSection),
@@ -153,7 +226,7 @@ function buildSummaryMetrics(
         measures: "Money left after reported monthly outflows and contributions.",
         calculation: "Generated by the platform cash-flow model.",
         assumptions: [
-          "The value uses the sample profile sent to the platform API.",
+          "The value uses the profile submitted to the platform API.",
         ],
         limitations: [
           "This is not a recommendation about what to do with remaining cash.",
@@ -187,7 +260,7 @@ function buildSummaryMetrics(
         calculation:
           "Generated by the platform debt-risk model from reported liability balances, interest rates, and tax-advantage flags.",
         assumptions: [
-          "The value uses debt balances and terms in the sample profile sent to the platform API.",
+          "The value uses debt balances and terms in the profile submitted to the platform API.",
         ],
         limitations: [
           "This is not a repayment priority, underwriting ratio, or creditworthiness assessment.",
