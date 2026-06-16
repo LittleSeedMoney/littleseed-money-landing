@@ -474,7 +474,7 @@ function parseStringArray(value: unknown, path: string): string[] {
 }
 
 function parseOptionalStringArray(value: unknown, path: string): string[] {
-  if (value === undefined) {
+  if (value == null) {
     return [];
   }
 
