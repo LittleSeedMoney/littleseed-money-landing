@@ -376,8 +376,17 @@ function buildDecisionReadiness(
   const eft = snapshot.eft_result;
   const input = snapshot.inputs.emergency_fund_target;
   const range = eft.target_amount_range;
+  const targetMonthsRange = eft.target_months_range;
+  const gapRange = eft.gap_amount_range;
+  const currentMonths = decimal(eft.current_months_covered);
   const targetDetail = range
     ? `${money(range.min_amount)} to ${money(range.max_amount)}`
+    : "Missing";
+  const targetMonthsDetail = targetMonthsRange
+    ? `${monthNumber(targetMonthsRange.min_months)} to ${monthNumber(targetMonthsRange.max_months)} months`
+    : "Missing";
+  const gapDetail = gapRange
+    ? `${money(gapRange.min_amount)} to ${money(gapRange.max_amount)}`
     : "Missing";
 
   return {
@@ -410,11 +419,42 @@ function buildDecisionReadiness(
         label: "Target range",
         value: targetDetail,
         provenance: range ? "calculated" : "missing",
+        detail: targetMonthsRange
+          ? `${targetMonthsDetail} of reported essential expenses.`
+          : undefined,
+      },
+    ],
+    resultMetrics: [
+      {
+        id: "current_months_covered",
+        label: "Current coverage",
+        value:
+          currentMonths === null ? "Missing" : `${monthNumber(currentMonths)} months`,
+        provenance: currentMonths === null ? "missing" : "calculated",
+        detail: "Reported liquid cash divided by required monthly outflows.",
+      },
+      {
+        id: "target_months_range",
+        label: "Baseline months",
+        value: targetMonthsDetail,
+        provenance: targetMonthsRange ? "source-backed" : "missing",
+        detail: "Educational range; not a single required number.",
+      },
+      {
+        id: "gap_amount_range",
+        label: "Gap range",
+        value: gapDetail,
+        provenance: gapRange ? "calculated" : "missing",
+        detail: "Target amount range minus reported liquid cash, floored at zero.",
       },
     ],
     missingInputs: missingInputs(eft.missing_context),
+    assumptions: eft.assumptions,
     limitations: eft.limitations,
     educationTopics: eft.education_topics,
+    evidenceSourceIds: eft.evidence_source_ids,
+    guidanceRuleVersion: eft.guidance_rule_version,
+    modelVersion: eft.model_version,
   };
 }
 
@@ -554,6 +594,17 @@ function formatMoney(value: number): string {
     maximumFractionDigits: 0,
     style: "currency",
   }).format(value);
+}
+
+function monthNumber(value: DecimalValue): string {
+  const amount = decimal(value);
+  if (amount === null) {
+    return "Missing";
+  }
+
+  return new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: 2,
+  }).format(amount);
 }
 
 function decimal(value: DecimalValue): number | null {

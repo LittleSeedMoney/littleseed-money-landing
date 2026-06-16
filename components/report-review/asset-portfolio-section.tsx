@@ -1,5 +1,6 @@
 import type {
   DecisionReadiness,
+  EvidenceSource,
   PortfolioNote,
   ReportReviewSample,
   SnapshotItem,
@@ -17,9 +18,11 @@ import {
 export function AssetPortfolioSection({
   decisionReadiness,
   portfolio,
+  sourceById,
 }: {
   decisionReadiness: DecisionReadiness;
   portfolio: ReportReviewSample["assetPortfolio"];
+  sourceById: Map<string, EvidenceSource>;
 }) {
   return (
     <section
@@ -63,7 +66,10 @@ export function AssetPortfolioSection({
         </div>
       </div>
 
-      <DecisionReadinessCard decisionReadiness={decisionReadiness} />
+      <DecisionReadinessCard
+        decisionReadiness={decisionReadiness}
+        sourceById={sourceById}
+      />
     </section>
   );
 }
@@ -165,8 +171,10 @@ function PortfolioNoteCard({ note }: { note: PortfolioNote }) {
 
 function DecisionReadinessCard({
   decisionReadiness,
+  sourceById,
 }: {
   decisionReadiness: DecisionReadiness;
+  sourceById: Map<string, EvidenceSource>;
 }) {
   return (
     <article className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
@@ -184,6 +192,36 @@ function DecisionReadinessCard({
         </div>
         <StatusPill label={decisionReadiness.status} tone="stone" />
       </div>
+
+      {decisionReadiness.resultMetrics.length > 0 ? (
+        <div className="mt-5 border-t border-stone-200 pt-4">
+          <h4 className="text-sm font-semibold text-seed-950">
+            Decision output
+          </h4>
+          <dl className="mt-3 grid gap-3 sm:grid-cols-3">
+            {decisionReadiness.resultMetrics.map((metric) => (
+              <div key={metric.id} className="min-w-0">
+                <dt className="text-sm font-medium text-earth-700">
+                  {metric.label}
+                </dt>
+                <dd className="mt-1">
+                  <span className="block break-words font-semibold tabular-nums text-seed-950">
+                    {metric.value}
+                  </span>
+                  <span className="mt-2 inline-flex">
+                    <ProvenanceTag provenance={metric.provenance} />
+                  </span>
+                  {metric.detail ? (
+                    <p className="mt-2 text-sm leading-6 text-earth-700">
+                      {metric.detail}
+                    </p>
+                  ) : null}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      ) : null}
 
       <div className="mt-5 grid gap-5 lg:grid-cols-2">
         <div>
@@ -247,6 +285,22 @@ function DecisionReadinessCard({
         </div>
       ) : null}
 
+      {decisionReadiness.assumptions.length > 0 ? (
+        <div className="mt-5 border-t border-stone-200 pt-4">
+          <h4 className="text-sm font-semibold text-seed-950">Assumptions</h4>
+          <ul className="mt-2 space-y-2 text-sm leading-6 text-earth-700">
+            {decisionReadiness.assumptions.map((assumption, index) => (
+              <li key={`${assumption}-${index}`}>{assumption}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      <DecisionTrace
+        decisionReadiness={decisionReadiness}
+        sourceById={sourceById}
+      />
+
       <div className="mt-5 border-t border-stone-200 pt-4">
         <h4 className="text-sm font-semibold text-seed-950">Limits</h4>
         <ul className="mt-2 space-y-2 text-sm leading-6 text-earth-700">
@@ -256,5 +310,69 @@ function DecisionReadinessCard({
         </ul>
       </div>
     </article>
+  );
+}
+
+function DecisionTrace({
+  decisionReadiness,
+  sourceById,
+}: {
+  decisionReadiness: DecisionReadiness;
+  sourceById: Map<string, EvidenceSource>;
+}) {
+  return (
+    <div className="mt-5 border-t border-stone-200 pt-4">
+      <h4 className="text-sm font-semibold text-seed-950">
+        Evidence and rule trace
+      </h4>
+      <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
+        <div>
+          <dt className="font-medium text-earth-700">Model version</dt>
+          <dd className="mt-1 break-words font-semibold text-seed-950">
+            {decisionReadiness.modelVersion}
+          </dd>
+        </div>
+        <div>
+          <dt className="font-medium text-earth-700">Guidance registry</dt>
+          <dd className="mt-1 break-words font-semibold text-seed-950">
+            {decisionReadiness.guidanceRuleVersion}
+          </dd>
+        </div>
+      </dl>
+
+      {decisionReadiness.evidenceSourceIds.length > 0 ? (
+        <ul className="mt-3 space-y-3 text-sm leading-6">
+          {decisionReadiness.evidenceSourceIds.map((id) => {
+            const source = sourceById.get(id);
+
+            return (
+              <li key={id}>
+                {source ? (
+                  <>
+                    <a
+                      className="font-medium text-seed-800 underline-offset-4 hover:underline focus:outline-none focus:ring-2 focus:ring-seed-500"
+                      href={source.url}
+                      rel="noreferrer"
+                      target="_blank"
+                    >
+                      {source.title}
+                    </a>
+                    <p className="text-earth-700">
+                      {source.publisher}. {source.supports}
+                    </p>
+                  </>
+                ) : (
+                  <p className="font-medium text-earth-700">{id}</p>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <p className="mt-2 text-sm leading-6 text-earth-700">
+          No evidence source IDs were returned for this decision result.
+        </p>
+      )}
+    </div>
   );
 }

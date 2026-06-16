@@ -118,6 +118,7 @@ export function ReportReviewWorkspace({
               <AssetPortfolioSection
                 decisionReadiness={report.decisionReadiness}
                 portfolio={report.assetPortfolio}
+                sourceById={sourceById}
               />
               <FindingsSection findings={report.findings} />
               <EducationSection

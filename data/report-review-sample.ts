@@ -73,6 +73,7 @@ export type DecisionReadinessInput = {
   label: string;
   value: string;
   provenance: Provenance;
+  detail?: string;
 };
 
 export type DecisionReadinessMissingInput = {
@@ -87,9 +88,14 @@ export type DecisionReadiness = {
   status: string;
   explanation: string;
   availableInputs: DecisionReadinessInput[];
+  resultMetrics: DecisionReadinessInput[];
   missingInputs: DecisionReadinessMissingInput[];
+  assumptions: string[];
   limitations: string[];
   educationTopics: string[];
+  evidenceSourceIds: string[];
+  guidanceRuleVersion: string;
+  modelVersion: string;
 };
 
 export type ReportReviewSample = {
@@ -386,6 +392,58 @@ export const reportReviewSample: ReportReviewSample = {
       ],
     },
     {
+      id: "cfpb_emergency_fund_guide",
+      publisher: "Consumer Financial Protection Bureau",
+      title: "An essential guide to building an emergency fund",
+      url: "https://www.consumerfinance.gov/an-essential-guide-to-building-an-emergency-fund/",
+      reviewedOn: "2026-06-12",
+      supports:
+        "The CFPB describes emergency funds as cash reserves for unplanned expenses or financial emergencies and frames the needed amount as situation-dependent.",
+      limitations: [
+        "The source does not establish a fixed universal months-of-expenses target.",
+        "It is educational guidance, not individualized financial advice.",
+      ],
+    },
+    {
+      id: "fdic_money_smart_your_savings",
+      publisher: "Federal Deposit Insurance Corporation",
+      title: "Money Smart for Adults, Module 5: Your Savings",
+      url: "https://www.fdic.gov/consumer-resource-center/money-smart-adults",
+      reviewedOn: "2026-06-12",
+      supports:
+        "FDIC Money Smart for Adults includes a savings module focused on saving for expenses, goals, and emergencies.",
+      limitations: [
+        "The curriculum is education material and does not define a household-specific target formula.",
+        "Module files may change independently from the landing catalog page.",
+      ],
+    },
+    {
+      id: "sec_investor_gov_rainy_day",
+      publisher: "U.S. Securities and Exchange Commission",
+      title: "Save for a Rainy Day",
+      url: "https://www.investor.gov/introduction-investing/investing-basics/save-and-invest/save-rainy-day",
+      reviewedOn: "2026-06-12",
+      supports:
+        "Investor.gov frames emergency savings as safe, accessible money and describes a potential upper context of six months of income.",
+      limitations: [
+        "The source discusses income-based savings context, not the LittleSeed essential-expense target calculation.",
+        "It is supplemental education rather than a deterministic rule.",
+      ],
+    },
+    {
+      id: "federal_reserve_shed_2025",
+      publisher: "Board of Governors of the Federal Reserve System",
+      title: "Report on the Economic Well-Being of U.S. Households in 2025",
+      url: "https://www.federalreserve.gov/publications/2026-economic-well-being-of-us-households-in-2025-executive-summary.htm",
+      reviewedOn: "2026-06-12",
+      supports:
+        "The SHED report provides descriptive emergency-expense and rainy-day-fund resilience benchmarks for U.S. households.",
+      limitations: [
+        "SHED is population-level descriptive evidence, not personalized advice.",
+        "The report does not define an individual household emergency-fund target.",
+      ],
+    },
+    {
       id: "irs_roth_comparison_chart",
       publisher: "Internal Revenue Service",
       title: "Roth comparison chart",
@@ -585,10 +643,10 @@ export const reportReviewSample: ReportReviewSample = {
   },
   decisionReadiness: {
     id: "emergency_fund_target_v0",
-    title: "Emergency Fund Target v0 readiness",
-    status: "Inputs partially available",
+    title: "Emergency Fund Target v0",
+    status: "Applicable",
     explanation:
-      "This preview shows which values are available for the first decision slice. It does not calculate a personalized target yet.",
+      "This preview shows an educational target range, the assumptions behind it, and the registry version that governs any guidance language.",
     availableInputs: [
       {
         id: "emergency_eligible_cash",
@@ -608,6 +666,36 @@ export const reportReviewSample: ReportReviewSample = {
         value: "Mostly stable",
         provenance: "sample",
       },
+      {
+        id: "target_range",
+        label: "Target range",
+        value: "$10,410 to $20,820",
+        provenance: "calculated",
+        detail: "Three to six months of reported essential expenses.",
+      },
+    ],
+    resultMetrics: [
+      {
+        id: "current_months_covered",
+        label: "Current coverage",
+        value: "3.46 months",
+        provenance: "calculated",
+        detail: "Reported liquid cash divided by required monthly outflows.",
+      },
+      {
+        id: "target_months_range",
+        label: "Baseline months",
+        value: "3 to 6 months",
+        provenance: "source-backed",
+        detail: "Educational range; not a single required number.",
+      },
+      {
+        id: "gap_amount_range",
+        label: "Gap range",
+        value: "$0 to $8,820",
+        provenance: "calculated",
+        detail: "Target amount range minus reported liquid cash, floored at zero.",
+      },
     ],
     missingInputs: [
       {
@@ -617,22 +705,30 @@ export const reportReviewSample: ReportReviewSample = {
           "Household dependents may change the appropriate interpretation of cash resilience.",
       },
       {
-        id: "insurance_context",
-        label: "Insurance context",
+        id: "job_stability",
+        label: "Job stability",
         whyItMatters:
-          "Major uncovered risks can limit ordinary emergency-fund interpretation.",
+          "Job stability affects whether the target explanation should emphasize income-interruption risk.",
       },
-      {
-        id: "support_access",
-        label: "Access to other support",
-        whyItMatters:
-          "Other reliable support may change scenario assumptions, but it should be optional context.",
-      },
+    ],
+    assumptions: [
+      "The range uses reported essential monthly expenses and reported liquid cash.",
+      "The base v0 target range is three to six months of essential expenses.",
+      "Retirement, restricted, and illiquid assets are excluded from liquid emergency cash.",
     ],
     limitations: [
-      "No target range is shown until the rule contract and assumptions are approved.",
-      "Missing optional context is not treated as zero or as a negative signal.",
+      "Emergency Fund Target v0 is educational and does not rank emergency savings above other household priorities.",
+      "The model does not use regional or demographic expense benchmarks.",
+      "The model does not verify whether assets outside reported liquid cash can be converted immediately without market loss, tax, or penalty.",
     ],
     educationTopics: ["emergency_fund.target_range"],
+    evidenceSourceIds: [
+      "cfpb_emergency_fund_guide",
+      "fdic_money_smart_your_savings",
+      "sec_investor_gov_rainy_day",
+      "federal_reserve_shed_2025",
+    ],
+    guidanceRuleVersion: "guidance_rule_registry_v0",
+    modelVersion: "emergency_fund_target_v0",
   },
 };
