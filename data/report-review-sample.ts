@@ -89,6 +89,7 @@ export type DecisionReadiness = {
   availableInputs: DecisionReadinessInput[];
   missingInputs: DecisionReadinessMissingInput[];
   limitations: string[];
+  educationTopics: string[];
 };
 
 export type ReportReviewSample = {
@@ -632,5 +633,6 @@ export const reportReviewSample: ReportReviewSample = {
       "No target range is shown until the rule contract and assumptions are approved.",
       "Missing optional context is not treated as zero or as a negative signal.",
     ],
+    educationTopics: ["emergency_fund.target_range"],
   },
 };

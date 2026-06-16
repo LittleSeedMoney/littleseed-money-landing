@@ -414,6 +414,7 @@ function buildDecisionReadiness(
     ],
     missingInputs: missingInputs(eft.missing_context),
     limitations: eft.limitations,
+    educationTopics: eft.education_topics,
   };
 }
 

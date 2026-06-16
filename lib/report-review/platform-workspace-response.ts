@@ -101,6 +101,7 @@ export type PlatformWorkspaceSnapshot = {
     missing_context: string[];
     assumptions: string[];
     limitations: string[];
+    education_topics: string[];
   };
 };
 
@@ -382,6 +383,10 @@ function parsePlatformWorkspaceSnapshot(
       limitations: parseStringArray(
         eftResult.limitations,
         `${path}.eft_result.limitations`,
+      ),
+      education_topics: parseStringArray(
+        eftResult.education_topics,
+        `${path}.eft_result.education_topics`,
       ),
     },
   };

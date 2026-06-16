@@ -9,6 +9,7 @@ import {
 } from "@/lib/report-review/manual-profile";
 
 import { AssetPortfolioSection } from "./asset-portfolio-section";
+import { EducationSection } from "./education-section";
 import { EvidenceSection } from "./evidence-section";
 import { FindingsSection } from "./findings-section";
 import { InputsSection } from "./inputs-section";
@@ -119,6 +120,10 @@ export function ReportReviewWorkspace({
                 portfolio={report.assetPortfolio}
               />
               <FindingsSection findings={report.findings} />
+              <EducationSection
+                decisionReadiness={report.decisionReadiness}
+                findings={report.findings}
+              />
               <EvidenceSection sources={report.evidenceSources} />
               <InputsSection dataCompleteness={report.dataCompleteness} />
             </>

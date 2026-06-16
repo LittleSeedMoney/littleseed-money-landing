@@ -1,4 +1,8 @@
 import type { Finding } from "@/data/report-review-sample";
+import {
+  educationTopicAnchor,
+  resolveEducationTopic,
+} from "@/lib/report-review/education-topics";
 
 import { InfoList, ReviewSectionHeading, StatusPill } from "./shared";
 
@@ -37,10 +41,34 @@ export function FindingsSection({ findings }: { findings: Finding[] }) {
             <InfoList title="Why it matters" items={[finding.whyItMatters]} />
             <InfoList title="Review options" items={finding.options} />
             <InfoList title="Limitations" items={finding.limitations} />
-            <InfoList title="Education topics" items={finding.educationTopics} />
+            <EducationTopicList topicIds={finding.educationTopics} />
           </div>
         </article>
       ))}
     </section>
+  );
+}
+
+function EducationTopicList({ topicIds }: { topicIds: string[] }) {
+  return (
+    <div>
+      <h4 className="text-sm font-semibold text-seed-950">Education topics</h4>
+      <ul className="mt-2 flex flex-wrap gap-2 text-sm">
+        {topicIds.map((id) => {
+          const topic = resolveEducationTopic(id);
+
+          return (
+            <li key={id}>
+              <a
+                className="inline-flex min-h-8 items-center rounded-lg border border-stone-200 bg-stone-50 px-3 font-medium text-earth-800 hover:border-seed-200 hover:bg-seed-50 hover:text-seed-900 focus:outline-none focus:ring-2 focus:ring-seed-500"
+                href={`#${educationTopicAnchor(id)}`}
+              >
+                {topic.title}
+              </a>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }
