@@ -101,6 +101,7 @@ export type PlatformWorkspaceSnapshot = {
     missing_context: string[];
     assumptions: string[];
     limitations: string[];
+    education_topics: string[];
   };
 };
 
@@ -383,6 +384,10 @@ function parsePlatformWorkspaceSnapshot(
         eftResult.limitations,
         `${path}.eft_result.limitations`,
       ),
+      education_topics: parseOptionalStringArray(
+        eftResult.education_topics,
+        `${path}.eft_result.education_topics`,
+      ),
     },
   };
 }
@@ -466,6 +471,14 @@ function parseArray<T>(
 
 function parseStringArray(value: unknown, path: string): string[] {
   return parseArray(value, path, expectString);
+}
+
+function parseOptionalStringArray(value: unknown, path: string): string[] {
+  if (value == null) {
+    return [];
+  }
+
+  return parseStringArray(value, path);
 }
 
 function expectRecord(

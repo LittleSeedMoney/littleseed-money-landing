@@ -3,10 +3,10 @@ import { reportReviewNavItems } from "./shared";
 export function ReportReviewNav() {
   return (
     <>
-      <div className="lg:hidden">
+      <div className="min-w-0 lg:hidden">
         <nav
           aria-label="Report review sections"
-          className="flex gap-2 overflow-x-auto pb-1 text-sm"
+          className="flex max-w-full gap-2 overflow-x-auto pb-1 text-sm"
         >
           {reportReviewNavItems.map(([label, href]) => (
             <a

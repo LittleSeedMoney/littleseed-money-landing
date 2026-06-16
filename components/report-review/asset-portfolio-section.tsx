@@ -7,6 +7,7 @@ import type {
 } from "@/data/report-review-sample";
 
 import {
+  EducationTopicLink,
   provenanceLabels,
   ProvenanceTag,
   ReviewSectionHeading,
@@ -94,7 +95,7 @@ function SnapshotTable({
   title: string;
 }) {
   return (
-    <div>
+    <div className="min-w-0">
       <h3 className="text-sm font-semibold text-seed-950">{title}</h3>
       <p id={descriptionId} className="mt-1 text-sm leading-6 text-earth-700">
         {description}
@@ -230,6 +231,21 @@ function DecisionReadinessCard({
           </ul>
         </div>
       </div>
+
+      {decisionReadiness.educationTopics.length > 0 ? (
+        <div className="mt-5 border-t border-stone-200 pt-4">
+          <h4 className="text-sm font-semibold text-seed-950">
+            Related education
+          </h4>
+          <ul className="mt-2 flex flex-wrap gap-2 text-sm">
+            {decisionReadiness.educationTopics.map((id) => (
+              <li key={id}>
+                <EducationTopicLink id={id} />
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
       <div className="mt-5 border-t border-stone-200 pt-4">
         <h4 className="text-sm font-semibold text-seed-950">Limits</h4>

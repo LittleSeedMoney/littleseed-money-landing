@@ -1,4 +1,8 @@
 import type { Provenance } from "@/data/report-review-sample";
+import {
+  educationTopicAnchor,
+  resolveEducationTopic,
+} from "@/lib/report-review/education-topics";
 
 export const reportReviewNavItems = [
   ["Manual input", "#manual-input"],
@@ -6,6 +10,7 @@ export const reportReviewNavItems = [
   ["Sections", "#sections"],
   ["Portfolio", "#portfolio"],
   ["Findings", "#findings"],
+  ["Education", "#education"],
   ["Evidence", "#evidence"],
   ["Inputs", "#inputs"],
 ] as const;
@@ -34,7 +39,7 @@ export function StatusPill({
 
   return (
     <span
-      className={`inline-flex min-h-8 items-center rounded-lg border px-3 text-xs font-semibold ${toneClass}`}
+      className={`inline-flex min-h-8 items-center self-start rounded-lg border px-3 text-xs font-semibold ${toneClass}`}
     >
       {label}
     </span>
@@ -65,6 +70,19 @@ export function ProvenanceTag({ provenance }: { provenance: Provenance }) {
     >
       {provenanceLabels[provenance]}
     </span>
+  );
+}
+
+export function EducationTopicLink({ id }: { id: string }) {
+  const topic = resolveEducationTopic(id);
+
+  return (
+    <a
+      className="inline-flex min-h-8 items-center rounded-lg border border-stone-200 bg-stone-50 px-3 font-medium text-earth-800 hover:border-seed-200 hover:bg-seed-50 hover:text-seed-900 focus:outline-none focus:ring-2 focus:ring-seed-500"
+      href={`#${educationTopicAnchor(id)}`}
+    >
+      {topic.title}
+    </a>
   );
 }
 

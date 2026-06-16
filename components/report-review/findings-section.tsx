@@ -1,6 +1,11 @@
 import type { Finding } from "@/data/report-review-sample";
 
-import { InfoList, ReviewSectionHeading, StatusPill } from "./shared";
+import {
+  EducationTopicLink,
+  InfoList,
+  ReviewSectionHeading,
+  StatusPill,
+} from "./shared";
 
 export function FindingsSection({ findings }: { findings: Finding[] }) {
   return (
@@ -37,10 +42,25 @@ export function FindingsSection({ findings }: { findings: Finding[] }) {
             <InfoList title="Why it matters" items={[finding.whyItMatters]} />
             <InfoList title="Review options" items={finding.options} />
             <InfoList title="Limitations" items={finding.limitations} />
-            <InfoList title="Education topics" items={finding.educationTopics} />
+            <EducationTopicList topicIds={finding.educationTopics} />
           </div>
         </article>
       ))}
     </section>
+  );
+}
+
+function EducationTopicList({ topicIds }: { topicIds: string[] }) {
+  return (
+    <div>
+      <h4 className="text-sm font-semibold text-seed-950">Education topics</h4>
+      <ul className="mt-2 flex flex-wrap gap-2 text-sm">
+        {topicIds.map((id) => (
+          <li key={id}>
+            <EducationTopicLink id={id} />
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
