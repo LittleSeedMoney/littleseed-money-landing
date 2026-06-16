@@ -6,6 +6,7 @@ export const reportReviewNavItems = [
   ["Sections", "#sections"],
   ["Portfolio", "#portfolio"],
   ["Findings", "#findings"],
+  ["Education", "#education"],
   ["Evidence", "#evidence"],
   ["Inputs", "#inputs"],
 ] as const;
@@ -34,7 +35,7 @@ export function StatusPill({
 
   return (
     <span
-      className={`inline-flex min-h-8 items-center rounded-lg border px-3 text-xs font-semibold ${toneClass}`}
+      className={`inline-flex min-h-8 items-center self-start rounded-lg border px-3 text-xs font-semibold ${toneClass}`}
     >
       {label}
     </span>
