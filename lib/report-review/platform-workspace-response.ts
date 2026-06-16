@@ -384,7 +384,7 @@ function parsePlatformWorkspaceSnapshot(
         eftResult.limitations,
         `${path}.eft_result.limitations`,
       ),
-      education_topics: parseStringArray(
+      education_topics: parseOptionalStringArray(
         eftResult.education_topics,
         `${path}.eft_result.education_topics`,
       ),
@@ -471,6 +471,14 @@ function parseArray<T>(
 
 function parseStringArray(value: unknown, path: string): string[] {
   return parseArray(value, path, expectString);
+}
+
+function parseOptionalStringArray(value: unknown, path: string): string[] {
+  if (value === undefined) {
+    return [];
+  }
+
+  return parseStringArray(value, path);
 }
 
 function expectRecord(
