@@ -64,7 +64,7 @@ export function resolveEducationTopic(id: string): EducationTopic {
 }
 
 export function educationTopicAnchor(id: string): string {
-  return `education-topic-${id.replace(/[^a-z0-9]+/g, "-")}`;
+  return `education-topic-${id}`;
 }
 
 export function uniqueTopicIds(topicGroups: string[][]): string[] {

@@ -5,12 +5,9 @@ import type {
   SnapshotItem,
   SummaryMetric,
 } from "@/data/report-review-sample";
-import {
-  educationTopicAnchor,
-  resolveEducationTopic,
-} from "@/lib/report-review/education-topics";
 
 import {
+  EducationTopicLink,
   provenanceLabels,
   ProvenanceTag,
   ReviewSectionHeading,
@@ -241,20 +238,11 @@ function DecisionReadinessCard({
             Related education
           </h4>
           <ul className="mt-2 flex flex-wrap gap-2 text-sm">
-            {decisionReadiness.educationTopics.map((id) => {
-              const topic = resolveEducationTopic(id);
-
-              return (
-                <li key={id}>
-                  <a
-                    className="inline-flex min-h-8 items-center rounded-lg border border-stone-200 bg-stone-50 px-3 font-medium text-earth-800 hover:border-seed-200 hover:bg-seed-50 hover:text-seed-900 focus:outline-none focus:ring-2 focus:ring-seed-500"
-                    href={`#${educationTopicAnchor(id)}`}
-                  >
-                    {topic.title}
-                  </a>
-                </li>
-              );
-            })}
+            {decisionReadiness.educationTopics.map((id) => (
+              <li key={id}>
+                <EducationTopicLink id={id} />
+              </li>
+            ))}
           </ul>
         </div>
       ) : null}
