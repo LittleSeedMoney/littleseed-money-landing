@@ -7,7 +7,7 @@ Canonical scope lock:
 `../littleseed-money-product-docs/docs/PHASE_SCOPE_LOCK.md`
 
 Canonical engineering log:
-`../littleseed-money-platform/docs/ENGINEERING_LOG.md`
+`../littleseed-money-product-docs/docs/ENGINEERING_LOG.md`
 
 ## PR Scope
 

@@ -227,11 +227,11 @@ claims, check whether product-docs should be updated in the same work item.
 The single canonical engineering log is:
 
 ```text
-../littleseed-money-platform/docs/ENGINEERING_LOG.md
+../littleseed-money-product-docs/docs/ENGINEERING_LOG.md
 ```
 
 Do not create a landing-local engineering log. For non-trivial landing work,
-update or explicitly check the canonical platform engineering log and mention
+update or explicitly check the canonical product-docs engineering log and mention
 the result in the PR body.
 
 If product-docs should change but cannot be updated in the same turn or branch,
