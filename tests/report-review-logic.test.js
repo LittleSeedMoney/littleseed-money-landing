@@ -12,6 +12,9 @@ const {
   parseWorkspaceReportResponse,
 } = require("../lib/report-review/platform-workspace-response.ts");
 const {
+  mapPlatformReport,
+} = require("../lib/report-review/platform-report.ts");
+const {
   educationTopicAnchor,
   resolveEducationTopic,
   uniqueTopicIds,
@@ -154,9 +157,310 @@ test("uniqueTopicIds deduplicates topics while preserving first-seen order", () 
   );
 });
 
+test("platform report mapper builds user-selected target comparison", () => {
+  const mapped = mapWorkspacePayload({
+    emergencyFundTarget: {
+      user_target_months: "2",
+    },
+    eftResult: {
+      model_version: "emergency_fund_target_v0",
+      evidence_source_ids: ["cfpb_emergency_fund_guide"],
+      guidance_rule_version: "guidance_rule_registry_v0",
+      assumptions: ["Baseline assumption."],
+      limitations: ["Baseline limitation."],
+      user_selected_target: {
+        target_months: "2.00",
+        target_amount: "6000.00",
+        gap_amount: "1000.00",
+        alignment_to_baseline: "below_baseline",
+      },
+    },
+  });
+
+  assert.equal(mapped.profileName, "Test profile");
+  assert.equal(mapped.dataMode, "Test Platform API");
+  assert.deepEqual(mapped.connectionNotice, {
+    tone: "seed",
+    message: "Loaded for mapper tests.",
+  });
+
+  const decision = mapped.decisionReadiness;
+  assert.deepEqual(decision.evidenceSourceIds, ["cfpb_emergency_fund_guide"]);
+  assert.equal(decision.guidanceRuleVersion, "guidance_rule_registry_v0");
+  assert.equal(decision.modelVersion, "emergency_fund_target_v0");
+  assert.deepEqual(decision.assumptions, ["Baseline assumption."]);
+  assert.deepEqual(decision.limitations, ["Baseline limitation."]);
+  assert.deepEqual(decision.userSelectedTarget, {
+    targetMonths: "2 months",
+    targetAmount: "$6,000",
+    gapAmount: "$1,000",
+    alignmentLabel: "Below baseline",
+    alignmentDetail:
+      "This preference is below the source-backed baseline range, so the baseline range remains visible for comparison.",
+  });
+
+  assert.deepEqual(
+    itemById(decision.availableInputs, "user_target_months"),
+    {
+      id: "user_target_months",
+      label: "User-selected target",
+      value: "2 months",
+      provenance: "user-entered",
+      detail:
+        "Optional preference target; it does not replace the baseline range.",
+    },
+  );
+});
+
+test("platform report mapper preserves missing EFT values", () => {
+  const mapped = mapWorkspacePayload({
+    emergencyFundTarget: {
+      monthly_essential_expenses: null,
+      cash_liquid_balance: null,
+      income_pattern: null,
+      user_target_months: undefined,
+    },
+    eftResult: {
+      target_months_range: null,
+      target_amount_range: null,
+      current_months_covered: null,
+      gap_amount_range: null,
+      missing_context: [
+        "monthly_essential_expenses",
+        "cash_liquid_balance",
+        "surprise_context",
+      ],
+    },
+  });
+
+  const decision = mapped.decisionReadiness;
+  assert.equal(decision.guidanceRuleVersion, "Unknown");
+  assert.equal(decision.modelVersion, "Unknown");
+  assert.equal(decision.userSelectedTarget, null);
+  assert.equal(
+    decision.availableInputs.some((item) => item.id === "user_target_months"),
+    false,
+  );
+  assert.deepEqual(
+    itemById(decision.availableInputs, "emergency_eligible_cash"),
+    {
+      id: "emergency_eligible_cash",
+      label: "Emergency-eligible cash",
+      value: "Missing",
+      provenance: "missing",
+    },
+  );
+  assert.deepEqual(itemById(decision.availableInputs, "income_pattern"), {
+    id: "income_pattern",
+    label: "Income pattern",
+    value: "Missing",
+    provenance: "missing",
+  });
+  assert.deepEqual(itemById(decision.resultMetrics, "current_months_covered"), {
+    id: "current_months_covered",
+    label: "Current coverage",
+    value: "Missing",
+    provenance: "missing",
+    detail: "Reported liquid cash divided by required monthly outflows.",
+  });
+  assert.deepEqual(itemById(decision.resultMetrics, "target_months_range"), {
+    id: "target_months_range",
+    label: "Baseline months",
+    value: "Missing",
+    provenance: "missing",
+    detail: "Educational range; not a single required number.",
+  });
+  assert.deepEqual(itemById(decision.resultMetrics, "gap_amount_range"), {
+    id: "gap_amount_range",
+    label: "Gap range",
+    value: "Missing",
+    provenance: "missing",
+    detail: "Target amount range minus reported liquid cash, floored at zero.",
+  });
+  assert.deepEqual(decision.missingInputs, [
+    {
+      id: "monthly_essential_expenses",
+      label: "Monthly Essential Expenses",
+      whyItMatters:
+        "Required monthly outflows are needed to translate target months into dollars.",
+    },
+    {
+      id: "cash_liquid_balance",
+      label: "Cash Liquid Balance",
+      whyItMatters:
+        "Emergency-eligible cash is needed before the model can compare current reserves with a target.",
+    },
+    {
+      id: "surprise_context",
+      label: "Surprise Context",
+      whyItMatters:
+        "This context is preserved as missing instead of being converted into a zero-dollar assumption.",
+    },
+  ]);
+});
+
+test("platform report mapper falls back for unknown user-target alignment", () => {
+  const mapped = mapWorkspacePayload({
+    emergencyFundTarget: {
+      user_target_months: "7",
+    },
+    eftResult: {
+      user_selected_target: {
+        target_months: "7.00",
+        target_amount: "21000.00",
+        gap_amount: "16000.00",
+        alignment_to_baseline: "custom_case",
+      },
+    },
+  });
+
+  assert.deepEqual(mapped.decisionReadiness.userSelectedTarget, {
+    targetMonths: "7 months",
+    targetAmount: "$21,000",
+    gapAmount: "$16,000",
+    alignmentLabel: "Custom Case",
+    alignmentDetail:
+      "This preference target is calculated separately from the source-backed baseline range.",
+  });
+});
+
+test("platform report mapper summarizes cash flow and completeness labels", () => {
+  const mapped = mapWorkspacePayload({
+    report: {
+      cash_flow: {
+        monthly_surplus_after_investing: "-125.40",
+      },
+      data_completeness: {
+        status: "partial",
+        explanation: "Some optional context is unavailable.",
+        missing_context: ["gross_annual_income"],
+        potentially_unmeasured_categories: ["insurance_gap"],
+      },
+    },
+  });
+
+  const monthlyCashFlow = itemById(mapped.summaryMetrics, "monthly_cash_flow");
+  assert.equal(monthlyCashFlow.value, "$125 short");
+  assert.equal(
+    monthlyCashFlow.detail,
+    "After living expenses, debt payments, and contributions.",
+  );
+  assert.equal(monthlyCashFlow.provenance, "calculated");
+  assert.equal(
+    itemById(mapped.summaryMetrics, "data_completeness").value,
+    "Partial",
+  );
+  assert.equal(
+    itemById(mapped.summaryMetrics, "data_completeness").provenance,
+    "missing",
+  );
+  assert.deepEqual(mapped.dataCompleteness, {
+    status: "Partial",
+    explanation: "Some optional context is unavailable.",
+    uncertainty: [],
+    missingContext: ["Gross Annual Income"],
+    potentiallyUnmeasuredCategories: ["Insurance Gap"],
+  });
+});
+
+test("platform report mapper maps portfolio totals and provenance", () => {
+  const mapped = mapWorkspacePayload({
+    report: {
+      net_worth: {
+        gross_assets: "9500.00",
+        total_liabilities: "1500.00",
+        net_worth: "8000.00",
+        liquid_net_worth: "5000.00",
+      },
+    },
+    assets: [
+      {
+        asset_id: "checking",
+        name: "Checking",
+        category: "cash",
+        balance: "3500.00",
+        liquidity: "liquid",
+        provenance: "user_entered",
+        emergency_fund_eligible: true,
+      },
+      {
+        asset_id: "brokerage",
+        name: "Brokerage",
+        category: "taxable_brokerage",
+        balance: "6000.00",
+        liquidity: "market_exposed",
+        provenance: "reference_data",
+        emergency_fund_eligible: false,
+      },
+    ],
+    liabilities: [
+      {
+        liability_id: "credit_card",
+        name: "Credit card",
+        category: "credit_card",
+        balance: "1500.00",
+        provenance: "estimated",
+      },
+    ],
+  });
+
+  assert.equal(
+    itemById(mapped.assetPortfolio.totals, "emergency_eligible_cash").value,
+    "$3,500",
+  );
+  assert.deepEqual(mapped.assetPortfolio.assets, [
+    {
+      id: "checking",
+      name: "Checking",
+      category: "Cash",
+      value: "$3,500",
+      liquidity: "Liquid",
+      provenance: "user-entered",
+      emergencyEligible: true,
+    },
+    {
+      id: "brokerage",
+      name: "Brokerage",
+      category: "Taxable Brokerage",
+      value: "$6,000",
+      liquidity: "Market Exposed",
+      provenance: "source-backed",
+      emergencyEligible: false,
+    },
+  ]);
+  assert.deepEqual(mapped.assetPortfolio.liabilities, [
+    {
+      id: "credit_card",
+      name: "Credit card",
+      category: "Credit Card",
+      value: "$1,500",
+      liquidity: "Debt",
+      provenance: "estimated",
+      emergencyEligible: false,
+    },
+  ]);
+});
+
+function mapWorkspacePayload(overrides = {}) {
+  return mapPlatformReport(
+    parseWorkspaceReportResponse(workspacePayload(overrides)),
+    {
+      profileName: "Test profile",
+      dataMode: "Test Platform API",
+      connectionMessage: "Loaded for mapper tests.",
+    },
+  );
+}
+
+function itemById(items, id) {
+  const item = items.find((candidate) => candidate.id === id);
+  assert.ok(item, `Expected item with id ${id}`);
+  return item;
+}
+
 function workspacePayload(overrides = {}) {
   return {
-    report: reportPayload(),
+    report: reportPayload(overrides.report),
     workspace_snapshot: {
       inputs: {
         emergency_fund_target: {
@@ -167,8 +471,8 @@ function workspacePayload(overrides = {}) {
           job_stability: "high",
           ...(overrides.emergencyFundTarget ?? {}),
         },
-        assets: [],
-        liabilities: [],
+        assets: overrides.assets ?? [],
+        liabilities: overrides.liabilities ?? [],
       },
       eft_result: {
         applicability: "applicable",
@@ -195,8 +499,8 @@ function workspacePayload(overrides = {}) {
   };
 }
 
-function reportPayload() {
-  return {
+function reportPayload(overrides = {}) {
+  const base = {
     report_schema_version: "financial_health_report_v0_3",
     report_status: "complete",
     calculated_at: "2026-06-17T00:00:00Z",
@@ -231,6 +535,39 @@ function reportPayload() {
     },
     long_term_contribution: {
       known_monthly_total_contribution: "0.00",
+    },
+  };
+
+  return {
+    ...base,
+    ...overrides,
+    disclaimer: {
+      ...base.disclaimer,
+      ...(overrides.disclaimer ?? {}),
+    },
+    data_completeness: {
+      ...base.data_completeness,
+      ...(overrides.data_completeness ?? {}),
+    },
+    report_context: {
+      ...base.report_context,
+      ...(overrides.report_context ?? {}),
+    },
+    net_worth: {
+      ...base.net_worth,
+      ...(overrides.net_worth ?? {}),
+    },
+    cash_flow: {
+      ...base.cash_flow,
+      ...(overrides.cash_flow ?? {}),
+    },
+    debt_risk: {
+      ...base.debt_risk,
+      ...(overrides.debt_risk ?? {}),
+    },
+    long_term_contribution: {
+      ...base.long_term_contribution,
+      ...(overrides.long_term_contribution ?? {}),
     },
   };
 }

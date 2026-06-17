@@ -8,7 +8,7 @@ import {
   type ReportSection,
   type SnapshotItem,
   type SummaryMetric,
-} from "@/data/report-review-sample";
+} from "../../data/report-review-sample";
 
 import { sampleFinancialProfile } from "./sample-profile";
 import {
@@ -49,7 +49,7 @@ type WorkspaceReportRequest = {
   userTargetMonths?: string;
 };
 
-type ReportMappingOptions = {
+export type ReportMappingOptions = {
   connectionMessage: string;
   dataMode: string;
   profileName: string;
@@ -170,7 +170,7 @@ function fallbackReport(error: unknown): ReportReviewSample {
   };
 }
 
-function mapPlatformReport(
+export function mapPlatformReport(
   payload: PlatformWorkspaceReportResponse,
   options: ReportMappingOptions,
 ): ReportReviewSample {
