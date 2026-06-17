@@ -355,7 +355,7 @@ function parsePlatformWorkspaceSnapshot(
       ),
     },
     eft_result: {
-      model_version: expectString(
+      model_version: parseOptionalString(
         eftResult.model_version,
         `${path}.eft_result.model_version`,
       ),
@@ -395,11 +395,11 @@ function parsePlatformWorkspaceSnapshot(
         eftResult.education_topics,
         `${path}.eft_result.education_topics`,
       ),
-      evidence_source_ids: parseStringArray(
+      evidence_source_ids: parseOptionalStringArray(
         eftResult.evidence_source_ids,
         `${path}.eft_result.evidence_source_ids`,
       ),
-      guidance_rule_version: expectString(
+      guidance_rule_version: parseOptionalString(
         eftResult.guidance_rule_version,
         `${path}.eft_result.guidance_rule_version`,
       ),
@@ -494,6 +494,14 @@ function parseOptionalStringArray(value: unknown, path: string): string[] {
   }
 
   return parseStringArray(value, path);
+}
+
+function parseOptionalString(value: unknown, path: string): string {
+  if (value == null) {
+    return "";
+  }
+
+  return expectString(value, path);
 }
 
 function expectRecord(

@@ -22,7 +22,7 @@ export function AssetPortfolioSection({
 }: {
   decisionReadiness: DecisionReadiness;
   portfolio: ReportReviewSample["assetPortfolio"];
-  sourceById: Map<string, EvidenceSource>;
+  sourceById: ReadonlyMap<string, EvidenceSource>;
 }) {
   return (
     <section
@@ -174,7 +174,7 @@ function DecisionReadinessCard({
   sourceById,
 }: {
   decisionReadiness: DecisionReadiness;
-  sourceById: Map<string, EvidenceSource>;
+  sourceById: ReadonlyMap<string, EvidenceSource>;
 }) {
   return (
     <article className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
@@ -318,7 +318,7 @@ function DecisionTrace({
   sourceById,
 }: {
   decisionReadiness: DecisionReadiness;
-  sourceById: Map<string, EvidenceSource>;
+  sourceById: ReadonlyMap<string, EvidenceSource>;
 }) {
   return (
     <div className="mt-5 border-t border-stone-200 pt-4">
