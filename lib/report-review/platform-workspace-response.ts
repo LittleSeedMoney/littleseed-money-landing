@@ -79,6 +79,7 @@ export type PlatformWorkspaceSnapshot = {
       income_pattern: string | null;
       dependents: number | null;
       job_stability: string | null;
+      user_target_months: DecimalValue;
     };
     assets: PlatformWorkspaceAsset[];
     liabilities: PlatformWorkspaceLiability[];
@@ -99,6 +100,7 @@ export type PlatformWorkspaceSnapshot = {
       min_amount: DecimalValue;
       max_amount: DecimalValue;
     } | null;
+    user_selected_target: PlatformEmergencyFundUserTarget | null;
     missing_context: string[];
     assumptions: string[];
     limitations: string[];
@@ -106,6 +108,13 @@ export type PlatformWorkspaceSnapshot = {
     evidence_source_ids: string[];
     guidance_rule_version: string;
   };
+};
+
+export type PlatformEmergencyFundUserTarget = {
+  target_months: DecimalValue;
+  target_amount: DecimalValue;
+  gap_amount: DecimalValue;
+  alignment_to_baseline: string;
 };
 
 export type PlatformWorkspaceAsset = {
@@ -342,6 +351,10 @@ function parsePlatformWorkspaceSnapshot(
           emergencyFundTarget.job_stability,
           `${path}.inputs.emergency_fund_target.job_stability`,
         ),
+        user_target_months: parseOptionalDecimalValue(
+          emergencyFundTarget.user_target_months,
+          `${path}.inputs.emergency_fund_target.user_target_months`,
+        ),
       },
       assets: parseArray(
         inputs.assets,
@@ -379,6 +392,10 @@ function parsePlatformWorkspaceSnapshot(
         eftResult.gap_amount_range,
         `${path}.eft_result.gap_amount_range`,
       ),
+      user_selected_target: parseNullableUserSelectedTarget(
+        eftResult.user_selected_target,
+        `${path}.eft_result.user_selected_target`,
+      ),
       missing_context: parseStringArray(
         eftResult.missing_context,
         `${path}.eft_result.missing_context`,
@@ -404,6 +421,32 @@ function parsePlatformWorkspaceSnapshot(
         `${path}.eft_result.guidance_rule_version`,
       ),
     },
+  };
+}
+
+function parseNullableUserSelectedTarget(
+  value: unknown,
+  path: string,
+): PlatformEmergencyFundUserTarget | null {
+  if (value == null) {
+    return null;
+  }
+
+  const target = expectRecord(value, path);
+  return {
+    target_months: expectDecimalValue(
+      target.target_months,
+      `${path}.target_months`,
+    ),
+    target_amount: expectDecimalValue(
+      target.target_amount,
+      `${path}.target_amount`,
+    ),
+    gap_amount: expectDecimalValue(target.gap_amount, `${path}.gap_amount`),
+    alignment_to_baseline: expectString(
+      target.alignment_to_baseline,
+      `${path}.alignment_to_baseline`,
+    ),
   };
 }
 
@@ -502,6 +545,14 @@ function parseOptionalString(value: unknown, path: string): string {
   }
 
   return expectString(value, path);
+}
+
+function parseOptionalDecimalValue(value: unknown, path: string): DecimalValue {
+  if (value === undefined) {
+    return null;
+  }
+
+  return expectDecimalValue(value, path);
 }
 
 function expectRecord(

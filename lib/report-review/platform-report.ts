@@ -28,6 +28,19 @@ const PLATFORM_API_URL = process.env.LITTLESEED_PLATFORM_API_URL?.trim();
 const PLATFORM_REQUEST_TIMEOUT_MS = 4_000;
 const MISSING = "Missing";
 const UNKNOWN = "Unknown";
+const USER_TARGET_ALIGNMENT_LABELS: Record<string, string> = {
+  above_baseline: "Above baseline",
+  below_baseline: "Below baseline",
+  within_baseline: "Within baseline",
+};
+const USER_TARGET_ALIGNMENT_DETAILS: Record<string, string> = {
+  above_baseline:
+    "This preference is above the source-backed baseline range, so it reflects a more conservative user choice rather than a v0 requirement.",
+  below_baseline:
+    "This preference is below the source-backed baseline range, so the baseline range remains visible for comparison.",
+  within_baseline:
+    "This preference sits inside the source-backed baseline range.",
+};
 
 type WorkspaceReportRequest = {
   profile: unknown;
@@ -381,6 +394,8 @@ function buildDecisionReadiness(
   const targetMonthsRange = eft.target_months_range;
   const gapRange = eft.gap_amount_range;
   const currentMonths = decimal(eft.current_months_covered);
+  const userTargetMonths = decimal(input.user_target_months);
+  const userSelectedTarget = mapUserSelectedTarget(eft.user_selected_target);
   const targetDetail = range
     ? `${money(range.min_amount)} to ${money(range.max_amount)}`
     : MISSING;
@@ -425,6 +440,18 @@ function buildDecisionReadiness(
           ? `${targetMonthsDetail} of reported essential expenses.`
           : undefined,
       },
+      ...(userTargetMonths === null
+        ? []
+        : [
+            {
+              id: "user_target_months",
+              label: "User-selected target",
+              value: `${monthNumber(userTargetMonths)} months`,
+              provenance: "user-entered" as const,
+              detail:
+                "Optional preference target; it does not replace the baseline range.",
+            },
+          ]),
     ],
     resultMetrics: [
       {
@@ -450,6 +477,7 @@ function buildDecisionReadiness(
         detail: "Target amount range minus reported liquid cash, floored at zero.",
       },
     ],
+    userSelectedTarget,
     missingInputs: missingInputs(eft.missing_context),
     assumptions: eft.assumptions,
     limitations: eft.limitations,
@@ -457,6 +485,22 @@ function buildDecisionReadiness(
     evidenceSourceIds: eft.evidence_source_ids,
     guidanceRuleVersion: eft.guidance_rule_version || UNKNOWN,
     modelVersion: eft.model_version || UNKNOWN,
+  };
+}
+
+function mapUserSelectedTarget(
+  target: PlatformWorkspaceSnapshot["eft_result"]["user_selected_target"],
+): ReportReviewSample["decisionReadiness"]["userSelectedTarget"] {
+  if (!target) {
+    return null;
+  }
+
+  return {
+    targetMonths: `${monthNumber(target.target_months)} months`,
+    targetAmount: money(target.target_amount),
+    gapAmount: money(target.gap_amount),
+    alignmentLabel: userTargetAlignmentLabel(target.alignment_to_baseline),
+    alignmentDetail: userTargetAlignmentDetail(target.alignment_to_baseline),
   };
 }
 
@@ -472,6 +516,17 @@ function inputItem(
     value: value === null || value === undefined ? MISSING : money(value),
     provenance: value === null || value === undefined ? "missing" : provenance,
   };
+}
+
+function userTargetAlignmentLabel(value: string): string {
+  return USER_TARGET_ALIGNMENT_LABELS[value] ?? labelValue(value);
+}
+
+function userTargetAlignmentDetail(value: string): string {
+  return (
+    USER_TARGET_ALIGNMENT_DETAILS[value] ??
+    "This preference target is calculated separately from the source-backed baseline range."
+  );
 }
 
 function missingInputs(values: string[]): DecisionReadinessMissingInput[] {
