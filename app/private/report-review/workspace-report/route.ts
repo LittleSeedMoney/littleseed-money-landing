@@ -7,6 +7,7 @@ import {
   type ManualAssetValue,
   type ManualDebtType,
   type ManualDebtValue,
+  type ManualProfileScalarField,
   type ManualProfileValues,
 } from "@/lib/report-review/manual-profile";
 import { getManualReportReviewData } from "@/lib/report-review/platform-report";
@@ -17,11 +18,6 @@ const MANUAL_REPORT_REQUEST_ERROR =
   "Manual report request could not be processed.";
 const PLATFORM_REPORT_ERROR =
   "The platform report service could not be reached. Please try again in a moment.";
-
-type ManualProfileScalarField = Exclude<
-  keyof ManualProfileValues,
-  "assets" | "debts"
->;
 
 const FORM_FIELDS: ManualProfileScalarField[] = [
   "age",

@@ -60,7 +60,7 @@ export type ManualProfileRequest = {
   userTargetMonths?: string;
 };
 
-type ManualProfileScalarField = Exclude<
+export type ManualProfileScalarField = Exclude<
   keyof ManualProfileValues,
   "assets" | "debts"
 >;
@@ -223,15 +223,8 @@ function buildAssets(
 function buildDebts(values: ManualProfileValues): Array<Record<string, unknown>> {
   return values.debts.flatMap((debt) => {
     const balance = decimalNumber(debt.balance);
-    const annualInterestRate = decimalNumber(debt.annualInterestRate);
-    const monthlyPayment = decimalNumber(debt.monthlyPayment);
 
     if (balance === 0) {
-      if (annualInterestRate !== 0 || monthlyPayment !== 0) {
-        throw new ManualProfileValidationError(
-          `When ${debt.name || "a liability"} balance is 0, APR and monthly payment must also be 0.`,
-        );
-      }
       return [];
     }
 
@@ -338,7 +331,19 @@ function validateDebts(debts: ManualDebtValue[]): void {
     requireDecimalWithLabel(debt.annualInterestRate, `${label} APR`);
     requireDecimalWithLabel(debt.monthlyPayment, `${label} monthly payment`);
 
-    if (decimalNumber(debt.balance) > 0) {
+    const balance = decimalNumber(debt.balance);
+    const annualInterestRate = decimalNumber(debt.annualInterestRate);
+    const monthlyPayment = decimalNumber(debt.monthlyPayment);
+
+    if (balance === 0) {
+      if (annualInterestRate !== 0 || monthlyPayment !== 0) {
+        throw new ManualProfileValidationError(
+          `When ${debt.name || "a liability"} balance is 0, APR and monthly payment must also be 0.`,
+        );
+      }
+    }
+
+    if (balance > 0) {
       requireText(debt.name, `${label} name`);
     }
   });

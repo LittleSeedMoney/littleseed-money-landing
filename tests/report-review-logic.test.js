@@ -74,6 +74,16 @@ test("manual profile aggregates asset rows into platform asset buckets", () => {
   assert.deepEqual(request.profile.debts, []);
 });
 
+test("manual profile requires at least one asset row", () => {
+  const values = defaultManualProfileValues();
+  values.assets = [];
+
+  assert.throws(
+    () => buildManualProfileRequest(values),
+    ManualProfileValidationError,
+  );
+});
+
 test("manual profile maps multiple liabilities and omits zero-balance rows", () => {
   const values = defaultManualProfileValues();
   values.debts = [

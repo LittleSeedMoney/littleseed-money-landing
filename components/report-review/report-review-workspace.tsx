@@ -9,6 +9,7 @@ import {
   type ManualAssetValue,
   type ManualDebtType,
   type ManualDebtValue,
+  type ManualProfileScalarField,
   type ManualProfileValues,
 } from "@/lib/report-review/manual-profile";
 
@@ -25,10 +26,6 @@ import { ReviewRail } from "./review-rail";
 import { ReviewSectionHeading, StatusPill } from "./shared";
 
 type ManualRequestState = "idle" | "submitting" | "error";
-type ManualProfileScalarField = Exclude<
-  keyof ManualProfileValues,
-  "assets" | "debts"
->;
 
 const ASSET_CATEGORY_OPTIONS: Array<[ManualAssetCategory, string]> = [
   ["cash", "Cash"],
@@ -532,6 +529,7 @@ function ManualInputSection({
                       onChange={(event) =>
                         onDebtUpdate(debt.id, "name", event.target.value)
                       }
+                      required={isPositiveDecimal(debt.balance)}
                       value={debt.name}
                     />
                     <SelectValueField
@@ -803,6 +801,11 @@ function CheckboxField({
 
 function createManualRowId(prefix: "asset" | "debt") {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function isPositiveDecimal(value: string) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0;
 }
 
 function hasReportContent(report: ReportReviewSample) {
