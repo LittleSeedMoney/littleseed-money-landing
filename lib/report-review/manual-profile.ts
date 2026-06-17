@@ -46,6 +46,9 @@ const REQUIRED_DECIMAL_FIELDS: Array<keyof ManualProfileValues> = [
 
 const OPTIONAL_DECIMAL_FIELDS: Array<keyof ManualProfileValues> = [
   "grossAnnualIncome",
+];
+
+const OPTIONAL_POSITIVE_DECIMAL_FIELDS: Array<keyof ManualProfileValues> = [
   "userTargetMonths",
 ];
 
@@ -174,6 +177,11 @@ function validateManualProfileValues(values: ManualProfileValues): void {
       requireDecimal(values[field], field);
     }
   }
+  for (const field of OPTIONAL_POSITIVE_DECIMAL_FIELDS) {
+    if (values[field]) {
+      requirePositiveDecimal(values[field], field);
+    }
+  }
   for (const field of REQUIRED_INTEGER_FIELDS) {
     requireInteger(values[field], field);
   }
@@ -193,6 +201,18 @@ function requireDecimal(value: string, field: keyof ManualProfileValues): void {
   if (!Number.isFinite(parsed) || parsed < 0) {
     throw new ManualProfileValidationError(
       `${labelField(field)} must be a non-negative number.`,
+    );
+  }
+}
+
+function requirePositiveDecimal(
+  value: string,
+  field: keyof ManualProfileValues,
+): void {
+  const parsed = decimalNumber(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    throw new ManualProfileValidationError(
+      `${labelField(field)} must be greater than 0.`,
     );
   }
 }

@@ -82,6 +82,14 @@ export type DecisionReadinessMissingInput = {
   whyItMatters: string;
 };
 
+export type DecisionReadinessUserTarget = {
+  targetMonths: string;
+  targetAmount: string;
+  gapAmount: string;
+  alignmentLabel: string;
+  alignmentDetail: string;
+};
+
 export type DecisionReadiness = {
   id: string;
   title: string;
@@ -89,6 +97,7 @@ export type DecisionReadiness = {
   explanation: string;
   availableInputs: DecisionReadinessInput[];
   resultMetrics: DecisionReadinessInput[];
+  userSelectedTarget: DecisionReadinessUserTarget | null;
   missingInputs: DecisionReadinessMissingInput[];
   assumptions: string[];
   limitations: string[];
@@ -697,6 +706,7 @@ export const reportReviewSample: ReportReviewSample = {
         detail: "Target amount range minus reported liquid cash, floored at zero.",
       },
     ],
+    userSelectedTarget: null,
     missingInputs: [
       {
         id: "dependents",

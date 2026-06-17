@@ -223,6 +223,10 @@ function DecisionReadinessCard({
         </div>
       ) : null}
 
+      {decisionReadiness.userSelectedTarget ? (
+        <UserSelectedTargetSummary target={decisionReadiness.userSelectedTarget} />
+      ) : null}
+
       <div className="mt-5 grid gap-5 lg:grid-cols-2">
         <div>
           <h4 className="text-sm font-semibold text-seed-950">
@@ -310,6 +314,50 @@ function DecisionReadinessCard({
         </ul>
       </div>
     </article>
+  );
+}
+
+function UserSelectedTargetSummary({
+  target,
+}: {
+  target: NonNullable<DecisionReadiness["userSelectedTarget"]>;
+}) {
+  return (
+    <div className="mt-5 border-t border-stone-200 pt-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h4 className="text-sm font-semibold text-seed-950">
+            User-selected target comparison
+          </h4>
+          <p className="mt-2 text-sm leading-6 text-earth-700">
+            {target.alignmentDetail}
+          </p>
+        </div>
+        <StatusPill label={target.alignmentLabel} tone="stone" />
+      </div>
+      <dl className="mt-3 grid gap-3 sm:grid-cols-3">
+        <div>
+          <dt className="text-sm font-medium text-earth-700">
+            Preference months
+          </dt>
+          <dd className="mt-1 font-semibold tabular-nums text-seed-950">
+            {target.targetMonths}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-sm font-medium text-earth-700">Target amount</dt>
+          <dd className="mt-1 font-semibold tabular-nums text-seed-950">
+            {target.targetAmount}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-sm font-medium text-earth-700">Remaining gap</dt>
+          <dd className="mt-1 font-semibold tabular-nums text-seed-950">
+            {target.gapAmount}
+          </dd>
+        </div>
+      </dl>
+    </div>
   );
 }
 
