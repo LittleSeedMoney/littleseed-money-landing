@@ -1,77 +1,59 @@
-## Guardrail Source
+## Canonical References
 
-Canonical checklist:
-`../littleseed-money-product-docs/docs/PR_ACCEPTANCE_CHECKLIST.md`
+- Checklist: `../littleseed-money-product-docs/docs/PR_ACCEPTANCE_CHECKLIST.md`
+- Scope lock: `../littleseed-money-product-docs/docs/PHASE_SCOPE_LOCK.md`
+- Engineering log: `../littleseed-money-product-docs/docs/ENGINEERING_LOG.md`
 
-Canonical scope lock:
-`../littleseed-money-product-docs/docs/PHASE_SCOPE_LOCK.md`
-
-Canonical engineering log:
-`../littleseed-money-product-docs/docs/ENGINEERING_LOG.md`
-
-## PR Scope
+## Scope
 
 Phase:
 Feature:
 User-visible change:
 
-## What changed
+## Change Summary
 
+Changed:
 -
 
-## What did NOT change
-
+Not changed:
 -
 
 ## Boundary Check
 
-Does this PR stay inside the canonical phase scope lock?
+Does this stay inside the canonical phase scope lock?
 
 Blocked areas touched, if any:
 
-Persistence/security/advice boundary impact:
+Persistence/security/advice impact:
 
-Roadmap sequencing impact:
+Roadmap impact:
 
-## Human Verification
+## Verification
 
-Verification type:
+Human verification path:
 
-Steps:
-1.
-2.
-3.
-
-Expected result:
-
-Actual result:
-
-## Test Evidence
-
-Command:
-
-Result:
+Test evidence:
 
 Meaningful cases covered:
 
--
+Browser/build evidence:
 
-## Cross-Repository Sync
+## Engineering Log / Sync
 
-Product-docs updated or checked:
+Canonical log updated or checked:
 
-Platform API/contract updated or checked:
+Product-docs sync status:
 
-Canonical engineering log updated or checked:
+Platform API/contract sync status:
 
 Follow-up:
 
 ## Risk
 
-Low / Medium / High
+Low / Medium / High:
 
 Why:
 
-## Notes for human reviewer
+## Notes
 
 -
