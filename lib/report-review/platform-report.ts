@@ -28,6 +28,19 @@ const PLATFORM_API_URL = process.env.LITTLESEED_PLATFORM_API_URL?.trim();
 const PLATFORM_REQUEST_TIMEOUT_MS = 4_000;
 const MISSING = "Missing";
 const UNKNOWN = "Unknown";
+const USER_TARGET_ALIGNMENT_LABELS: Record<string, string> = {
+  above_baseline: "Above baseline",
+  below_baseline: "Below baseline",
+  within_baseline: "Within baseline",
+};
+const USER_TARGET_ALIGNMENT_DETAILS: Record<string, string> = {
+  above_baseline:
+    "This preference is above the source-backed baseline range, so it reflects a more conservative user choice rather than a v0 requirement.",
+  below_baseline:
+    "This preference is below the source-backed baseline range, so the baseline range remains visible for comparison.",
+  within_baseline:
+    "This preference sits inside the source-backed baseline range.",
+};
 
 type WorkspaceReportRequest = {
   profile: unknown;
@@ -506,27 +519,12 @@ function inputItem(
 }
 
 function userTargetAlignmentLabel(value: string): string {
-  const labels: Record<string, string> = {
-    above_baseline: "Above baseline",
-    below_baseline: "Below baseline",
-    within_baseline: "Within baseline",
-  };
-
-  return labels[value] ?? labelValue(value);
+  return USER_TARGET_ALIGNMENT_LABELS[value] ?? labelValue(value);
 }
 
 function userTargetAlignmentDetail(value: string): string {
-  const details: Record<string, string> = {
-    above_baseline:
-      "This preference is above the source-backed baseline range, so it reflects a more conservative user choice rather than a v0 requirement.",
-    below_baseline:
-      "This preference is below the source-backed baseline range, so the baseline range remains visible for comparison.",
-    within_baseline:
-      "This preference sits inside the source-backed baseline range.",
-  };
-
   return (
-    details[value] ??
+    USER_TARGET_ALIGNMENT_DETAILS[value] ??
     "This preference target is calculated separately from the source-backed baseline range."
   );
 }

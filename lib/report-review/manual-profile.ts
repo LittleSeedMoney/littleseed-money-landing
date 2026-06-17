@@ -209,7 +209,7 @@ function requirePositiveDecimal(
   value: string,
   field: keyof ManualProfileValues,
 ): void {
-  const parsed = decimalNumber(value);
+  const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed <= 0) {
     throw new ManualProfileValidationError(
       `${labelField(field)} must be greater than 0.`,
