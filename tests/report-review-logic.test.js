@@ -11,6 +11,11 @@ const {
 const {
   parseWorkspaceReportResponse,
 } = require("../lib/report-review/platform-workspace-response.ts");
+const {
+  educationTopicAnchor,
+  resolveEducationTopic,
+  uniqueTopicIds,
+} = require("../lib/report-review/education-topics.ts");
 
 test("manual profile omits blank user target months", () => {
   const values = defaultManualProfileValues();
@@ -102,6 +107,50 @@ test("workspace parser rejects malformed user-selected target values", () => {
   assert.throws(
     () => parseWorkspaceReportResponse(payload),
     /user_selected_target\.target_months must be a string, number, or null/,
+  );
+});
+
+test("education topic resolver returns registered display metadata", () => {
+  const topic = resolveEducationTopic("emergency_fund.target_range");
+
+  assert.deepEqual(topic, {
+    id: "emergency_fund.target_range",
+    title: "Emergency fund target range",
+    concept: "Emergency fund target ranges and liquid cash context.",
+    status: "pending",
+  });
+});
+
+test("education topic resolver falls back for unknown platform topics", () => {
+  const topic = resolveEducationTopic("future_topic.sample_case");
+
+  assert.equal(topic.id, "future_topic.sample_case");
+  assert.equal(topic.title, "Future Topic Sample Case");
+  assert.equal(topic.status, "pending");
+  assert.match(topic.concept, /does not have landing-side display metadata/);
+});
+
+test("education topic anchors preserve stable topic ids", () => {
+  assert.equal(
+    educationTopicAnchor("debt.interest_cost"),
+    "education-topic-debt.interest_cost",
+  );
+});
+
+test("uniqueTopicIds deduplicates topics while preserving first-seen order", () => {
+  assert.deepEqual(
+    uniqueTopicIds([
+      ["debt.interest_cost", "cash_flow.monthly_deficit"],
+      ["debt.interest_cost", "emergency_fund.target_range"],
+      [],
+      ["cash_flow.monthly_deficit", "net_worth.assets_and_liabilities"],
+    ]),
+    [
+      "debt.interest_cost",
+      "cash_flow.monthly_deficit",
+      "emergency_fund.target_range",
+      "net_worth.assets_and_liabilities",
+    ],
   );
 });
 
