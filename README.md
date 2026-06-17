@@ -24,6 +24,8 @@ does not replace the underlying calculations.
 ```bash
 npm install
 npm run dev
+npm test
+npm run lint
 ```
 
 Production build:
