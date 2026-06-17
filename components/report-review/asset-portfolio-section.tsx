@@ -388,6 +388,65 @@ function DecisionTrace({
         </div>
       </dl>
 
+      {decisionReadiness.guidanceRules.length > 0 ? (
+        <div className="mt-4">
+          <h5 className="text-sm font-semibold text-seed-950">
+            Matched guidance rules
+          </h5>
+          <ul className="mt-2 space-y-3">
+            {decisionReadiness.guidanceRules.map((rule) => (
+              <li
+                key={rule.id}
+                className="rounded-lg border border-stone-200 bg-stone-50 p-3 text-sm"
+              >
+                <p className="font-medium leading-6 text-seed-950">
+                  {rule.allowedPhrasing}
+                </p>
+                <dl className="mt-2 grid gap-2 text-earth-700 sm:grid-cols-2">
+                  <div>
+                    <dt className="font-medium text-earth-800">Rule</dt>
+                    <dd className="break-words">{rule.id}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-medium text-earth-800">Trigger</dt>
+                    <dd className="break-words">{rule.trigger}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-medium text-earth-800">Version</dt>
+                    <dd className="break-words">{rule.ruleVersion}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-medium text-earth-800">Required context</dt>
+                    <dd className="break-words">
+                      {rule.requiredGuards.join(", ")}
+                    </dd>
+                  </div>
+                </dl>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {rule.evidenceSourceIds.map((id) => {
+                    const source = sourceById.get(id);
+
+                    return (
+                      <span
+                        key={id}
+                        className="rounded-md border border-stone-200 bg-white px-2 py-1 text-xs font-medium text-earth-700"
+                      >
+                        {source?.publisher ?? id}
+                      </span>
+                    );
+                  })}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <p className="mt-4 text-sm leading-6 text-earth-700">
+          No guidance rule matched this decision result, so no approved
+          next-step phrasing is active for this snapshot.
+        </p>
+      )}
+
       {decisionReadiness.evidenceSourceIds.length > 0 ? (
         <ul className="mt-3 space-y-3 text-sm leading-6">
           {decisionReadiness.evidenceSourceIds.map((id) => {

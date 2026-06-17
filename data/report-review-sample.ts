@@ -90,6 +90,15 @@ export type DecisionReadinessUserTarget = {
   alignmentDetail: string;
 };
 
+export type GuidanceRuleTrace = {
+  id: string;
+  allowedPhrasing: string;
+  trigger: string;
+  evidenceSourceIds: string[];
+  requiredGuards: string[];
+  ruleVersion: string;
+};
+
 export type DecisionReadiness = {
   id: string;
   title: string;
@@ -103,6 +112,7 @@ export type DecisionReadiness = {
   limitations: string[];
   educationTopics: string[];
   evidenceSourceIds: string[];
+  guidanceRules: GuidanceRuleTrace[];
   guidanceRuleVersion: string;
   modelVersion: string;
 };
@@ -738,6 +748,7 @@ export const reportReviewSample: ReportReviewSample = {
       "sec_investor_gov_rainy_day",
       "federal_reserve_shed_2025",
     ],
+    guidanceRules: [],
     guidanceRuleVersion: "guidance_rule_registry_v0",
     modelVersion: "emergency_fund_target_v0",
   },

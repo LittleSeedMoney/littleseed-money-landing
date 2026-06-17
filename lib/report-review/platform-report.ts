@@ -483,9 +483,34 @@ function buildDecisionReadiness(
     limitations: eft.limitations,
     educationTopics: eft.education_topics,
     evidenceSourceIds: eft.evidence_source_ids,
+    guidanceRules: eft.guidance_rules.map(mapGuidanceRuleTrace),
     guidanceRuleVersion: eft.guidance_rule_version || UNKNOWN,
     modelVersion: eft.model_version || UNKNOWN,
   };
+}
+
+function mapGuidanceRuleTrace(
+  rule: PlatformWorkspaceSnapshot["eft_result"]["guidance_rules"][number],
+): ReportReviewSample["decisionReadiness"]["guidanceRules"][number] {
+  return {
+    id: rule.rule_id,
+    allowedPhrasing: rule.allowed_phrasing,
+    trigger: guidanceTriggerLabel(rule.trigger),
+    evidenceSourceIds: rule.evidence_source_ids,
+    requiredGuards: rule.required_guards,
+    ruleVersion: rule.rule_version,
+  };
+}
+
+function guidanceTriggerLabel(
+  trigger: PlatformWorkspaceSnapshot["eft_result"]["guidance_rules"][number]["trigger"],
+): string {
+  const threshold = trigger.threshold_ref ?? trigger.threshold_value;
+  if (threshold === null || threshold === undefined) {
+    return `${trigger.metric} ${labelValue(trigger.operator)}`;
+  }
+
+  return `${trigger.metric} ${labelValue(trigger.operator)} ${threshold}`;
 }
 
 function mapUserSelectedTarget(
