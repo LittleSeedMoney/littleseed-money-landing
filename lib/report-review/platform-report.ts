@@ -8,7 +8,7 @@ import {
   type ReportSection,
   type SnapshotItem,
   type SummaryMetric,
-} from "../../data/report-review-sample";
+} from "@/data/report-review-sample";
 
 import { sampleFinancialProfile } from "./sample-profile";
 import {
