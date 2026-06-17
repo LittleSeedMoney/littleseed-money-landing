@@ -5,6 +5,10 @@ import { useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 import type { ReportReviewSample } from "@/data/report-review-sample";
 import {
   defaultManualProfileValues,
+  type ManualAssetCategory,
+  type ManualAssetValue,
+  type ManualDebtType,
+  type ManualDebtValue,
   type ManualProfileValues,
 } from "@/lib/report-review/manual-profile";
 
@@ -21,6 +25,26 @@ import { ReviewRail } from "./review-rail";
 import { ReviewSectionHeading, StatusPill } from "./shared";
 
 type ManualRequestState = "idle" | "submitting" | "error";
+type ManualProfileScalarField = Exclude<
+  keyof ManualProfileValues,
+  "assets" | "debts"
+>;
+
+const ASSET_CATEGORY_OPTIONS: Array<[ManualAssetCategory, string]> = [
+  ["cash", "Cash"],
+  ["retirement", "Retirement"],
+  ["brokerage", "Brokerage"],
+  ["other", "Other"],
+];
+
+const DEBT_TYPE_OPTIONS: Array<[ManualDebtType, string]> = [
+  ["credit_card", "Credit card"],
+  ["student_loan", "Student loan"],
+  ["auto_loan", "Auto loan"],
+  ["personal_loan", "Personal loan"],
+  ["medical_debt", "Medical debt"],
+  ["other", "Other"],
+];
 
 export function ReportReviewWorkspace({
   initialReport,
@@ -79,11 +103,90 @@ export function ReportReviewWorkspace({
   }
 
   function updateValue(
-    field: keyof ManualProfileValues,
+    field: ManualProfileScalarField,
     event: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) {
     const nextValue = event.target.value;
     setValues((current) => ({ ...current, [field]: nextValue }));
+  }
+
+  function updateAssetValue<T extends keyof ManualAssetValue>(
+    id: string,
+    field: T,
+    value: ManualAssetValue[T],
+  ) {
+    setValues((current) => ({
+      ...current,
+      assets: current.assets.map((asset) =>
+        asset.id === id ? { ...asset, [field]: value } : asset,
+      ),
+    }));
+  }
+
+  function updateDebtValue<T extends keyof ManualDebtValue>(
+    id: string,
+    field: T,
+    value: ManualDebtValue[T],
+  ) {
+    setValues((current) => ({
+      ...current,
+      debts: current.debts.map((debt) =>
+        debt.id === id ? { ...debt, [field]: value } : debt,
+      ),
+    }));
+  }
+
+  function addAssetRow() {
+    setValues((current) => ({
+      ...current,
+      assets: [
+        ...current.assets,
+        {
+          id: createManualRowId("asset"),
+          name: "New asset",
+          category: "other",
+          balance: "0.00",
+        },
+      ],
+    }));
+  }
+
+  function removeAssetRow(id: string) {
+    setValues((current) => {
+      if (current.assets.length === 1) {
+        return current;
+      }
+
+      return {
+        ...current,
+        assets: current.assets.filter((asset) => asset.id !== id),
+      };
+    });
+  }
+
+  function addDebtRow() {
+    setValues((current) => ({
+      ...current,
+      debts: [
+        ...current.debts,
+        {
+          id: createManualRowId("debt"),
+          name: "New liability",
+          debtType: "other",
+          balance: "0.00",
+          annualInterestRate: "0.00",
+          monthlyPayment: "0.00",
+          interestTaxAdvantaged: false,
+        },
+      ],
+    }));
+  }
+
+  function removeDebtRow(id: string) {
+    setValues((current) => ({
+      ...current,
+      debts: current.debts.filter((debt) => debt.id !== id),
+    }));
   }
 
   function resetToSampleValues() {
@@ -102,7 +205,13 @@ export function ReportReviewWorkspace({
         <div className="min-w-0 space-y-6">
           <ManualInputSection
             errorMessage={errorMessage}
+            onAddAsset={addAssetRow}
+            onAddDebt={addDebtRow}
+            onAssetUpdate={updateAssetValue}
+            onDebtUpdate={updateDebtValue}
             onReset={resetToSampleValues}
+            onRemoveAsset={removeAssetRow}
+            onRemoveDebt={removeDebtRow}
             onSubmit={submitManualProfile}
             onUpdate={updateValue}
             requestState={requestState}
@@ -141,17 +250,37 @@ export function ReportReviewWorkspace({
 
 function ManualInputSection({
   errorMessage,
+  onAddAsset,
+  onAddDebt,
+  onAssetUpdate,
+  onDebtUpdate,
   onReset,
+  onRemoveAsset,
+  onRemoveDebt,
   onSubmit,
   onUpdate,
   requestState,
   values,
 }: {
   errorMessage: string;
+  onAddAsset: () => void;
+  onAddDebt: () => void;
+  onAssetUpdate: <T extends keyof ManualAssetValue>(
+    id: string,
+    field: T,
+    value: ManualAssetValue[T],
+  ) => void;
+  onDebtUpdate: <T extends keyof ManualDebtValue>(
+    id: string,
+    field: T,
+    value: ManualDebtValue[T],
+  ) => void;
   onReset: () => void;
+  onRemoveAsset: (id: string) => void;
+  onRemoveDebt: (id: string) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onUpdate: (
-    field: keyof ManualProfileValues,
+    field: ManualProfileScalarField,
     event: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => void;
   requestState: ManualRequestState;
@@ -165,7 +294,7 @@ function ManualInputSection({
         eyebrow="Input flow"
         id="manual-input-heading"
         title="Manual review inputs"
-        description="Enter the minimum profile values needed for the private report and Emergency Fund Target review."
+        description="Enter the profile, asset, and liability values needed for the private report and Emergency Fund Target review."
       />
 
       <form
@@ -220,13 +349,6 @@ function ManualInputSection({
             onUpdate={onUpdate}
             required
             value={values.monthlyDiscretionaryExpenses}
-          />
-          <NumberField
-            field="cash"
-            label="Cash and cash equivalents, dollars"
-            onUpdate={onUpdate}
-            required
-            value={values.cash}
           />
           <NumberField
             field="monthlyInvestmentContribution"
@@ -289,38 +411,189 @@ function ManualInputSection({
         <div className="mt-5 border-t border-stone-200 pt-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h3 className="text-sm font-semibold text-seed-950">
-                Credit-card debt
-              </h3>
+              <h3 className="text-sm font-semibold text-seed-950">Assets</h3>
               <p className="mt-1 text-sm leading-6 text-earth-700">
-                Enter 0 values when there is no current credit-card balance.
+                Track cash separately from longer-term balances so liquidity
+                stays visible in the report.
               </p>
             </div>
-            <StatusPill label="Required" tone="stone" />
+            <div className="flex items-center gap-3">
+              <StatusPill label="Required" tone="stone" />
+              <button
+                className="rounded-lg border border-stone-300 px-3 py-2 text-sm font-semibold text-earth-800 hover:bg-stone-50 focus:outline-none focus:ring-2 focus:ring-seed-500"
+                onClick={onAddAsset}
+                type="button"
+              >
+                Add asset
+              </button>
+            </div>
           </div>
-          <div className="mt-4 grid gap-4 lg:grid-cols-3">
-            <NumberField
-              field="creditCardBalance"
-              label="Credit-card balance, dollars"
-              onUpdate={onUpdate}
-              required
-              value={values.creditCardBalance}
-            />
-            <NumberField
-              field="creditCardApr"
-              label="Credit-card APR, percent"
-              onUpdate={onUpdate}
-              required
-              value={values.creditCardApr}
-            />
-            <NumberField
-              field="creditCardMonthlyPayment"
-              label="Credit-card monthly payment, dollars"
-              onUpdate={onUpdate}
-              required
-              value={values.creditCardMonthlyPayment}
-            />
+          <div className="mt-4 space-y-4">
+            {values.assets.map((asset, index) => (
+              <div
+                className="border-t border-stone-200 pt-4 first:border-t-0 first:pt-0"
+                key={asset.id}
+              >
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-sm font-semibold text-earth-800">
+                    Asset {index + 1}
+                  </p>
+                  <button
+                    className="self-start rounded-lg border border-stone-300 px-3 py-2 text-sm font-semibold text-earth-800 hover:bg-stone-50 focus:outline-none focus:ring-2 focus:ring-seed-500 disabled:cursor-not-allowed disabled:opacity-50 sm:self-auto"
+                    disabled={values.assets.length === 1}
+                    onClick={() => onRemoveAsset(asset.id)}
+                    type="button"
+                  >
+                    Remove
+                  </button>
+                </div>
+                <div className="mt-3 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  <TextValueField
+                    label="Asset name"
+                    onChange={(event) =>
+                      onAssetUpdate(asset.id, "name", event.target.value)
+                    }
+                    required
+                    value={asset.name}
+                  />
+                  <SelectValueField
+                    label="Category"
+                    onChange={(event) =>
+                      onAssetUpdate(
+                        asset.id,
+                        "category",
+                        event.target.value as ManualAssetCategory,
+                      )
+                    }
+                    options={ASSET_CATEGORY_OPTIONS}
+                    value={asset.category}
+                  />
+                  <NumberValueField
+                    label="Balance, dollars"
+                    onChange={(event) =>
+                      onAssetUpdate(asset.id, "balance", event.target.value)
+                    }
+                    required
+                    value={asset.balance}
+                  />
+                </div>
+              </div>
+            ))}
           </div>
+        </div>
+
+        <div className="mt-5 border-t border-stone-200 pt-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="text-sm font-semibold text-seed-950">
+                Liabilities
+              </h3>
+              <p className="mt-1 text-sm leading-6 text-earth-700">
+                Rows with no balance stay out of the submitted liability list.
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <StatusPill label="Optional" tone="stone" />
+              <button
+                className="rounded-lg border border-stone-300 px-3 py-2 text-sm font-semibold text-earth-800 hover:bg-stone-50 focus:outline-none focus:ring-2 focus:ring-seed-500"
+                onClick={onAddDebt}
+                type="button"
+              >
+                Add liability
+              </button>
+            </div>
+          </div>
+          {values.debts.length === 0 ? (
+            <p className="mt-4 rounded-lg border border-dashed border-stone-300 px-4 py-3 text-sm leading-6 text-earth-700">
+              No liabilities entered.
+            </p>
+          ) : (
+            <div className="mt-4 space-y-4">
+              {values.debts.map((debt, index) => (
+                <div
+                  className="border-t border-stone-200 pt-4 first:border-t-0 first:pt-0"
+                  key={debt.id}
+                >
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-sm font-semibold text-earth-800">
+                      Liability {index + 1}
+                    </p>
+                    <button
+                      className="self-start rounded-lg border border-stone-300 px-3 py-2 text-sm font-semibold text-earth-800 hover:bg-stone-50 focus:outline-none focus:ring-2 focus:ring-seed-500 sm:self-auto"
+                      onClick={() => onRemoveDebt(debt.id)}
+                      type="button"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                  <div className="mt-3 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    <TextValueField
+                      label="Liability name"
+                      onChange={(event) =>
+                        onDebtUpdate(debt.id, "name", event.target.value)
+                      }
+                      value={debt.name}
+                    />
+                    <SelectValueField
+                      label="Type"
+                      onChange={(event) =>
+                        onDebtUpdate(
+                          debt.id,
+                          "debtType",
+                          event.target.value as ManualDebtType,
+                        )
+                      }
+                      options={DEBT_TYPE_OPTIONS}
+                      value={debt.debtType}
+                    />
+                    <NumberValueField
+                      label="Balance, dollars"
+                      onChange={(event) =>
+                        onDebtUpdate(debt.id, "balance", event.target.value)
+                      }
+                      required
+                      value={debt.balance}
+                    />
+                    <NumberValueField
+                      label="APR, percent"
+                      onChange={(event) =>
+                        onDebtUpdate(
+                          debt.id,
+                          "annualInterestRate",
+                          event.target.value,
+                        )
+                      }
+                      required
+                      value={debt.annualInterestRate}
+                    />
+                    <NumberValueField
+                      label="Monthly payment, dollars"
+                      onChange={(event) =>
+                        onDebtUpdate(
+                          debt.id,
+                          "monthlyPayment",
+                          event.target.value,
+                        )
+                      }
+                      required
+                      value={debt.monthlyPayment}
+                    />
+                  </div>
+                  <CheckboxField
+                    checked={debt.interestTaxAdvantaged}
+                    label="Interest may be tax advantaged"
+                    onChange={(event) =>
+                      onDebtUpdate(
+                        debt.id,
+                        "interestTaxAdvantaged",
+                        event.target.checked,
+                      )
+                    }
+                  />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {errorMessage ? (
@@ -361,11 +634,11 @@ function NumberField({
   step = "0.01",
   value,
 }: {
-  field: keyof ManualProfileValues;
+  field: ManualProfileScalarField;
   label: string;
   onUpdate: (
-    field: keyof ManualProfileValues,
-    event: ChangeEvent<HTMLInputElement>,
+    field: ManualProfileScalarField,
+    event: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => void;
   required?: boolean;
   step?: string;
@@ -395,13 +668,13 @@ function SelectField({
   options,
   value,
 }: {
-  field: keyof ManualProfileValues;
+  field: ManualProfileScalarField;
   label: string;
   onUpdate: (
-    field: keyof ManualProfileValues,
-    event: ChangeEvent<HTMLSelectElement>,
+    field: ManualProfileScalarField,
+    event: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => void;
-  options: Array<[string, string]>;
+  options: ReadonlyArray<readonly [string, string]>;
   value: string;
 }) {
   return (
@@ -420,6 +693,116 @@ function SelectField({
       </select>
     </label>
   );
+}
+
+function TextValueField({
+  label,
+  onChange,
+  required = false,
+  value,
+}: {
+  label: string;
+  onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  required?: boolean;
+  value: string;
+}) {
+  return (
+    <label className="block">
+      <span className="text-sm font-medium text-earth-800">{label}</span>
+      <input
+        className="mt-2 min-h-11 w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-seed-950 shadow-sm outline-none focus:border-seed-500 focus:ring-2 focus:ring-seed-200"
+        onChange={onChange}
+        required={required}
+        type="text"
+        value={value}
+      />
+    </label>
+  );
+}
+
+function NumberValueField({
+  label,
+  onChange,
+  required = false,
+  step = "0.01",
+  value,
+}: {
+  label: string;
+  onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  required?: boolean;
+  step?: string;
+  value: string;
+}) {
+  return (
+    <label className="block">
+      <span className="text-sm font-medium text-earth-800">{label}</span>
+      <input
+        className="mt-2 min-h-11 w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-seed-950 shadow-sm outline-none focus:border-seed-500 focus:ring-2 focus:ring-seed-200"
+        inputMode="decimal"
+        min="0"
+        onChange={onChange}
+        required={required}
+        step={step}
+        type="number"
+        value={value}
+      />
+    </label>
+  );
+}
+
+function SelectValueField({
+  label,
+  onChange,
+  options,
+  value,
+}: {
+  label: string;
+  onChange: (event: ChangeEvent<HTMLSelectElement>) => void;
+  options: ReadonlyArray<readonly [string, string]>;
+  value: string;
+}) {
+  return (
+    <label className="block">
+      <span className="text-sm font-medium text-earth-800">{label}</span>
+      <select
+        className="mt-2 min-h-11 w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-seed-950 shadow-sm outline-none focus:border-seed-500 focus:ring-2 focus:ring-seed-200"
+        onChange={onChange}
+        value={value}
+      >
+        {options.map(([optionValue, optionLabel]) => (
+          <option key={optionValue} value={optionValue}>
+            {optionLabel}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function CheckboxField({
+  checked,
+  label,
+  onChange,
+}: {
+  checked: boolean;
+  label: string;
+  onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+}) {
+  return (
+    <label className="mt-3 flex items-center gap-2 text-sm font-medium text-earth-800">
+      <input
+        checked={checked}
+        className="h-4 w-4 rounded border-stone-300 text-seed-700 focus:ring-seed-500"
+        onChange={onChange}
+        type="checkbox"
+      />
+      <span>{label}</span>
+    </label>
+  );
+}
+
+function createManualRowId(prefix: "asset" | "debt") {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 function hasReportContent(report: ReportReviewSample) {

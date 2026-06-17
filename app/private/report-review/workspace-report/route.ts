@@ -3,6 +3,10 @@ import { NextResponse } from "next/server";
 import {
   buildManualProfileRequest,
   ManualProfileValidationError,
+  type ManualAssetCategory,
+  type ManualAssetValue,
+  type ManualDebtType,
+  type ManualDebtValue,
   type ManualProfileValues,
 } from "@/lib/report-review/manual-profile";
 import { getManualReportReviewData } from "@/lib/report-review/platform-report";
@@ -14,12 +18,13 @@ const MANUAL_REPORT_REQUEST_ERROR =
 const PLATFORM_REPORT_ERROR =
   "The platform report service could not be reached. Please try again in a moment.";
 
-const FORM_FIELDS: Array<keyof ManualProfileValues> = [
+type ManualProfileScalarField = Exclude<
+  keyof ManualProfileValues,
+  "assets" | "debts"
+>;
+
+const FORM_FIELDS: ManualProfileScalarField[] = [
   "age",
-  "cash",
-  "creditCardApr",
-  "creditCardBalance",
-  "creditCardMonthlyPayment",
   "dependents",
   "expectedYearsInCurrentLocation",
   "grossAnnualIncome",
@@ -72,7 +77,7 @@ function parseManualProfileValues(value: unknown): ManualProfileValues {
   }
 
   const record = value as Record<string, unknown>;
-  return Object.fromEntries(
+  const scalarValues = Object.fromEntries(
     FORM_FIELDS.map((field) => {
       const fieldValue = record[field];
       if (typeof fieldValue !== "string") {
@@ -82,5 +87,104 @@ function parseManualProfileValues(value: unknown): ManualProfileValues {
       }
       return [field, fieldValue];
     }),
-  ) as ManualProfileValues;
+  ) as Record<ManualProfileScalarField, string>;
+
+  return {
+    ...scalarValues,
+    assets: parseAssets(record.assets),
+    debts: parseDebts(record.debts),
+  };
+}
+
+function parseAssets(value: unknown): ManualAssetValue[] {
+  if (!Array.isArray(value)) {
+    throw new ManualProfileValidationError(
+      "assets must be submitted as an array.",
+    );
+  }
+
+  return value.map((asset, index) => {
+    const record = expectRecord(asset, `assets[${index}]`);
+    return {
+      id: readString(record, "id", `assets[${index}]`),
+      name: readString(record, "name", `assets[${index}]`),
+      category: readString(
+        record,
+        "category",
+        `assets[${index}]`,
+      ) as ManualAssetCategory,
+      balance: readString(record, "balance", `assets[${index}]`),
+    };
+  });
+}
+
+function parseDebts(value: unknown): ManualDebtValue[] {
+  if (!Array.isArray(value)) {
+    throw new ManualProfileValidationError(
+      "debts must be submitted as an array.",
+    );
+  }
+
+  return value.map((debt, index) => {
+    const record = expectRecord(debt, `debts[${index}]`);
+    return {
+      id: readString(record, "id", `debts[${index}]`),
+      name: readString(record, "name", `debts[${index}]`),
+      debtType: readString(
+        record,
+        "debtType",
+        `debts[${index}]`,
+      ) as ManualDebtType,
+      balance: readString(record, "balance", `debts[${index}]`),
+      annualInterestRate: readString(
+        record,
+        "annualInterestRate",
+        `debts[${index}]`,
+      ),
+      monthlyPayment: readString(record, "monthlyPayment", `debts[${index}]`),
+      interestTaxAdvantaged: readBoolean(
+        record,
+        "interestTaxAdvantaged",
+        `debts[${index}]`,
+      ),
+    };
+  });
+}
+
+function expectRecord(value: unknown, label: string): Record<string, unknown> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new ManualProfileValidationError(`${label} must be an object.`);
+  }
+
+  return value as Record<string, unknown>;
+}
+
+function readString(
+  record: Record<string, unknown>,
+  field: string,
+  label: string,
+): string {
+  const value = record[field];
+  if (typeof value !== "string") {
+    throw new ManualProfileValidationError(
+      `${label}.${field} must be submitted as text.`,
+    );
+  }
+
+  return value;
+}
+
+function readBoolean(
+  record: Record<string, unknown>,
+  field: string,
+  label: string,
+): boolean {
+  const value = record[field];
+  if (typeof value !== "boolean") {
+    throw new ManualProfileValidationError(
+      `${label}.${field} must be submitted as true or false.`,
+    );
+  }
+
+  return value;
 }
