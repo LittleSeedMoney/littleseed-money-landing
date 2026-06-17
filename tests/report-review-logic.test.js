@@ -27,6 +27,137 @@ test("manual profile omits blank user target months", () => {
   assert.equal(request.profile.monthly_take_home_income, "5200.00");
 });
 
+test("manual profile aggregates asset rows into platform asset buckets", () => {
+  const values = defaultManualProfileValues();
+  values.assets = [
+    {
+      id: "checking",
+      name: "Checking",
+      category: "cash",
+      balance: "1500.25",
+    },
+    {
+      id: "savings",
+      name: "Savings",
+      category: "cash",
+      balance: "2499.75",
+    },
+    {
+      id: "retirement",
+      name: "401(k)",
+      category: "retirement",
+      balance: "10000",
+    },
+    {
+      id: "brokerage",
+      name: "Brokerage",
+      category: "brokerage",
+      balance: "500",
+    },
+    {
+      id: "other",
+      name: "Other asset",
+      category: "other",
+      balance: "75.50",
+    },
+  ];
+  values.debts = [];
+
+  const request = buildManualProfileRequest(values);
+
+  assert.deepEqual(request.profile.assets, {
+    cash: "4000.00",
+    retirement: "10000.00",
+    brokerage: "500.00",
+    other: "75.50",
+  });
+  assert.deepEqual(request.profile.debts, []);
+});
+
+test("manual profile requires at least one asset row", () => {
+  const values = defaultManualProfileValues();
+  values.assets = [];
+
+  assert.throws(
+    () => buildManualProfileRequest(values),
+    ManualProfileValidationError,
+  );
+});
+
+test("manual profile maps multiple liabilities and omits zero-balance rows", () => {
+  const values = defaultManualProfileValues();
+  values.debts = [
+    {
+      id: "credit-card",
+      name: "Rewards card",
+      debtType: "credit_card",
+      balance: "1200.00",
+      annualInterestRate: "24.99",
+      monthlyPayment: "80.00",
+      interestTaxAdvantaged: false,
+    },
+    {
+      id: "student-loan",
+      name: "Federal student loan",
+      debtType: "student_loan",
+      balance: "18000.00",
+      annualInterestRate: "5.25",
+      monthlyPayment: "250.00",
+      interestTaxAdvantaged: true,
+    },
+    {
+      id: "unused-line",
+      name: "Unused line",
+      debtType: "other",
+      balance: "0",
+      annualInterestRate: "0",
+      monthlyPayment: "0",
+      interestTaxAdvantaged: false,
+    },
+  ];
+
+  const request = buildManualProfileRequest(values);
+
+  assert.deepEqual(request.profile.debts, [
+    {
+      name: "Rewards card",
+      debt_type: "credit_card",
+      balance: "1200.00",
+      annual_interest_rate: "24.99",
+      monthly_payment: "80.00",
+      interest_tax_advantaged: false,
+    },
+    {
+      name: "Federal student loan",
+      debt_type: "student_loan",
+      balance: "18000.00",
+      annual_interest_rate: "5.25",
+      monthly_payment: "250.00",
+      interest_tax_advantaged: true,
+    },
+  ]);
+});
+
+test("manual profile rejects zero-balance liability with APR or payment", () => {
+  const values = defaultManualProfileValues();
+  values.debts = [
+    {
+      id: "stale-debt",
+      name: "Stale debt",
+      debtType: "other",
+      balance: "0",
+      annualInterestRate: "7.5",
+      monthlyPayment: "0",
+      interestTaxAdvantaged: false,
+    },
+  ];
+
+  assert.throws(
+    () => buildManualProfileRequest(values),
+    ManualProfileValidationError,
+  );
+});
+
 test("manual profile carries positive user target months", () => {
   const values = defaultManualProfileValues();
   values.userTargetMonths = "2.5";
