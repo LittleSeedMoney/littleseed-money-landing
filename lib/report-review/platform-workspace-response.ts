@@ -106,8 +106,23 @@ export type PlatformWorkspaceSnapshot = {
     limitations: string[];
     education_topics: string[];
     evidence_source_ids: string[];
+    guidance_rules: PlatformGuidanceRule[];
     guidance_rule_version: string;
   };
+};
+
+export type PlatformGuidanceRule = {
+  rule_id: string;
+  trigger: {
+    metric: string;
+    operator: string;
+    threshold_ref: string | null;
+    threshold_value: DecimalValue;
+  };
+  allowed_phrasing: string;
+  evidence_source_ids: string[];
+  required_guards: string[];
+  rule_version: string;
 };
 
 export type PlatformEmergencyFundUserTarget = {
@@ -416,11 +431,50 @@ function parsePlatformWorkspaceSnapshot(
         eftResult.evidence_source_ids,
         `${path}.eft_result.evidence_source_ids`,
       ),
+      guidance_rules: parseOptionalArray(
+        eftResult.guidance_rules,
+        `${path}.eft_result.guidance_rules`,
+        parseGuidanceRule,
+      ),
       guidance_rule_version: parseOptionalString(
         eftResult.guidance_rule_version,
         `${path}.eft_result.guidance_rule_version`,
       ),
     },
+  };
+}
+
+function parseGuidanceRule(value: unknown, path: string): PlatformGuidanceRule {
+  const rule = expectRecord(value, path);
+  const trigger = expectRecord(rule.trigger, `${path}.trigger`);
+
+  return {
+    rule_id: expectString(rule.rule_id, `${path}.rule_id`),
+    trigger: {
+      metric: expectString(trigger.metric, `${path}.trigger.metric`),
+      operator: expectString(trigger.operator, `${path}.trigger.operator`),
+      threshold_ref: expectNullableString(
+        trigger.threshold_ref,
+        `${path}.trigger.threshold_ref`,
+      ),
+      threshold_value: parseOptionalDecimalValue(
+        trigger.threshold_value,
+        `${path}.trigger.threshold_value`,
+      ),
+    },
+    allowed_phrasing: expectString(
+      rule.allowed_phrasing,
+      `${path}.allowed_phrasing`,
+    ),
+    evidence_source_ids: parseStringArray(
+      rule.evidence_source_ids,
+      `${path}.evidence_source_ids`,
+    ),
+    required_guards: parseStringArray(
+      rule.required_guards,
+      `${path}.required_guards`,
+    ),
+    rule_version: expectString(rule.rule_version, `${path}.rule_version`),
   };
 }
 
@@ -525,6 +579,18 @@ function parseArray<T>(
   }
 
   return value.map((item, index) => parseItem(item, `${path}[${index}]`));
+}
+
+function parseOptionalArray<T>(
+  value: unknown,
+  path: string,
+  parseItem: (item: unknown, path: string) => T,
+): T[] {
+  if (value == null) {
+    return [];
+  }
+
+  return parseArray(value, path, parseItem);
 }
 
 function parseStringArray(value: unknown, path: string): string[] {

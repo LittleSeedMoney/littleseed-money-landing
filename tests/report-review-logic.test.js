@@ -189,7 +189,22 @@ test("workspace parser tolerates omitted optional EFT trace fields", () => {
   assert.equal(parsed.workspace_snapshot.eft_result.model_version, "");
   assert.equal(parsed.workspace_snapshot.eft_result.user_selected_target, null);
   assert.deepEqual(parsed.workspace_snapshot.eft_result.evidence_source_ids, []);
+  assert.deepEqual(parsed.workspace_snapshot.eft_result.guidance_rules, []);
   assert.equal(parsed.workspace_snapshot.eft_result.guidance_rule_version, "");
+});
+
+test("workspace parser accepts matched guidance rule trace", () => {
+  const payload = workspacePayload({
+    eftResult: {
+      guidance_rules: [guidanceRulePayload()],
+    },
+  });
+
+  const parsed = parseWorkspaceReportResponse(payload);
+
+  assert.deepEqual(parsed.workspace_snapshot.eft_result.guidance_rules, [
+    guidanceRulePayload(),
+  ]);
 });
 
 test("workspace parser accepts user-selected target comparison", () => {
@@ -294,6 +309,7 @@ test("platform report mapper builds user-selected target comparison", () => {
     eftResult: {
       model_version: "emergency_fund_target_v0",
       evidence_source_ids: ["cfpb_emergency_fund_guide"],
+      guidance_rules: [guidanceRulePayload()],
       guidance_rule_version: "guidance_rule_registry_v0",
       assumptions: ["Baseline assumption."],
       limitations: ["Baseline limitation."],
@@ -315,6 +331,24 @@ test("platform report mapper builds user-selected target comparison", () => {
 
   const decision = mapped.decisionReadiness;
   assert.deepEqual(decision.evidenceSourceIds, ["cfpb_emergency_fund_guide"]);
+  assert.deepEqual(decision.guidanceRules, [
+    {
+      id: "eft.cash_below_lower_target_range",
+      allowedPhrasing:
+        "Your cash currently covers less than the lower end of a typical emergency-fund range.",
+      trigger:
+        "current_months_covered Less Than target_months_range.min_months",
+      evidenceSourceIds: [
+        "cfpb_emergency_fund_guide",
+        "fdic_money_smart_your_savings",
+      ],
+      requiredGuards: [
+        "monthly_essential_expenses",
+        "cash_liquid_balance",
+      ],
+      ruleVersion: "guidance_rule_registry_v0",
+    },
+  ]);
   assert.equal(decision.guidanceRuleVersion, "guidance_rule_registry_v0");
   assert.equal(decision.modelVersion, "emergency_fund_target_v0");
   assert.deepEqual(decision.assumptions, ["Baseline assumption."]);
@@ -585,6 +619,29 @@ function itemById(items, id) {
   const item = items.find((candidate) => candidate.id === id);
   assert.ok(item, `Expected item with id ${id}`);
   return item;
+}
+
+function guidanceRulePayload() {
+  return {
+    rule_id: "eft.cash_below_lower_target_range",
+    trigger: {
+      metric: "current_months_covered",
+      operator: "less_than",
+      threshold_ref: "target_months_range.min_months",
+      threshold_value: null,
+    },
+    allowed_phrasing:
+      "Your cash currently covers less than the lower end of a typical emergency-fund range.",
+    evidence_source_ids: [
+      "cfpb_emergency_fund_guide",
+      "fdic_money_smart_your_savings",
+    ],
+    required_guards: [
+      "monthly_essential_expenses",
+      "cash_liquid_balance",
+    ],
+    rule_version: "guidance_rule_registry_v0",
+  };
 }
 
 function workspacePayload(overrides = {}) {
