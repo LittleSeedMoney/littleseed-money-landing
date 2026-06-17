@@ -27,6 +27,9 @@ user for documents.
 Read these core documents before substantial landing, brand, content, or
 report-review work:
 
+- `docs/AI_DEVELOPMENT_GUARDRAILS.md`
+- `docs/PHASE_SCOPE_LOCK.md`
+- `docs/PR_ACCEPTANCE_CHECKLIST.md`
 - `docs/00_NAMING_AND_BRAND.md`
 - `docs/01_PRODUCT_MANIFESTO.md`
 - `docs/02_VISION.md`
@@ -54,6 +57,10 @@ Also read task-specific documents when the work touches that area:
   `docs/11_MOVEMENT_AND_EDUCATION.md`, `docs/12_PUBLISHING_PLAN.md`,
   `docs/17_FINANCIAL_COACHING_KNOWLEDGE_FRAMEWORK.md`,
   `docs/21_CONTENT_AND_DEV_BLOG_SYSTEM.md`
+- Charge Inspector, CSV transaction parsing, leak detection, recurring-charge
+  detection, duplicate-charge detection, bank-fee detection, or price-increase
+  detection: `docs/25_CHARGE_INSPECTOR_WEDGE.md`,
+  `docs/26_WEDGE_FIRST_ROADMAP_PROPOSAL.md`
 
 If a document has changed locally, read its diff as well as the file. If a new
 product-docs file appears and its title or contents match the task scope, read
@@ -93,6 +100,21 @@ editing code or docs. Include:
 For small mechanical fixes, one concise paragraph is enough. For larger
 cross-repository or user-facing work, use bullets. If the scope changes
 materially during development, update the user before continuing.
+
+## AI Product Safety Guardrails
+
+The canonical AI guardrails live in product-docs:
+
+```text
+../littleseed-money-product-docs/docs/AI_DEVELOPMENT_GUARDRAILS.md
+../littleseed-money-product-docs/docs/PHASE_SCOPE_LOCK.md
+../littleseed-money-product-docs/docs/PR_ACCEPTANCE_CHECKLIST.md
+```
+
+Do not duplicate those rules in this repository. Treat this `AGENTS.md` as a
+pointer and workflow entry point. If the rules need to change, update
+product-docs first, then update this file only when the pointer or loading
+workflow changes.
 
 ## Repository Map
 
@@ -201,6 +223,16 @@ acceptable.
 When landing work changes product meaning, public messaging, roadmap wording,
 report UX, platform API assumptions, compliance boundaries, or user-facing
 claims, check whether product-docs should be updated in the same work item.
+
+The single canonical engineering log is:
+
+```text
+../littleseed-money-platform/docs/ENGINEERING_LOG.md
+```
+
+Do not create a landing-local engineering log. For non-trivial landing work,
+update or explicitly check the canonical platform engineering log and mention
+the result in the PR body.
 
 If product-docs should change but cannot be updated in the same turn or branch,
 record that as an explicit follow-up in the final response. Do not let stale
