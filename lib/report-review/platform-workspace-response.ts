@@ -84,6 +84,7 @@ export type PlatformWorkspaceSnapshot = {
     liabilities: PlatformWorkspaceLiability[];
   };
   eft_result: {
+    model_version: string;
     applicability: string;
     target_months_range: {
       min_months: DecimalValue;
@@ -102,6 +103,8 @@ export type PlatformWorkspaceSnapshot = {
     assumptions: string[];
     limitations: string[];
     education_topics: string[];
+    evidence_source_ids: string[];
+    guidance_rule_version: string;
   };
 };
 
@@ -352,6 +355,10 @@ function parsePlatformWorkspaceSnapshot(
       ),
     },
     eft_result: {
+      model_version: parseOptionalString(
+        eftResult.model_version,
+        `${path}.eft_result.model_version`,
+      ),
       applicability: expectString(
         eftResult.applicability,
         `${path}.eft_result.applicability`,
@@ -387,6 +394,14 @@ function parsePlatformWorkspaceSnapshot(
       education_topics: parseOptionalStringArray(
         eftResult.education_topics,
         `${path}.eft_result.education_topics`,
+      ),
+      evidence_source_ids: parseOptionalStringArray(
+        eftResult.evidence_source_ids,
+        `${path}.eft_result.evidence_source_ids`,
+      ),
+      guidance_rule_version: parseOptionalString(
+        eftResult.guidance_rule_version,
+        `${path}.eft_result.guidance_rule_version`,
       ),
     },
   };
@@ -479,6 +494,14 @@ function parseOptionalStringArray(value: unknown, path: string): string[] {
   }
 
   return parseStringArray(value, path);
+}
+
+function parseOptionalString(value: unknown, path: string): string {
+  if (value == null) {
+    return "";
+  }
+
+  return expectString(value, path);
 }
 
 function expectRecord(

@@ -26,6 +26,8 @@ import {
 
 const PLATFORM_API_URL = process.env.LITTLESEED_PLATFORM_API_URL?.trim();
 const PLATFORM_REQUEST_TIMEOUT_MS = 4_000;
+const MISSING = "Missing";
+const UNKNOWN = "Unknown";
 
 type WorkspaceReportRequest = {
   profile: unknown;
@@ -236,7 +238,7 @@ function buildSummaryMetrics(
     {
       id: "emergency_coverage",
       label: "Emergency coverage",
-      value: coverage === null ? "Missing" : `${coverage.toFixed(2)} months`,
+      value: coverage === null ? MISSING : `${coverage.toFixed(2)} months`,
       detail: "Reported cash divided by required monthly outflows.",
       provenance: coverage === null ? "missing" : "calculated",
       disclosure: {
@@ -376,9 +378,18 @@ function buildDecisionReadiness(
   const eft = snapshot.eft_result;
   const input = snapshot.inputs.emergency_fund_target;
   const range = eft.target_amount_range;
+  const targetMonthsRange = eft.target_months_range;
+  const gapRange = eft.gap_amount_range;
+  const currentMonths = decimal(eft.current_months_covered);
   const targetDetail = range
     ? `${money(range.min_amount)} to ${money(range.max_amount)}`
-    : "Missing";
+    : MISSING;
+  const targetMonthsDetail = targetMonthsRange
+    ? `${monthNumber(targetMonthsRange.min_months)} to ${monthNumber(targetMonthsRange.max_months)} months`
+    : MISSING;
+  const gapDetail = gapRange
+    ? `${money(gapRange.min_amount)} to ${money(gapRange.max_amount)}`
+    : MISSING;
 
   return {
     id: "emergency_fund_target_v0",
@@ -402,7 +413,7 @@ function buildDecisionReadiness(
       {
         id: "income_pattern",
         label: "Income pattern",
-        value: input.income_pattern ? labelValue(input.income_pattern) : "Missing",
+        value: input.income_pattern ? labelValue(input.income_pattern) : MISSING,
         provenance: input.income_pattern ? "user-entered" : "missing",
       },
       {
@@ -410,11 +421,42 @@ function buildDecisionReadiness(
         label: "Target range",
         value: targetDetail,
         provenance: range ? "calculated" : "missing",
+        detail: targetMonthsRange
+          ? `${targetMonthsDetail} of reported essential expenses.`
+          : undefined,
+      },
+    ],
+    resultMetrics: [
+      {
+        id: "current_months_covered",
+        label: "Current coverage",
+        value:
+          currentMonths === null ? MISSING : `${monthNumber(currentMonths)} months`,
+        provenance: currentMonths === null ? "missing" : "calculated",
+        detail: "Reported liquid cash divided by required monthly outflows.",
+      },
+      {
+        id: "target_months_range",
+        label: "Baseline months",
+        value: targetMonthsDetail,
+        provenance: targetMonthsRange ? "source-backed" : "missing",
+        detail: "Educational range; not a single required number.",
+      },
+      {
+        id: "gap_amount_range",
+        label: "Gap range",
+        value: gapDetail,
+        provenance: gapRange ? "calculated" : "missing",
+        detail: "Target amount range minus reported liquid cash, floored at zero.",
       },
     ],
     missingInputs: missingInputs(eft.missing_context),
+    assumptions: eft.assumptions,
     limitations: eft.limitations,
     educationTopics: eft.education_topics,
+    evidenceSourceIds: eft.evidence_source_ids,
+    guidanceRuleVersion: eft.guidance_rule_version || UNKNOWN,
+    modelVersion: eft.model_version || UNKNOWN,
   };
 }
 
@@ -427,7 +469,7 @@ function inputItem(
   return {
     id,
     label,
-    value: value === null || value === undefined ? "Missing" : money(value),
+    value: value === null || value === undefined ? MISSING : money(value),
     provenance: value === null || value === undefined ? "missing" : provenance,
   };
 }
@@ -543,7 +585,7 @@ function mapProvenance(value: string): Provenance {
 function money(value: DecimalValue): string {
   const amount = decimal(value);
   if (amount === null) {
-    return "Missing";
+    return MISSING;
   }
   return formatMoney(amount);
 }
@@ -556,6 +598,17 @@ function formatMoney(value: number): string {
   }).format(value);
 }
 
+function monthNumber(value: DecimalValue): string {
+  const amount = decimal(value);
+  if (amount === null) {
+    return MISSING;
+  }
+
+  return new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
+
 function decimal(value: DecimalValue): number | null {
   if (value === null || value === undefined || value === "") {
     return null;
@@ -566,7 +619,7 @@ function decimal(value: DecimalValue): number | null {
 
 function monthlySurplusText(value: number | null): string {
   if (value === null) {
-    return "Missing";
+    return MISSING;
   }
   if (value < 0) {
     return `${formatMoney(Math.abs(value))} short`;
