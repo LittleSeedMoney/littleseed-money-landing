@@ -4,11 +4,14 @@ import { useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 
 import type { ReportReviewSample } from "@/data/report-review-sample";
 import {
+  MANUAL_PROFILE_PRESETS,
   defaultManualProfileValues,
+  manualProfilePresetValues,
   type ManualAssetCategory,
   type ManualAssetValue,
   type ManualDebtType,
   type ManualDebtValue,
+  type ManualProfilePresetId,
   type ManualProfileScalarField,
   type ManualProfileValues,
 } from "@/lib/report-review/manual-profile";
@@ -50,6 +53,9 @@ export function ReportReviewWorkspace({
 }) {
   const [report, setReport] = useState(initialReport);
   const [values, setValues] = useState(defaultManualProfileValues);
+  const [selectedPreset, setSelectedPreset] = useState<
+    ManualProfilePresetId | "custom"
+  >("sample");
   const [requestState, setRequestState] = useState<ManualRequestState>("idle");
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -104,6 +110,7 @@ export function ReportReviewWorkspace({
     event: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) {
     const nextValue = event.target.value;
+    setSelectedPreset("custom");
     setValues((current) => ({ ...current, [field]: nextValue }));
   }
 
@@ -112,6 +119,7 @@ export function ReportReviewWorkspace({
     field: T,
     value: ManualAssetValue[T],
   ) {
+    setSelectedPreset("custom");
     setValues((current) => ({
       ...current,
       assets: current.assets.map((asset) =>
@@ -125,6 +133,7 @@ export function ReportReviewWorkspace({
     field: T,
     value: ManualDebtValue[T],
   ) {
+    setSelectedPreset("custom");
     setValues((current) => ({
       ...current,
       debts: current.debts.map((debt) =>
@@ -134,6 +143,7 @@ export function ReportReviewWorkspace({
   }
 
   function addAssetRow() {
+    setSelectedPreset("custom");
     setValues((current) => ({
       ...current,
       assets: [
@@ -149,6 +159,7 @@ export function ReportReviewWorkspace({
   }
 
   function removeAssetRow(id: string) {
+    setSelectedPreset("custom");
     setValues((current) => {
       if (current.assets.length === 1) {
         return current;
@@ -162,6 +173,7 @@ export function ReportReviewWorkspace({
   }
 
   function addDebtRow() {
+    setSelectedPreset("custom");
     setValues((current) => ({
       ...current,
       debts: [
@@ -180,16 +192,22 @@ export function ReportReviewWorkspace({
   }
 
   function removeDebtRow(id: string) {
+    setSelectedPreset("custom");
     setValues((current) => ({
       ...current,
       debts: current.debts.filter((debt) => debt.id !== id),
     }));
   }
 
-  function resetToSampleValues() {
-    setValues(defaultManualProfileValues());
+  function applyPreset(presetId: ManualProfilePresetId) {
+    setValues(manualProfilePresetValues(presetId));
+    setSelectedPreset(presetId);
     setErrorMessage("");
     setRequestState("idle");
+  }
+
+  function resetToSampleValues() {
+    applyPreset("sample");
   }
 
   return (
@@ -209,9 +227,11 @@ export function ReportReviewWorkspace({
             onReset={resetToSampleValues}
             onRemoveAsset={removeAssetRow}
             onRemoveDebt={removeDebtRow}
+            onPresetSelect={applyPreset}
             onSubmit={submitManualProfile}
             onUpdate={updateValue}
             requestState={requestState}
+            selectedPreset={selectedPreset}
             values={values}
           />
           {hasReportContent(report) ? (
@@ -254,9 +274,11 @@ function ManualInputSection({
   onReset,
   onRemoveAsset,
   onRemoveDebt,
+  onPresetSelect,
   onSubmit,
   onUpdate,
   requestState,
+  selectedPreset,
   values,
 }: {
   errorMessage: string;
@@ -275,12 +297,14 @@ function ManualInputSection({
   onReset: () => void;
   onRemoveAsset: (id: string) => void;
   onRemoveDebt: (id: string) => void;
+  onPresetSelect: (presetId: ManualProfilePresetId) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onUpdate: (
     field: ManualProfileScalarField,
     event: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => void;
   requestState: ManualRequestState;
+  selectedPreset: ManualProfilePresetId | "custom";
   values: ManualProfileValues;
 }) {
   const isSubmitting = requestState === "submitting";
@@ -298,7 +322,55 @@ function ManualInputSection({
         className="mt-3 rounded-lg border border-stone-200 bg-white p-5 shadow-sm"
         onSubmit={onSubmit}
       >
-        <div className="grid gap-4 lg:grid-cols-3">
+        <div className="border-b border-stone-200 pb-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h3 className="text-sm font-semibold text-seed-950">
+                Scenario presets
+              </h3>
+              <p className="mt-1 text-sm leading-6 text-earth-700">
+                In-session review inputs. No profile is saved.
+              </p>
+            </div>
+            <StatusPill
+              label={selectedPreset === "custom" ? "Custom inputs" : "Preset"}
+              tone="stone"
+            />
+          </div>
+          <div
+            aria-label="Scenario presets"
+            className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4"
+            role="group"
+          >
+            {MANUAL_PROFILE_PRESETS.map((preset) => {
+              const isSelected = selectedPreset === preset.id;
+
+              return (
+                <button
+                  aria-pressed={isSelected}
+                  className={presetButtonClass(isSelected)}
+                  key={preset.id}
+                  onClick={() => onPresetSelect(preset.id)}
+                  type="button"
+                >
+                  <span className="block text-sm font-semibold">
+                    {preset.label}
+                  </span>
+                  <span className="mt-1 block text-xs leading-5">
+                    {preset.description}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          {selectedPreset === "custom" ? (
+            <p className="mt-3 text-sm leading-6 text-earth-700">
+              Inputs have changed after loading a preset.
+            </p>
+          ) : null}
+        </div>
+
+        <div className="mt-5 grid gap-4 lg:grid-cols-3">
           <NumberField
             field="age"
             label="Age"
@@ -806,6 +878,17 @@ function createManualRowId(prefix: "asset" | "debt") {
 function isPositiveDecimal(value: string) {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0;
+}
+
+function presetButtonClass(isSelected: boolean) {
+  const base =
+    "min-h-24 rounded-lg border px-3 py-3 text-left text-earth-800 shadow-sm outline-none transition focus:ring-2 focus:ring-seed-500";
+
+  if (isSelected) {
+    return `${base} border-seed-700 bg-seed-50 text-seed-950`;
+  }
+
+  return `${base} border-stone-300 bg-white hover:bg-stone-50`;
 }
 
 function hasReportContent(report: ReportReviewSample) {

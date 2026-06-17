@@ -65,6 +65,32 @@ export type ManualProfileScalarField = Exclude<
   "assets" | "debts"
 >;
 
+export const MANUAL_PROFILE_PRESETS = [
+  {
+    id: "sample",
+    label: "Sample household",
+    description: "Current sample values for baseline report review.",
+  },
+  {
+    id: "low_cash_guidance",
+    label: "Low cash coverage",
+    description: "Cash below one month of required outflows.",
+  },
+  {
+    id: "three_month_boundary",
+    label: "Three-month boundary",
+    description: "Cash equals exactly three months of required outflows.",
+  },
+  {
+    id: "required_only",
+    label: "Required fields only",
+    description: "Optional gross income, dependents, and debts removed.",
+  },
+] as const;
+
+export type ManualProfilePresetId =
+  (typeof MANUAL_PROFILE_PRESETS)[number]["id"];
+
 export class ManualProfileValidationError extends Error {
   constructor(message: string) {
     super(message);
@@ -96,6 +122,51 @@ const REQUIRED_INTEGER_FIELDS: ManualProfileScalarField[] = [
 const OPTIONAL_INTEGER_FIELDS: ManualProfileScalarField[] = ["dependents"];
 
 export function defaultManualProfileValues(): ManualProfileValues {
+  return manualProfilePresetValues("sample");
+}
+
+export function manualProfilePresetValues(
+  presetId: ManualProfilePresetId,
+): ManualProfileValues {
+  const values = sampleManualProfileValues();
+
+  if (presetId === "low_cash_guidance") {
+    values.assets = values.assets.map((asset) =>
+      asset.category === "cash" ? { ...asset, balance: "1500.00" } : asset,
+    );
+    values.userTargetMonths = "3";
+    return values;
+  }
+
+  if (presetId === "three_month_boundary") {
+    values.assets = values.assets.map((asset) =>
+      asset.category === "cash" ? { ...asset, balance: "10410.00" } : asset,
+    );
+    values.userTargetMonths = "3";
+    return values;
+  }
+
+  if (presetId === "required_only") {
+    values.assets = values.assets.map((asset) => {
+      if (asset.category === "cash") {
+        return { ...asset, balance: "9000.00" };
+      }
+      return { ...asset, balance: "0.00" };
+    });
+    values.debts = [];
+    values.dependents = "";
+    values.grossAnnualIncome = "";
+    values.incomePattern = "variable";
+    values.jobStability = "medium";
+    values.monthlyInvestmentContribution = "0.00";
+    values.userTargetMonths = "";
+    return values;
+  }
+
+  return values;
+}
+
+function sampleManualProfileValues(): ManualProfileValues {
   return {
     age: String(sampleFinancialProfile.age),
     assets: [

@@ -2,8 +2,10 @@ const assert = require("node:assert/strict");
 const test = require("node:test");
 
 const {
+  MANUAL_PROFILE_PRESETS,
   buildManualProfileRequest,
   defaultManualProfileValues,
+  manualProfilePresetValues,
   ManualProfileValidationError,
 } = require("../lib/report-review/manual-profile.ts");
 const {
@@ -25,6 +27,64 @@ test("manual profile omits blank user target months", () => {
 
   assert.equal(request.userTargetMonths, undefined);
   assert.equal(request.profile.monthly_take_home_income, "5200.00");
+});
+
+test("manual profile presets expose the expected review scenarios", () => {
+  assert.deepEqual(
+    MANUAL_PROFILE_PRESETS.map((preset) => preset.id),
+    [
+      "sample",
+      "low_cash_guidance",
+      "three_month_boundary",
+      "required_only",
+    ],
+  );
+});
+
+test("manual profile presets return independent value copies", () => {
+  const first = manualProfilePresetValues("sample");
+  first.assets[0].balance = "1.00";
+  first.debts[0].name = "Changed";
+
+  const second = manualProfilePresetValues("sample");
+
+  assert.equal(second.assets[0].balance, "12000.00");
+  assert.equal(second.debts[0].name, "Student loan");
+});
+
+test("low-cash preset maps a guidance-trace review input", () => {
+  const values = manualProfilePresetValues("low_cash_guidance");
+
+  const request = buildManualProfileRequest(values);
+
+  assert.equal(request.profile.assets.cash, "1500.00");
+  assert.equal(request.userTargetMonths, "3");
+});
+
+test("three-month boundary preset maps exactly three months of required outflows", () => {
+  const values = manualProfilePresetValues("three_month_boundary");
+
+  const request = buildManualProfileRequest(values);
+
+  assert.equal(request.profile.monthly_housing_cost, "1800.00");
+  assert.equal(request.profile.monthly_non_housing_essential_expenses, "900.00");
+  assert.deepEqual(
+    request.profile.debts.map((debt) => debt.monthly_payment),
+    ["250.00", "420.00", "100.00"],
+  );
+  assert.equal(request.profile.assets.cash, "10410.00");
+  assert.equal(request.userTargetMonths, "3");
+});
+
+test("required-only preset omits optional profile context", () => {
+  const values = manualProfilePresetValues("required_only");
+
+  const request = buildManualProfileRequest(values);
+
+  assert.equal("gross_annual_income" in request.profile, false);
+  assert.equal("dependents" in request.profile, false);
+  assert.deepEqual(request.profile.debts, []);
+  assert.equal(request.userTargetMonths, undefined);
 });
 
 test("manual profile aggregates asset rows into platform asset buckets", () => {
