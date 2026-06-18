@@ -295,6 +295,32 @@ export default function Home() {
         </div>
       </section>
 
+      <section className="bg-earth-50 px-6 pb-20 lg:px-8">
+        <div className="mx-auto max-w-4xl">
+          <p className="text-xs font-bold uppercase tracking-[0.22em] text-earth-700">
+            From the founder
+          </p>
+          <div className="mt-5 rounded-3xl border border-seed-900/10 bg-white p-7 shadow-soft sm:p-10">
+            <p className="text-lg leading-8 text-seed-900/75">
+              LittleSeed Money is being built by Junsu Jeong, a data engineer
+              with a software engineering background.
+            </p>
+            <p className="mt-5 text-lg leading-8 text-seed-900/75">
+              In his twenties, Junsu once took his host family to White Duck,
+              his favorite taco place in Johnson City, Tennessee. That day, he
+              heard a simple piece of advice: "Save money."
+            </p>
+            <p className="mt-5 font-display text-2xl leading-9 text-seed-950">
+              That small sentence stayed with him.
+            </p>
+            <p className="mt-4 text-lg leading-8 text-seed-900/75">
+              LittleSeed Money is built around the belief that small financial
+              steps, taken wisely, can grow into something meaningful.
+            </p>
+          </div>
+        </div>
+      </section>
+
       <Footer />
     </main>
   );
