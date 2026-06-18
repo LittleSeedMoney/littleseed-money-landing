@@ -16,11 +16,11 @@ export function Header() {
           <a className="transition hover:text-seed-500" href="#mission">
             Mission
           </a>
-          <a className="transition hover:text-seed-500" href="#tools">
-            Tools
+          <a className="transition hover:text-seed-500" href="#why">
+            Why LittleSeed
           </a>
-          <a className="transition hover:text-seed-500" href="#build">
-            Build
+          <a className="transition hover:text-seed-500" href="#roadmap">
+            Roadmap
           </a>
         </nav>
         <a
