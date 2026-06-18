@@ -187,7 +187,17 @@ test("charge inspector findings can be hidden without mutating the review", () =
 });
 
 test("charge inspector empty review keeps a safe no-finding state", () => {
+  const summary = summarizeChargeInspectorReview(chargeInspectorEmptyReview);
+
   assert.equal(isChargeInspectorEmpty(chargeInspectorEmptyReview), true);
+  assert.deepEqual(summary, {
+    totalFindings: 0,
+    reviewedTransactionCount: 0,
+    recurringCount: 0,
+    duplicateCount: 0,
+    bankFeeCount: 0,
+    priceIncreaseCount: 0,
+  });
   assert.deepEqual(
     visibleChargeInspectorFindings(chargeInspectorSampleReview, [
       ...chargeInspectorSampleReview.findings.map((finding) => finding.id),
@@ -681,6 +691,8 @@ test("platform report mapper builds user-selected target comparison", () => {
     tone: "seed",
     message: "Loaded for mapper tests.",
   });
+  assert.equal(mapped.chargeInspector.sourceLabel, "Empty review fixture");
+  assert.deepEqual(mapped.chargeInspector.findings, []);
 
   const decision = mapped.decisionReadiness;
   assert.deepEqual(decision.evidenceSourceIds, ["cfpb_emergency_fund_guide"]);

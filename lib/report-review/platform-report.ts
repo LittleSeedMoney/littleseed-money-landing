@@ -11,7 +11,7 @@ import {
 } from "@/data/report-review-sample";
 
 import { sampleFinancialProfile } from "./sample-profile";
-import { chargeInspectorSampleReview } from "./charge-inspector";
+import { chargeInspectorEmptyReview } from "./charge-inspector";
 import {
   parseWorkspaceReportResponse,
   type DecimalValue,
@@ -219,7 +219,7 @@ export function mapPlatformReport(
       ],
     },
     decisionReadiness: buildDecisionReadiness(snapshot),
-    chargeInspector: chargeInspectorSampleReview,
+    chargeInspector: chargeInspectorEmptyReview,
   };
 }
 

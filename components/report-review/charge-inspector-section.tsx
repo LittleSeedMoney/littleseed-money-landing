@@ -115,7 +115,7 @@ export function ChargeInspectorSection({
           </p>
           <button
             className="min-h-10 rounded-lg border border-stone-300 bg-white px-4 text-sm font-semibold text-earth-800 shadow-sm hover:border-seed-300 hover:text-seed-900 focus:outline-none focus:ring-2 focus:ring-seed-500"
-            data-testid="charge-inspector-restore"
+            data-testid="charge-inspector-restore-banner"
             onClick={restoreFindings}
             type="button"
           >
@@ -314,7 +314,7 @@ function ChargeInspectorEmptyState({
         {showRestore ? (
           <button
             className="min-h-10 rounded-lg border border-stone-300 bg-white px-4 text-sm font-semibold text-earth-800 shadow-sm hover:border-seed-300 hover:text-seed-900 focus:outline-none focus:ring-2 focus:ring-seed-500"
-            data-testid="charge-inspector-restore"
+            data-testid="charge-inspector-restore-empty"
             onClick={onRestore}
             type="button"
           >
