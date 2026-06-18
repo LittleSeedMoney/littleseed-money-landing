@@ -19,6 +19,7 @@ import {
 } from "@/lib/report-review/manual-profile";
 
 import { AssetPortfolioSection } from "./asset-portfolio-section";
+import { ChargeInspectorSection } from "./charge-inspector-section";
 import { EducationSection } from "./education-section";
 import { EvidenceSection } from "./evidence-section";
 import { FindingsSection } from "./findings-section";
@@ -247,6 +248,7 @@ export function ReportReviewWorkspace({
                 sourceById={sourceById}
               />
               <SavingGoalDraftSection />
+              <ChargeInspectorSection review={report.chargeInspector} />
               <FindingsSection findings={report.findings} />
               <EducationSection
                 decisionReadiness={report.decisionReadiness}

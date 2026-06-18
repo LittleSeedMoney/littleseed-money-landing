@@ -16,8 +16,19 @@ const {
   ManualProfileValidationError,
 } = require("../lib/report-review/manual-profile.ts");
 const {
+  reportReviewSample,
+} = require("../data/report-review-sample.ts");
+const {
   REPORT_REVIEW_VALIDATION_CHECKLIST,
 } = require("../lib/report-review/validation-checklist.ts");
+const {
+  chargeInspectorEmptyReview,
+  chargeInspectorFindingTypeLabels,
+  chargeInspectorSampleReview,
+  isChargeInspectorEmpty,
+  summarizeChargeInspectorReview,
+  visibleChargeInspectorFindings,
+} = require("../lib/report-review/charge-inspector.ts");
 const {
   parseWorkspaceReportResponse,
 } = require("../lib/report-review/platform-workspace-response.ts");
@@ -143,6 +154,100 @@ test("saving goal draft stays inside the product boundary", () => {
   assert.match(copy, /Does not compare this goal/);
   assert.doesNotMatch(copy, /you should/i);
   assert.doesNotMatch(copy, /credit card/i);
+});
+
+test("charge inspector sample covers every current finding type", () => {
+  const summary = summarizeChargeInspectorReview(chargeInspectorSampleReview);
+
+  assert.equal(summary.reviewedTransactionCount, 18);
+  assert.equal(summary.totalFindings, 4);
+  assert.equal(summary.recurringCount, 1);
+  assert.equal(summary.duplicateCount, 1);
+  assert.equal(summary.bankFeeCount, 1);
+  assert.equal(summary.priceIncreaseCount, 1);
+  assert.deepEqual(
+    chargeInspectorSampleReview.findings.map((finding) => finding.type).sort(),
+    Object.keys(chargeInspectorFindingTypeLabels).sort(),
+  );
+});
+
+test("charge inspector findings can be hidden without mutating the review", () => {
+  const firstFindingId = chargeInspectorSampleReview.findings[0].id;
+  const visibleFindings = visibleChargeInspectorFindings(
+    chargeInspectorSampleReview,
+    [firstFindingId],
+  );
+
+  assert.equal(visibleFindings.length, 3);
+  assert.equal(
+    visibleFindings.some((finding) => finding.id === firstFindingId),
+    false,
+  );
+  assert.equal(chargeInspectorSampleReview.findings.length, 4);
+});
+
+test("charge inspector empty review keeps a safe no-finding state", () => {
+  const summary = summarizeChargeInspectorReview(chargeInspectorEmptyReview);
+
+  assert.equal(isChargeInspectorEmpty(chargeInspectorEmptyReview), true);
+  assert.deepEqual(summary, {
+    totalFindings: 0,
+    reviewedTransactionCount: 0,
+    recurringCount: 0,
+    duplicateCount: 0,
+    bankFeeCount: 0,
+    priceIncreaseCount: 0,
+  });
+  assert.deepEqual(
+    visibleChargeInspectorFindings(chargeInspectorSampleReview, [
+      ...chargeInspectorSampleReview.findings.map((finding) => finding.id),
+    ]),
+    [],
+  );
+  assert.match(
+    chargeInspectorEmptyReview.emptyState.body,
+    /No transaction upload/,
+  );
+  assert.match(
+    chargeInspectorEmptyReview.emptyState.checks.join(" "),
+    /does not prove every transaction is correct/,
+  );
+});
+
+test("charge inspector copy stays inside review-only boundaries", () => {
+  const copy = [
+    chargeInspectorSampleReview.sourceLabel,
+    ...chargeInspectorSampleReview.limitations,
+    chargeInspectorSampleReview.emptyState.title,
+    chargeInspectorSampleReview.emptyState.body,
+    ...chargeInspectorSampleReview.emptyState.checks,
+    ...chargeInspectorSampleReview.findings.flatMap((finding) => [
+      finding.title,
+      finding.summary,
+      finding.explanation,
+      ...finding.limitations,
+      ...finding.suggestedReviewSteps,
+      ...finding.evidenceRows.flatMap((row) => [
+        row.merchantName,
+        row.detail,
+      ]),
+    ]),
+  ].join(" ");
+
+  assert.match(copy, /review prompts/);
+  assert.match(copy, /No account connection/);
+  assert.doesNotMatch(
+    copy,
+    /\b(definitely|wasteful|cancel|dispute|guaranteed|you should)\b/i,
+  );
+});
+
+test("report review sample exposes charge inspector review data", () => {
+  assert.equal(
+    reportReviewSample.chargeInspector.sourceLabel,
+    "Sample CSV review fixture",
+  );
+  assert.equal(reportReviewSample.chargeInspector.findings.length, 4);
 });
 
 test("manual profile presets expose the expected review scenarios", () => {
@@ -586,6 +691,8 @@ test("platform report mapper builds user-selected target comparison", () => {
     tone: "seed",
     message: "Loaded for mapper tests.",
   });
+  assert.equal(mapped.chargeInspector.sourceLabel, "Empty review fixture");
+  assert.deepEqual(mapped.chargeInspector.findings, []);
 
   const decision = mapped.decisionReadiness;
   assert.deepEqual(decision.evidenceSourceIds, ["cfpb_emergency_fund_guide"]);

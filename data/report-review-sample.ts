@@ -1,3 +1,8 @@
+import {
+  chargeInspectorSampleReview,
+  type ChargeInspectorReview,
+} from "@/lib/report-review/charge-inspector";
+
 export type Provenance =
   | "sample"
   | "user-entered"
@@ -146,6 +151,7 @@ export type ReportReviewSample = {
     notes: PortfolioNote[];
   };
   decisionReadiness: DecisionReadiness;
+  chargeInspector: ChargeInspectorReview;
 };
 
 export const reportReviewSample: ReportReviewSample = {
@@ -752,4 +758,5 @@ export const reportReviewSample: ReportReviewSample = {
     guidanceRuleVersion: "guidance_rule_registry_v0",
     modelVersion: "emergency_fund_target_v0",
   },
+  chargeInspector: chargeInspectorSampleReview,
 };
