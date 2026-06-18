@@ -28,6 +28,7 @@ import { ReportReviewHeader } from "./report-review-header";
 import { ReportReviewNav } from "./report-review-nav";
 import { ReportSections } from "./report-sections";
 import { ReviewRail } from "./review-rail";
+import { SavingGoalDraftSection } from "./saving-goal-draft-section";
 import { ReviewSectionHeading, StatusPill } from "./shared";
 import { ValidationChecklistSection } from "./validation-checklist-section";
 
@@ -245,6 +246,7 @@ export function ReportReviewWorkspace({
                 portfolio={report.assetPortfolio}
                 sourceById={sourceById}
               />
+              <SavingGoalDraftSection />
               <FindingsSection findings={report.findings} />
               <EducationSection
                 decisionReadiness={report.decisionReadiness}

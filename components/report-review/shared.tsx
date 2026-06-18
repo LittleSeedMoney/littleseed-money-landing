@@ -10,6 +10,7 @@ export const reportReviewNavItems = [
   ["Overview", "#overview"],
   ["Sections", "#sections"],
   ["Portfolio", "#portfolio"],
+  ["Goal draft", "#saving-goal-draft"],
   ["Findings", "#findings"],
   ["Education", "#education"],
   ["Evidence", "#evidence"],

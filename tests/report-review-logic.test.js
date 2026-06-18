@@ -29,6 +29,10 @@ const {
   resolveEducationTopic,
   uniqueTopicIds,
 } = require("../lib/report-review/education-topics.ts");
+const {
+  calculateSavingGoalDraft,
+  defaultSavingGoalDraftValues,
+} = require("../lib/report-review/saving-goal-draft.ts");
 
 test("manual profile omits blank user target months", () => {
   const values = defaultManualProfileValues();
@@ -37,6 +41,87 @@ test("manual profile omits blank user target months", () => {
 
   assert.equal(request.userTargetMonths, undefined);
   assert.equal(request.profile.monthly_take_home_income, "5200.00");
+});
+
+test("saving goal draft calculates the baseline arithmetic", () => {
+  const summary = calculateSavingGoalDraft(defaultSavingGoalDraftValues());
+
+  assert.equal(summary.goalName, "Emergency reserve top-up");
+  assert.equal(summary.remainingAmount, 3000);
+  assert.equal(summary.progressPercent, 80);
+  assert.equal(summary.monthsAtCurrentContribution, 6);
+  assert.equal(summary.monthlyNeededForTarget, 500);
+  assert.equal(summary.status, "pace_fits_horizon");
+  assert.equal(summary.statusLabel, "Pace fits entered horizon");
+});
+
+test("saving goal draft keeps blank target horizon missing", () => {
+  const values = defaultSavingGoalDraftValues();
+  values.targetMonths = "";
+
+  const summary = calculateSavingGoalDraft(values);
+
+  assert.equal(summary.targetMonths, null);
+  assert.equal(summary.monthlyNeededForTarget, null);
+  assert.equal(summary.status, "estimate_only");
+  assert.deepEqual(summary.validationMessages, []);
+});
+
+test("saving goal draft caps progress when current savings exceed target", () => {
+  const values = defaultSavingGoalDraftValues();
+  values.currentSaved = "16000.00";
+
+  const summary = calculateSavingGoalDraft(values);
+
+  assert.equal(summary.remainingAmount, 0);
+  assert.equal(summary.progressPercent, 100);
+  assert.equal(summary.monthsAtCurrentContribution, 0);
+  assert.equal(summary.monthlyNeededForTarget, 0);
+  assert.equal(summary.status, "reached");
+});
+
+test("saving goal draft treats zero contribution as horizon-only context", () => {
+  const values = defaultSavingGoalDraftValues();
+  values.monthlyContribution = "0";
+
+  const summary = calculateSavingGoalDraft(values);
+
+  assert.equal(summary.monthsAtCurrentContribution, null);
+  assert.equal(summary.monthlyNeededForTarget, 500);
+  assert.equal(summary.status, "horizon_only");
+});
+
+test("saving goal draft rejects a non-positive target amount", () => {
+  const values = defaultSavingGoalDraftValues();
+  values.targetAmount = "0";
+
+  const summary = calculateSavingGoalDraft(values);
+
+  assert.equal(summary.status, "needs_target");
+  assert.equal(summary.remainingAmount, null);
+  assert.match(summary.validationMessages.join(" "), /greater than 0/);
+});
+
+test("saving goal draft rejects an invalid optional horizon", () => {
+  const values = defaultSavingGoalDraftValues();
+  values.targetMonths = "0";
+
+  const summary = calculateSavingGoalDraft(values);
+
+  assert.equal(summary.status, "invalid_input");
+  assert.equal(summary.monthlyNeededForTarget, null);
+  assert.match(summary.validationMessages.join(" "), /Target horizon/);
+});
+
+test("saving goal draft stays inside the product boundary", () => {
+  const summary = calculateSavingGoalDraft(defaultSavingGoalDraftValues());
+  const copy = [...summary.assumptions, ...summary.limitations].join(" ");
+
+  assert.match(copy, /in-session draft/);
+  assert.match(copy, /No bank connection/);
+  assert.match(copy, /Does not compare this goal/);
+  assert.doesNotMatch(copy, /you should/i);
+  assert.doesNotMatch(copy, /credit card/i);
 });
 
 test("manual profile presets expose the expected review scenarios", () => {
