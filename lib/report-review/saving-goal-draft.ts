@@ -43,6 +43,22 @@ export function defaultSavingGoalDraftValues(): SavingGoalDraftValues {
   };
 }
 
+export function formatSavingGoalDraftMoney(value: number | null) {
+  if (value === null) {
+    return "Missing";
+  }
+
+  const cents = Math.round(value * 100);
+  const hasCents = Math.abs(cents % 100) !== 0;
+
+  return new Intl.NumberFormat("en-US", {
+    currency: "USD",
+    maximumFractionDigits: hasCents ? 2 : 0,
+    minimumFractionDigits: hasCents ? 2 : 0,
+    style: "currency",
+  }).format(cents / 100);
+}
+
 export function calculateSavingGoalDraft(
   values: SavingGoalDraftValues,
 ): SavingGoalDraftSummary {

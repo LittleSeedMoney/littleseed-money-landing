@@ -5,6 +5,7 @@ import { useMemo, useState, type ChangeEvent } from "react";
 import {
   calculateSavingGoalDraft,
   defaultSavingGoalDraftValues,
+  formatSavingGoalDraftMoney,
   type SavingGoalDraftStatus,
   type SavingGoalDraftValues,
 } from "@/lib/report-review/saving-goal-draft";
@@ -96,7 +97,7 @@ export function SavingGoalDraftSection() {
           <GoalMetric
             detail="Target amount minus current saved amount."
             label="Remaining"
-            value={formatMoney(summary.remainingAmount)}
+            value={formatSavingGoalDraftMoney(summary.remainingAmount)}
           />
           <GoalMetric
             detail="Current saved amount divided by the target amount."
@@ -243,18 +244,6 @@ function statusTone(status: SavingGoalDraftStatus) {
   return "stone";
 }
 
-function formatMoney(value: number | null) {
-  if (value === null) {
-    return "Missing";
-  }
-
-  return new Intl.NumberFormat("en-US", {
-    currency: "USD",
-    maximumFractionDigits: 0,
-    style: "currency",
-  }).format(value);
-}
-
 function formatPercent(value: number | null) {
   if (value === null) {
     return "Missing";
@@ -282,5 +271,5 @@ function formatMonthlyNeeded(value: number | null) {
     return "No horizon entered";
   }
 
-  return `${formatMoney(value)} / month`;
+  return `${formatSavingGoalDraftMoney(value)} / month`;
 }

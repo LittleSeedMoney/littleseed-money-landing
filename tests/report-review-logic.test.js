@@ -32,6 +32,7 @@ const {
 const {
   calculateSavingGoalDraft,
   defaultSavingGoalDraftValues,
+  formatSavingGoalDraftMoney,
 } = require("../lib/report-review/saving-goal-draft.ts");
 
 test("manual profile omits blank user target months", () => {
@@ -111,6 +112,13 @@ test("saving goal draft rejects an invalid optional horizon", () => {
   assert.equal(summary.status, "invalid_input");
   assert.equal(summary.monthlyNeededForTarget, null);
   assert.match(summary.validationMessages.join(" "), /Target horizon/);
+});
+
+test("saving goal draft money formatting preserves entered cents", () => {
+  assert.equal(formatSavingGoalDraftMoney(3000), "$3,000");
+  assert.equal(formatSavingGoalDraftMoney(3000.5), "$3,000.50");
+  assert.equal(formatSavingGoalDraftMoney(750.125), "$750.13");
+  assert.equal(formatSavingGoalDraftMoney(null), "Missing");
 });
 
 test("saving goal draft stays inside the product boundary", () => {
