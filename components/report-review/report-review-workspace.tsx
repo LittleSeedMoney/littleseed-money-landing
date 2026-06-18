@@ -206,10 +206,6 @@ export function ReportReviewWorkspace({
     setRequestState("idle");
   }
 
-  function resetToSampleValues() {
-    applyPreset("sample");
-  }
-
   return (
     <main className="min-h-screen bg-stone-50 text-earth-900">
       <ReportReviewHeader dataLabel={dataLabel(report.dataMode)} />
@@ -224,7 +220,6 @@ export function ReportReviewWorkspace({
             onAddDebt={addDebtRow}
             onAssetUpdate={updateAssetValue}
             onDebtUpdate={updateDebtValue}
-            onReset={resetToSampleValues}
             onRemoveAsset={removeAssetRow}
             onRemoveDebt={removeDebtRow}
             onPresetSelect={applyPreset}
@@ -271,7 +266,6 @@ function ManualInputSection({
   onAddDebt,
   onAssetUpdate,
   onDebtUpdate,
-  onReset,
   onRemoveAsset,
   onRemoveDebt,
   onPresetSelect,
@@ -294,7 +288,6 @@ function ManualInputSection({
     field: T,
     value: ManualDebtValue[T],
   ) => void;
-  onReset: () => void;
   onRemoveAsset: (id: string) => void;
   onRemoveDebt: (id: string) => void;
   onPresetSelect: (presetId: ManualProfilePresetId) => void;
@@ -682,13 +675,6 @@ function ManualInputSection({
             type="submit"
           >
             {isSubmitting ? "Running report" : "Run manual report"}
-          </button>
-          <button
-            className="rounded-lg border border-stone-300 px-4 py-2 text-sm font-semibold text-earth-800 hover:bg-stone-50 focus:outline-none focus:ring-2 focus:ring-seed-500"
-            onClick={onReset}
-            type="button"
-          >
-            Reset sample inputs
           </button>
         </div>
       </form>

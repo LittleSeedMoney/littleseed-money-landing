@@ -65,6 +65,14 @@ test("three-month boundary preset maps exactly three months of required outflows
   const values = manualProfilePresetValues("three_month_boundary");
 
   const request = buildManualProfileRequest(values);
+  const monthlyDebtPayments = request.profile.debts.reduce(
+    (total, debt) => total + Number(debt.monthly_payment),
+    0,
+  );
+  const monthlyRequiredOutflows =
+    Number(request.profile.monthly_housing_cost) +
+    Number(request.profile.monthly_non_housing_essential_expenses) +
+    monthlyDebtPayments;
 
   assert.equal(request.profile.monthly_housing_cost, "1800.00");
   assert.equal(request.profile.monthly_non_housing_essential_expenses, "900.00");
@@ -72,7 +80,10 @@ test("three-month boundary preset maps exactly three months of required outflows
     request.profile.debts.map((debt) => debt.monthly_payment),
     ["250.00", "420.00", "100.00"],
   );
-  assert.equal(request.profile.assets.cash, "10410.00");
+  assert.equal(
+    request.profile.assets.cash,
+    (monthlyRequiredOutflows * 3).toFixed(2),
+  );
   assert.equal(request.userTargetMonths, "3");
 });
 
@@ -84,6 +95,11 @@ test("required-only preset omits optional profile context", () => {
   assert.equal("gross_annual_income" in request.profile, false);
   assert.equal("dependents" in request.profile, false);
   assert.deepEqual(request.profile.debts, []);
+  assert.equal(request.profile.income_pattern, "mostly_stable");
+  assert.equal(request.profile.job_stability, "high");
+  assert.equal(request.profile.monthly_investment_contribution, "500.00");
+  assert.equal(request.profile.assets.cash, "12000.00");
+  assert.equal(request.profile.assets.retirement, "45000.00");
   assert.equal(request.userTargetMonths, undefined);
 });
 

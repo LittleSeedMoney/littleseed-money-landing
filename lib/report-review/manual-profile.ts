@@ -84,7 +84,7 @@ export const MANUAL_PROFILE_PRESETS = [
   {
     id: "required_only",
     label: "Required fields only",
-    description: "Optional gross income, dependents, and debts removed.",
+    description: "Optional income, dependents, debts, and target removed.",
   },
 ] as const;
 
@@ -139,26 +139,18 @@ export function manualProfilePresetValues(
   }
 
   if (presetId === "three_month_boundary") {
+    const cashBalance = targetMonthsCashBalance(values, 3);
     values.assets = values.assets.map((asset) =>
-      asset.category === "cash" ? { ...asset, balance: "10410.00" } : asset,
+      asset.category === "cash" ? { ...asset, balance: cashBalance } : asset,
     );
     values.userTargetMonths = "3";
     return values;
   }
 
   if (presetId === "required_only") {
-    values.assets = values.assets.map((asset) => {
-      if (asset.category === "cash") {
-        return { ...asset, balance: "9000.00" };
-      }
-      return { ...asset, balance: "0.00" };
-    });
     values.debts = [];
     values.dependents = "";
     values.grossAnnualIncome = "";
-    values.incomePattern = "variable";
-    values.jobStability = "medium";
-    values.monthlyInvestmentContribution = "0.00";
     values.userTargetMonths = "";
     return values;
   }
@@ -225,6 +217,22 @@ function sampleManualProfileValues(): ManualProfileValues {
     riskTolerance: sampleFinancialProfile.risk_tolerance,
     userTargetMonths: "",
   };
+}
+
+function targetMonthsCashBalance(
+  values: ManualProfileValues,
+  targetMonths: number,
+): string {
+  const monthlyDebtPayments = values.debts.reduce(
+    (total, debt) => total + decimalNumber(debt.monthlyPayment),
+    0,
+  );
+  const monthlyRequiredOutflows =
+    decimalNumber(values.monthlyHousingCost) +
+    decimalNumber(values.monthlyNonHousingEssentialExpenses) +
+    monthlyDebtPayments;
+
+  return decimalString(monthlyRequiredOutflows * targetMonths);
 }
 
 export function buildManualProfileRequest(
