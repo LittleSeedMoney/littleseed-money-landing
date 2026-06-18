@@ -11,6 +11,7 @@ export const reportReviewNavItems = [
   ["Sections", "#sections"],
   ["Portfolio", "#portfolio"],
   ["Goal draft", "#saving-goal-draft"],
+  ["Charge Inspector", "#charge-inspector"],
   ["Findings", "#findings"],
   ["Education", "#education"],
   ["Evidence", "#evidence"],
