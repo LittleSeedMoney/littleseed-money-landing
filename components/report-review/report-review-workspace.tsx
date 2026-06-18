@@ -27,6 +27,7 @@ import { ReportReviewNav } from "./report-review-nav";
 import { ReportSections } from "./report-sections";
 import { ReviewRail } from "./review-rail";
 import { ReviewSectionHeading, StatusPill } from "./shared";
+import { ValidationChecklistSection } from "./validation-checklist-section";
 
 type ManualRequestState = "idle" | "submitting" | "error";
 
@@ -229,6 +230,7 @@ export function ReportReviewWorkspace({
             selectedPreset={selectedPreset}
             values={values}
           />
+          <ValidationChecklistSection selectedPreset={selectedPreset} />
           {hasReportContent(report) ? (
             <>
               <OverviewSection generatedAt={generatedAt} report={report} />
