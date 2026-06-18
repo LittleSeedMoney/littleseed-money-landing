@@ -2,6 +2,7 @@ const assert = require("node:assert/strict");
 const test = require("node:test");
 
 const {
+  MANUAL_PROFILE_FIELD_REQUIREMENTS,
   MANUAL_PROFILE_PRESETS,
   buildManualProfileRequest,
   defaultManualProfileValues,
@@ -44,6 +45,36 @@ test("manual profile presets expose the expected review scenarios", () => {
   );
 });
 
+test("manual profile field requirements identify required and optional inputs", () => {
+  const requirements = Object.entries(MANUAL_PROFILE_FIELD_REQUIREMENTS);
+  const requiredFields = requirements
+    .filter(([, requirement]) => requirement === "required")
+    .map(([field]) => field)
+    .sort();
+  const optionalFields = requirements
+    .filter(([, requirement]) => requirement === "optional")
+    .map(([field]) => field)
+    .sort();
+
+  assert.deepEqual(requiredFields, [
+    "age",
+    "expectedYearsInCurrentLocation",
+    "incomePattern",
+    "jobStability",
+    "monthlyDiscretionaryExpenses",
+    "monthlyHousingCost",
+    "monthlyInvestmentContribution",
+    "monthlyNonHousingEssentialExpenses",
+    "monthlyTakeHomeIncome",
+    "riskTolerance",
+  ]);
+  assert.deepEqual(optionalFields, [
+    "dependents",
+    "grossAnnualIncome",
+    "userTargetMonths",
+  ]);
+});
+
 test("report review validation checklist covers every preset", () => {
   assert.deepEqual(
     REPORT_REVIEW_VALIDATION_CHECKLIST.map((item) => item.presetId),
@@ -65,7 +96,14 @@ test("report review validation checklist includes human-verifiable cases", () =>
 
   assert.ok(
     requiredOnlyCase.expectedResults.some((result) =>
-      result.includes("omits optional income"),
+      result.includes(
+        "omits optional income, dependents, and user target months",
+      ),
+    ),
+  );
+  assert.ok(
+    requiredOnlyCase.inputChecks.some((check) =>
+      check.includes("Fields labeled Optional"),
     ),
   );
   assert.ok(

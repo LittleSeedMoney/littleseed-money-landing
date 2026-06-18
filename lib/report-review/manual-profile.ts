@@ -65,6 +65,27 @@ export type ManualProfileScalarField = Exclude<
   "assets" | "debts"
 >;
 
+export type ManualProfileFieldRequirement = "required" | "optional";
+
+export const MANUAL_PROFILE_FIELD_REQUIREMENTS: Record<
+  ManualProfileScalarField,
+  ManualProfileFieldRequirement
+> = {
+  age: "required",
+  dependents: "optional",
+  expectedYearsInCurrentLocation: "required",
+  grossAnnualIncome: "optional",
+  incomePattern: "required",
+  jobStability: "required",
+  monthlyDiscretionaryExpenses: "required",
+  monthlyHousingCost: "required",
+  monthlyInvestmentContribution: "required",
+  monthlyNonHousingEssentialExpenses: "required",
+  monthlyTakeHomeIncome: "required",
+  riskTolerance: "required",
+  userTargetMonths: "optional",
+};
+
 export const MANUAL_PROFILE_PRESETS = [
   {
     id: "sample",

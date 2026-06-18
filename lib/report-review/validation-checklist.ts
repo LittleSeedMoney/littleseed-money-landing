@@ -63,11 +63,11 @@ export const REPORT_REVIEW_VALIDATION_CHECKLIST: ReportReviewValidationChecklist
       focus: "Missing optional context without converting blanks to zero.",
       inputChecks: [
         "Required fields only preset is selected.",
-        "Gross annual income, dependents, user target months, and liabilities are blank or absent.",
+        "Fields labeled Optional are blank or absent: gross annual income, dependents, user target months, and liabilities.",
         "Sample income pattern, job stability, asset balances, and monthly investing contribution remain intact.",
       ],
       expectedResults: [
-        "Request builder omits optional income and dependents instead of sending zero values.",
+        "Request builder omits optional income, dependents, and user target months instead of sending zero values.",
         "Liabilities are omitted as an empty list, not converted into zero-dollar debt facts.",
         "Missing optional context remains visible in the report or decision output where applicable.",
       ],

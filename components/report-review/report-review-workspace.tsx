@@ -4,6 +4,7 @@ import { useMemo, useState, type ChangeEvent, type FormEvent } from "react";
 
 import type { ReportReviewSample } from "@/data/report-review-sample";
 import {
+  MANUAL_PROFILE_FIELD_REQUIREMENTS,
   MANUAL_PROFILE_PRESETS,
   defaultManualProfileValues,
   manualProfilePresetValues,
@@ -11,6 +12,7 @@ import {
   type ManualAssetValue,
   type ManualDebtType,
   type ManualDebtValue,
+  type ManualProfileFieldRequirement,
   type ManualProfilePresetId,
   type ManualProfileScalarField,
   type ManualProfileValues,
@@ -324,7 +326,8 @@ function ManualInputSection({
                 Scenario presets
               </h3>
               <p className="mt-1 text-sm leading-6 text-earth-700">
-                In-session review inputs. No profile is saved.
+                In-session review inputs. Required fields build the request;
+                blank optional fields stay missing.
               </p>
             </div>
             <StatusPill
@@ -521,6 +524,7 @@ function ManualInputSection({
                     value={asset.name}
                   />
                   <SelectValueField
+                    required
                     label="Category"
                     onChange={(event) =>
                       onAssetUpdate(
@@ -592,6 +596,11 @@ function ManualInputSection({
                   </div>
                   <div className="mt-3 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                     <TextValueField
+                      requirement={
+                        isPositiveDecimal(debt.balance)
+                          ? "required"
+                          : "conditional"
+                      }
                       label="Liability name"
                       onChange={(event) =>
                         onDebtUpdate(debt.id, "name", event.target.value)
@@ -600,6 +609,7 @@ function ManualInputSection({
                       value={debt.name}
                     />
                     <SelectValueField
+                      required
                       label="Type"
                       onChange={(event) =>
                         onDebtUpdate(
@@ -702,9 +712,11 @@ function NumberField({
   step?: string;
   value: string;
 }) {
+  const requirement = MANUAL_PROFILE_FIELD_REQUIREMENTS[field];
+
   return (
     <label className="block">
-      <span className="text-sm font-medium text-earth-800">{label}</span>
+      <FieldLabel label={label} requirement={requirement} />
       <input
         className="mt-2 min-h-11 w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-seed-950 shadow-sm outline-none focus:border-seed-500 focus:ring-2 focus:ring-seed-200"
         inputMode="decimal"
@@ -735,12 +747,15 @@ function SelectField({
   options: ReadonlyArray<readonly [string, string]>;
   value: string;
 }) {
+  const requirement = MANUAL_PROFILE_FIELD_REQUIREMENTS[field];
+
   return (
     <label className="block">
-      <span className="text-sm font-medium text-earth-800">{label}</span>
+      <FieldLabel label={label} requirement={requirement} />
       <select
         className="mt-2 min-h-11 w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-seed-950 shadow-sm outline-none focus:border-seed-500 focus:ring-2 focus:ring-seed-200"
         onChange={(event) => onUpdate(field, event)}
+        required={requirement === "required"}
         value={value}
       >
         {options.map(([optionValue, optionLabel]) => (
@@ -756,17 +771,22 @@ function SelectField({
 function TextValueField({
   label,
   onChange,
+  requirement,
   required = false,
   value,
 }: {
   label: string;
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  requirement?: ManualProfileFieldRequirement | "conditional";
   required?: boolean;
   value: string;
 }) {
+  const resolvedRequirement =
+    requirement ?? (required ? "required" : "optional");
+
   return (
     <label className="block">
-      <span className="text-sm font-medium text-earth-800">{label}</span>
+      <FieldLabel label={label} requirement={resolvedRequirement} />
       <input
         className="mt-2 min-h-11 w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-seed-950 shadow-sm outline-none focus:border-seed-500 focus:ring-2 focus:ring-seed-200"
         onChange={onChange}
@@ -781,19 +801,24 @@ function TextValueField({
 function NumberValueField({
   label,
   onChange,
+  requirement,
   required = false,
   step = "0.01",
   value,
 }: {
   label: string;
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  requirement?: ManualProfileFieldRequirement | "conditional";
   required?: boolean;
   step?: string;
   value: string;
 }) {
+  const resolvedRequirement =
+    requirement ?? (required ? "required" : "optional");
+
   return (
     <label className="block">
-      <span className="text-sm font-medium text-earth-800">{label}</span>
+      <FieldLabel label={label} requirement={resolvedRequirement} />
       <input
         className="mt-2 min-h-11 w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-seed-950 shadow-sm outline-none focus:border-seed-500 focus:ring-2 focus:ring-seed-200"
         inputMode="decimal"
@@ -812,19 +837,25 @@ function SelectValueField({
   label,
   onChange,
   options,
+  required = false,
   value,
 }: {
   label: string;
   onChange: (event: ChangeEvent<HTMLSelectElement>) => void;
   options: ReadonlyArray<readonly [string, string]>;
+  required?: boolean;
   value: string;
 }) {
   return (
     <label className="block">
-      <span className="text-sm font-medium text-earth-800">{label}</span>
+      <FieldLabel
+        label={label}
+        requirement={required ? "required" : "optional"}
+      />
       <select
         className="mt-2 min-h-11 w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-seed-950 shadow-sm outline-none focus:border-seed-500 focus:ring-2 focus:ring-seed-200"
         onChange={onChange}
+        required={required}
         value={value}
       >
         {options.map(([optionValue, optionLabel]) => (
@@ -834,6 +865,32 @@ function SelectValueField({
         ))}
       </select>
     </label>
+  );
+}
+
+function FieldLabel({
+  label,
+  requirement,
+}: {
+  label: string;
+  requirement: ManualProfileFieldRequirement | "conditional";
+}) {
+  const labelText =
+    requirement === "conditional" ? "Required if balance > 0" : requirement;
+
+  return (
+    <span className="flex min-h-5 flex-wrap items-center gap-x-2 gap-y-1">
+      <span className="text-sm font-medium text-earth-800">{label}</span>
+      <span
+        className={`text-xs font-semibold uppercase tracking-[0.12em] ${
+          requirement === "required" || requirement === "conditional"
+            ? "text-seed-700"
+            : "text-earth-500"
+        }`}
+      >
+        {labelText}
+      </span>
+    </span>
   );
 }
 
