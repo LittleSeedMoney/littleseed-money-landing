@@ -2,12 +2,22 @@ const assert = require("node:assert/strict");
 const test = require("node:test");
 
 const {
+  MANUAL_PROFILE_FIELD_REQUIREMENTS,
   MANUAL_PROFILE_PRESETS,
+  OPTIONAL_DECIMAL_FIELDS,
+  OPTIONAL_INTEGER_FIELDS,
+  OPTIONAL_POSITIVE_DECIMAL_FIELDS,
+  REQUIRED_DECIMAL_FIELDS,
+  REQUIRED_INTEGER_FIELDS,
+  REQUIRED_SELECT_FIELDS,
   buildManualProfileRequest,
   defaultManualProfileValues,
   manualProfilePresetValues,
   ManualProfileValidationError,
 } = require("../lib/report-review/manual-profile.ts");
+const {
+  REPORT_REVIEW_VALIDATION_CHECKLIST,
+} = require("../lib/report-review/validation-checklist.ts");
 const {
   parseWorkspaceReportResponse,
 } = require("../lib/report-review/platform-workspace-response.ts");
@@ -38,6 +48,72 @@ test("manual profile presets expose the expected review scenarios", () => {
       "three_month_boundary",
       "required_only",
     ],
+  );
+});
+
+test("manual profile field requirements identify required and optional inputs", () => {
+  const requirements = Object.entries(MANUAL_PROFILE_FIELD_REQUIREMENTS);
+  const expectedRequiredFields = [
+    ...REQUIRED_DECIMAL_FIELDS,
+    ...REQUIRED_INTEGER_FIELDS,
+    ...REQUIRED_SELECT_FIELDS,
+  ].sort();
+  const expectedOptionalFields = [
+    ...OPTIONAL_DECIMAL_FIELDS,
+    ...OPTIONAL_POSITIVE_DECIMAL_FIELDS,
+    ...OPTIONAL_INTEGER_FIELDS,
+  ].sort();
+  const scalarFields = Object.keys(defaultManualProfileValues())
+    .filter((field) => field !== "assets" && field !== "debts")
+    .sort();
+  const requiredFields = requirements
+    .filter(([, requirement]) => requirement === "required")
+    .map(([field]) => field)
+    .sort();
+  const optionalFields = requirements
+    .filter(([, requirement]) => requirement === "optional")
+    .map(([field]) => field)
+    .sort();
+  const labeledFields = requirements.map(([field]) => field).sort();
+
+  assert.deepEqual(requiredFields, expectedRequiredFields);
+  assert.deepEqual(optionalFields, expectedOptionalFields);
+  assert.deepEqual(labeledFields, scalarFields);
+});
+
+test("report review validation checklist covers every preset", () => {
+  assert.deepEqual(
+    REPORT_REVIEW_VALIDATION_CHECKLIST.map((item) => item.presetId),
+    MANUAL_PROFILE_PRESETS.map((preset) => preset.id),
+  );
+});
+
+test("report review validation checklist includes human-verifiable cases", () => {
+  for (const item of REPORT_REVIEW_VALIDATION_CHECKLIST) {
+    assert.ok(item.focus.length > 0);
+    assert.ok(item.inputChecks.length >= 2);
+    assert.ok(item.expectedResults.length >= 2);
+    assert.ok(item.boundary.length > 0);
+  }
+
+  const requiredOnlyCase = REPORT_REVIEW_VALIDATION_CHECKLIST.find(
+    (item) => item.presetId === "required_only",
+  );
+
+  assert.ok(
+    requiredOnlyCase.expectedResults.some((result) =>
+      result.includes(
+        "omits optional income, dependents, and user target months",
+      ),
+    ),
+  );
+  assert.ok(
+    requiredOnlyCase.inputChecks.some((check) =>
+      check.includes("Fields labeled Optional"),
+    ),
+  );
+  assert.ok(
+    requiredOnlyCase.boundary.includes("Missing information must stay missing"),
   );
 });
 

@@ -6,6 +6,7 @@ import {
 
 export const reportReviewNavItems = [
   ["Manual input", "#manual-input"],
+  ["Validation", "#validation-checklist"],
   ["Overview", "#overview"],
   ["Sections", "#sections"],
   ["Portfolio", "#portfolio"],
