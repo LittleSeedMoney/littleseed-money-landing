@@ -67,25 +67,6 @@ export type ManualProfileScalarField = Exclude<
 
 export type ManualProfileFieldRequirement = "required" | "optional";
 
-export const MANUAL_PROFILE_FIELD_REQUIREMENTS: Record<
-  ManualProfileScalarField,
-  ManualProfileFieldRequirement
-> = {
-  age: "required",
-  dependents: "optional",
-  expectedYearsInCurrentLocation: "required",
-  grossAnnualIncome: "optional",
-  incomePattern: "required",
-  jobStability: "required",
-  monthlyDiscretionaryExpenses: "required",
-  monthlyHousingCost: "required",
-  monthlyInvestmentContribution: "required",
-  monthlyNonHousingEssentialExpenses: "required",
-  monthlyTakeHomeIncome: "required",
-  riskTolerance: "required",
-  userTargetMonths: "optional",
-};
-
 export const MANUAL_PROFILE_PRESETS = [
   {
     id: "sample",
@@ -119,7 +100,7 @@ export class ManualProfileValidationError extends Error {
   }
 }
 
-const REQUIRED_DECIMAL_FIELDS: ManualProfileScalarField[] = [
+export const REQUIRED_DECIMAL_FIELDS: ManualProfileScalarField[] = [
   "monthlyTakeHomeIncome",
   "monthlyHousingCost",
   "monthlyNonHousingEssentialExpenses",
@@ -127,20 +108,59 @@ const REQUIRED_DECIMAL_FIELDS: ManualProfileScalarField[] = [
   "monthlyInvestmentContribution",
 ];
 
-const OPTIONAL_DECIMAL_FIELDS: ManualProfileScalarField[] = [
+export const OPTIONAL_DECIMAL_FIELDS: ManualProfileScalarField[] = [
   "grossAnnualIncome",
 ];
 
-const OPTIONAL_POSITIVE_DECIMAL_FIELDS: ManualProfileScalarField[] = [
+export const OPTIONAL_POSITIVE_DECIMAL_FIELDS: ManualProfileScalarField[] = [
   "userTargetMonths",
 ];
 
-const REQUIRED_INTEGER_FIELDS: ManualProfileScalarField[] = [
+export const REQUIRED_INTEGER_FIELDS: ManualProfileScalarField[] = [
   "age",
   "expectedYearsInCurrentLocation",
 ];
 
-const OPTIONAL_INTEGER_FIELDS: ManualProfileScalarField[] = ["dependents"];
+export const OPTIONAL_INTEGER_FIELDS: ManualProfileScalarField[] = [
+  "dependents",
+];
+
+export const REQUIRED_SELECT_FIELDS: ManualProfileScalarField[] = [
+  "incomePattern",
+  "jobStability",
+  "riskTolerance",
+];
+
+export const MANUAL_PROFILE_FIELD_REQUIREMENTS =
+  buildManualProfileFieldRequirements();
+
+function buildManualProfileFieldRequirements(): Record<
+  ManualProfileScalarField,
+  ManualProfileFieldRequirement
+> {
+  const requirements = {} as Record<
+    ManualProfileScalarField,
+    ManualProfileFieldRequirement
+  >;
+
+  for (const field of [
+    ...REQUIRED_DECIMAL_FIELDS,
+    ...REQUIRED_INTEGER_FIELDS,
+    ...REQUIRED_SELECT_FIELDS,
+  ]) {
+    requirements[field] = "required";
+  }
+
+  for (const field of [
+    ...OPTIONAL_DECIMAL_FIELDS,
+    ...OPTIONAL_POSITIVE_DECIMAL_FIELDS,
+    ...OPTIONAL_INTEGER_FIELDS,
+  ]) {
+    requirements[field] = "optional";
+  }
+
+  return requirements;
+}
 
 export function defaultManualProfileValues(): ManualProfileValues {
   return manualProfilePresetValues("sample");

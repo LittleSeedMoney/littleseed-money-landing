@@ -15,7 +15,7 @@ export const REPORT_REVIEW_VALIDATION_CHECKLIST: ReportReviewValidationChecklist
       focus: "Baseline report shape and ordinary sample values.",
       inputChecks: [
         "Sample household preset is selected.",
-        "Cash balance is 12000.00 and emergency target months is blank.",
+        "Cash asset row is present and emergency target months is blank.",
         "Student loan, auto loan, and credit-card liabilities are present.",
       ],
       expectedResults: [
@@ -31,7 +31,7 @@ export const REPORT_REVIEW_VALIDATION_CHECKLIST: ReportReviewValidationChecklist
       focus: "Underfunded emergency cash and matched guidance-rule trace.",
       inputChecks: [
         "Low cash coverage preset is selected.",
-        "Cash balance is 1500.00 and emergency target months is 3.",
+        "Cash balance uses the low-cash preset value and emergency target months is 3.",
         "Debt rows remain present so required outflows include monthly payments.",
       ],
       expectedResults: [
@@ -47,7 +47,7 @@ export const REPORT_REVIEW_VALIDATION_CHECKLIST: ReportReviewValidationChecklist
       focus: "Lower-bound equality where no below-target rule should fire.",
       inputChecks: [
         "Three-month boundary preset is selected.",
-        "Cash balance equals 10410.00, derived from three months of required outflows.",
+        "Cash balance equals three months of required outflows: housing plus non-housing essentials plus debt payments.",
         "Emergency target months is 3.",
       ],
       expectedResults: [

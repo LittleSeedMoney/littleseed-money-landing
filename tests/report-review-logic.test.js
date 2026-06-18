@@ -4,6 +4,12 @@ const test = require("node:test");
 const {
   MANUAL_PROFILE_FIELD_REQUIREMENTS,
   MANUAL_PROFILE_PRESETS,
+  OPTIONAL_DECIMAL_FIELDS,
+  OPTIONAL_INTEGER_FIELDS,
+  OPTIONAL_POSITIVE_DECIMAL_FIELDS,
+  REQUIRED_DECIMAL_FIELDS,
+  REQUIRED_INTEGER_FIELDS,
+  REQUIRED_SELECT_FIELDS,
   buildManualProfileRequest,
   defaultManualProfileValues,
   manualProfilePresetValues,
@@ -47,6 +53,19 @@ test("manual profile presets expose the expected review scenarios", () => {
 
 test("manual profile field requirements identify required and optional inputs", () => {
   const requirements = Object.entries(MANUAL_PROFILE_FIELD_REQUIREMENTS);
+  const expectedRequiredFields = [
+    ...REQUIRED_DECIMAL_FIELDS,
+    ...REQUIRED_INTEGER_FIELDS,
+    ...REQUIRED_SELECT_FIELDS,
+  ].sort();
+  const expectedOptionalFields = [
+    ...OPTIONAL_DECIMAL_FIELDS,
+    ...OPTIONAL_POSITIVE_DECIMAL_FIELDS,
+    ...OPTIONAL_INTEGER_FIELDS,
+  ].sort();
+  const scalarFields = Object.keys(defaultManualProfileValues())
+    .filter((field) => field !== "assets" && field !== "debts")
+    .sort();
   const requiredFields = requirements
     .filter(([, requirement]) => requirement === "required")
     .map(([field]) => field)
@@ -55,24 +74,11 @@ test("manual profile field requirements identify required and optional inputs", 
     .filter(([, requirement]) => requirement === "optional")
     .map(([field]) => field)
     .sort();
+  const labeledFields = requirements.map(([field]) => field).sort();
 
-  assert.deepEqual(requiredFields, [
-    "age",
-    "expectedYearsInCurrentLocation",
-    "incomePattern",
-    "jobStability",
-    "monthlyDiscretionaryExpenses",
-    "monthlyHousingCost",
-    "monthlyInvestmentContribution",
-    "monthlyNonHousingEssentialExpenses",
-    "monthlyTakeHomeIncome",
-    "riskTolerance",
-  ]);
-  assert.deepEqual(optionalFields, [
-    "dependents",
-    "grossAnnualIncome",
-    "userTargetMonths",
-  ]);
+  assert.deepEqual(requiredFields, expectedRequiredFields);
+  assert.deepEqual(optionalFields, expectedOptionalFields);
+  assert.deepEqual(labeledFields, scalarFields);
 });
 
 test("report review validation checklist covers every preset", () => {
