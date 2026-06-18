@@ -92,6 +92,19 @@ test("saving goal draft treats zero contribution as horizon-only context", () =>
   assert.equal(summary.status, "horizon_only");
 });
 
+test("saving goal draft requires contribution or horizon when both are absent", () => {
+  const values = defaultSavingGoalDraftValues();
+  values.monthlyContribution = "0";
+  values.targetMonths = "";
+
+  const summary = calculateSavingGoalDraft(values);
+
+  assert.equal(summary.status, "needs_contribution_or_horizon");
+  assert.equal(summary.monthsAtCurrentContribution, null);
+  assert.equal(summary.monthlyNeededForTarget, null);
+  assert.deepEqual(summary.validationMessages, []);
+});
+
 test("saving goal draft rejects a non-positive target amount", () => {
   const values = defaultSavingGoalDraftValues();
   values.targetAmount = "0";

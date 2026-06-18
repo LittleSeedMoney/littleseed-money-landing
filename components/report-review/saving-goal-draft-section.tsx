@@ -136,11 +136,10 @@ function GoalTextField({
 }) {
   return (
     <label className="block min-w-0">
-      <GoalFieldLabel label={label} requirement="Required" />
+      <GoalFieldLabel label={label} requirement="Optional" />
       <input
         className="mt-2 min-h-11 w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-seed-950 shadow-sm outline-none focus:border-seed-500 focus:ring-2 focus:ring-seed-200"
         onChange={onChange}
-        required
         type="text"
         value={value}
       />
