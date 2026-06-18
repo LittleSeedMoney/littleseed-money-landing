@@ -4,20 +4,6 @@ import {
   resolveEducationTopic,
 } from "@/lib/report-review/education-topics";
 
-export const reportReviewNavItems = [
-  ["Manual input", "#manual-input"],
-  ["Validation", "#validation-checklist"],
-  ["Overview", "#overview"],
-  ["Sections", "#sections"],
-  ["Portfolio", "#portfolio"],
-  ["Goal draft", "#saving-goal-draft"],
-  ["Charge Inspector", "#charge-inspector"],
-  ["Findings", "#findings"],
-  ["Education", "#education"],
-  ["Evidence", "#evidence"],
-  ["Inputs", "#inputs"],
-] as const;
-
 export const provenanceLabels: Record<Provenance, string> = {
   sample: "Sample",
   "user-entered": "User-entered",

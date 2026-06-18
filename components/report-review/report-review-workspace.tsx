@@ -1,6 +1,12 @@
 "use client";
 
-import { useMemo, useState, type ChangeEvent, type FormEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from "react";
 
 import type { ReportReviewSample } from "@/data/report-review-sample";
 import {
@@ -17,6 +23,10 @@ import {
   type ManualProfileScalarField,
   type ManualProfileValues,
 } from "@/lib/report-review/manual-profile";
+import {
+  reportReviewScreenFromHash,
+  type ReportReviewScreenId,
+} from "@/lib/report-review/report-review-screens";
 
 import { AssetPortfolioSection } from "./asset-portfolio-section";
 import { ChargeInspectorSection } from "./charge-inspector-section";
@@ -63,6 +73,8 @@ export function ReportReviewWorkspace({
   >("sample");
   const [requestState, setRequestState] = useState<ManualRequestState>("idle");
   const [errorMessage, setErrorMessage] = useState("");
+  const [activeScreen, setActiveScreen] =
+    useState<ReportReviewScreenId>("report");
 
   const generatedAt = useMemo(
     () =>
@@ -77,6 +89,16 @@ export function ReportReviewWorkspace({
     () => new Map(report.evidenceSources.map((source) => [source.id, source])),
     [report.evidenceSources],
   );
+
+  useEffect(() => {
+    function syncScreenFromHash() {
+      setActiveScreen(reportReviewScreenFromHash(window.location.hash));
+    }
+
+    syncScreenFromHash();
+    window.addEventListener("hashchange", syncScreenFromHash);
+    return () => window.removeEventListener("hashchange", syncScreenFromHash);
+  }, []);
 
   async function submitManualProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -211,60 +233,177 @@ export function ReportReviewWorkspace({
     setRequestState("idle");
   }
 
+  function selectScreen(screen: ReportReviewScreenId) {
+    setActiveScreen(screen);
+    window.history.replaceState(null, "", `#${screen}`);
+  }
+
   return (
     <main className="min-h-screen bg-stone-50 text-earth-900">
       <ReportReviewHeader dataLabel={dataLabel(report.dataMode)} />
 
-      <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[220px_minmax(0,1fr)_280px] lg:px-8">
-        <ReportReviewNav />
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <ReportReviewNav
+          activeScreen={activeScreen}
+          onScreenSelect={selectScreen}
+        />
 
-        <div className="min-w-0 space-y-6">
-          <ManualInputSection
-            errorMessage={errorMessage}
-            onAddAsset={addAssetRow}
-            onAddDebt={addDebtRow}
-            onAssetUpdate={updateAssetValue}
-            onDebtUpdate={updateDebtValue}
-            onRemoveAsset={removeAssetRow}
-            onRemoveDebt={removeDebtRow}
-            onPresetSelect={applyPreset}
-            onSubmit={submitManualProfile}
-            onUpdate={updateValue}
-            requestState={requestState}
-            selectedPreset={selectedPreset}
-            values={values}
-          />
-          <ValidationChecklistSection selectedPreset={selectedPreset} />
-          {hasReportContent(report) ? (
-            <>
-              <OverviewSection generatedAt={generatedAt} report={report} />
-              <ReportSections
-                sections={report.sections}
-                sourceById={sourceById}
-              />
-              <AssetPortfolioSection
-                decisionReadiness={report.decisionReadiness}
-                portfolio={report.assetPortfolio}
-                sourceById={sourceById}
-              />
-              <SavingGoalDraftSection />
-              <ChargeInspectorSection review={report.chargeInspector} />
-              <FindingsSection findings={report.findings} />
-              <EducationSection
-                decisionReadiness={report.decisionReadiness}
-                findings={report.findings}
-              />
-              <EvidenceSection sources={report.evidenceSources} />
-              <InputsSection dataCompleteness={report.dataCompleteness} />
-            </>
-          ) : (
-            <EmptyReportState />
-          )}
+        <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
+          <section
+            aria-labelledby={`report-review-screen-${activeScreen}-heading`}
+            className="min-w-0 space-y-6"
+            id={`report-review-screen-${activeScreen}`}
+            role="tabpanel"
+          >
+            <h2
+              className="sr-only"
+              id={`report-review-screen-${activeScreen}-heading`}
+            >
+              {activeScreen} screen
+            </h2>
+            {renderActiveScreen({
+              activeScreen,
+              errorMessage,
+              generatedAt,
+              onAddAsset: addAssetRow,
+              onAddDebt: addDebtRow,
+              onAssetUpdate: updateAssetValue,
+              onDebtUpdate: updateDebtValue,
+              onPresetSelect: applyPreset,
+              onRemoveAsset: removeAssetRow,
+              onRemoveDebt: removeDebtRow,
+              onSubmit: submitManualProfile,
+              onUpdate: updateValue,
+              report,
+              requestState,
+              selectedPreset,
+              sourceById,
+              values,
+            })}
+          </section>
+
+          <ReviewRail report={report} />
         </div>
-
-        <ReviewRail report={report} />
       </div>
     </main>
+  );
+}
+
+function renderActiveScreen({
+  activeScreen,
+  errorMessage,
+  generatedAt,
+  onAddAsset,
+  onAddDebt,
+  onAssetUpdate,
+  onDebtUpdate,
+  onPresetSelect,
+  onRemoveAsset,
+  onRemoveDebt,
+  onSubmit,
+  onUpdate,
+  report,
+  requestState,
+  selectedPreset,
+  sourceById,
+  values,
+}: {
+  activeScreen: ReportReviewScreenId;
+  errorMessage: string;
+  generatedAt: string;
+  onAddAsset: () => void;
+  onAddDebt: () => void;
+  onAssetUpdate: <T extends keyof ManualAssetValue>(
+    id: string,
+    field: T,
+    value: ManualAssetValue[T],
+  ) => void;
+  onDebtUpdate: <T extends keyof ManualDebtValue>(
+    id: string,
+    field: T,
+    value: ManualDebtValue[T],
+  ) => void;
+  onPresetSelect: (presetId: ManualProfilePresetId) => void;
+  onRemoveAsset: (id: string) => void;
+  onRemoveDebt: (id: string) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onUpdate: (
+    field: ManualProfileScalarField,
+    event: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => void;
+  report: ReportReviewSample;
+  requestState: ManualRequestState;
+  selectedPreset: ManualProfilePresetId | "custom";
+  sourceById: Map<string, ReportReviewSample["evidenceSources"][number]>;
+  values: ManualProfileValues;
+}) {
+  if (activeScreen === "inputs") {
+    return (
+      <>
+        <ManualInputSection
+          errorMessage={errorMessage}
+          onAddAsset={onAddAsset}
+          onAddDebt={onAddDebt}
+          onAssetUpdate={onAssetUpdate}
+          onDebtUpdate={onDebtUpdate}
+          onRemoveAsset={onRemoveAsset}
+          onRemoveDebt={onRemoveDebt}
+          onPresetSelect={onPresetSelect}
+          onSubmit={onSubmit}
+          onUpdate={onUpdate}
+          requestState={requestState}
+          selectedPreset={selectedPreset}
+          values={values}
+        />
+        <ValidationChecklistSection selectedPreset={selectedPreset} />
+        {hasReportContent(report) ? (
+          <InputsSection dataCompleteness={report.dataCompleteness} />
+        ) : (
+          <EmptyReportState />
+        )}
+      </>
+    );
+  }
+
+  if (!hasReportContent(report)) {
+    return <EmptyReportState />;
+  }
+
+  if (activeScreen === "portfolio") {
+    return (
+      <>
+        <AssetPortfolioSection
+          decisionReadiness={report.decisionReadiness}
+          portfolio={report.assetPortfolio}
+          sourceById={sourceById}
+        />
+        <SavingGoalDraftSection />
+      </>
+    );
+  }
+
+  if (activeScreen === "charge-inspector") {
+    return <ChargeInspectorSection review={report.chargeInspector} />;
+  }
+
+  if (activeScreen === "education") {
+    return (
+      <>
+        <EducationSection
+          decisionReadiness={report.decisionReadiness}
+          findings={report.findings}
+        />
+        <EvidenceSection sources={report.evidenceSources} />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <OverviewSection generatedAt={generatedAt} report={report} />
+      <ReportSections sections={report.sections} sourceById={sourceById} />
+      <FindingsSection findings={report.findings} />
+    </>
   );
 }
 

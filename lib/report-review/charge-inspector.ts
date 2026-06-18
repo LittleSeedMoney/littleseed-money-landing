@@ -1,10 +1,24 @@
+import type { DecimalValue } from "./platform-workspace-response";
+import type {
+  PlatformBankFeeCandidate,
+  PlatformChargeInspectorReviewResponse,
+  PlatformDuplicateChargeCandidate,
+  PlatformNormalizedTransaction,
+  PlatformPriceIncreaseCandidate,
+  PlatformRecurringChargeCandidate,
+} from "./platform-charge-inspector-response";
+
 export type ChargeInspectorFindingType =
   | "recurring_charge"
   | "duplicate_charge"
   | "bank_fee"
   | "price_increase";
 
-export type ChargeInspectorDataMode = "sample" | "empty";
+export type ChargeInspectorDataMode =
+  | "sample"
+  | "platform-sample"
+  | "user-csv"
+  | "empty";
 
 export type ChargeInspectorEvidenceRow = {
   id: string;
@@ -230,7 +244,7 @@ export const chargeInspectorSampleReview: ChargeInspectorReview = {
 
 export const chargeInspectorEmptyReview: ChargeInspectorReview = {
   dataMode: "empty",
-  sourceLabel: "Empty review fixture",
+  sourceLabel: "No Charge Inspector CSV review",
   reviewedTransactionCount: 0,
   findings: [],
   emptyState: chargeInspectorSampleReview.emptyState,
@@ -262,9 +276,202 @@ export function visibleChargeInspectorFindings(
   return review.findings.filter((finding) => !dismissed.has(finding.id));
 }
 
+export function mapPlatformChargeInspectorReview(
+  response: PlatformChargeInspectorReviewResponse,
+): ChargeInspectorReview {
+  const evidenceById = new Map(
+    response.evidence_transactions.map((transaction) => [
+      transaction.transaction_id,
+      transaction,
+    ]),
+  );
+  const parseLimitations =
+    response.parse_error_count > 0
+      ? [
+          `${response.parse_error_count.toLocaleString("en-US")} CSV validation issue${
+            response.parse_error_count === 1 ? "" : "s"
+          } returned from the platform parser.`,
+        ]
+      : [];
+
+  return {
+    dataMode: response.source === "sample_csv" ? "platform-sample" : "user-csv",
+    sourceLabel:
+      response.source === "sample_csv"
+        ? "Platform sample CSV review"
+        : "Platform CSV review",
+    reviewedTransactionCount: response.reviewed_transaction_count,
+    findings: [
+      ...response.findings.recurring_charges.map((candidate) =>
+        mapRecurringCharge(candidate, evidenceById),
+      ),
+      ...response.findings.duplicate_charges.map((candidate) =>
+        mapDuplicateCharge(candidate, evidenceById),
+      ),
+      ...response.findings.bank_fees.map((candidate) =>
+        mapBankFee(candidate, evidenceById),
+      ),
+      ...response.findings.price_increases.map((candidate) =>
+        mapPriceIncrease(candidate, evidenceById),
+      ),
+    ],
+    emptyState: chargeInspectorSampleReview.emptyState,
+    limitations: [
+      ...response.limitations,
+      ...parseLimitations,
+      `Platform review schema: ${response.schema_version}.`,
+    ],
+  };
+}
+
 function countFindings(
   review: ChargeInspectorReview,
   type: ChargeInspectorFindingType,
 ) {
   return review.findings.filter((finding) => finding.type === type).length;
+}
+
+function mapRecurringCharge(
+  candidate: PlatformRecurringChargeCandidate,
+  evidenceById: Map<string, PlatformNormalizedTransaction>,
+): ChargeInspectorFinding {
+  return {
+    id: candidate.finding_id,
+    type: "recurring_charge",
+    title: `${candidate.merchant_name} recurring pattern`,
+    summary: candidate.explanation,
+    explanation:
+      "The platform recurring detector matched " +
+      `${candidate.occurrence_count.toLocaleString("en-US")} monthly debit rows from ` +
+      `${candidate.first_seen_date} to ${candidate.last_seen_date}.`,
+    amountLabel: money(candidate.typical_amount),
+    cadenceLabel: titleCase(candidate.cadence),
+    evidenceRows: evidenceRows(candidate.evidence_transaction_ids, evidenceById),
+    limitations: candidate.limitations,
+    suggestedReviewSteps: [
+      "Compare the merchant name and dates against the source statement.",
+      "Decide whether this belongs in the household's recurring expense list.",
+    ],
+  };
+}
+
+function mapDuplicateCharge(
+  candidate: PlatformDuplicateChargeCandidate,
+  evidenceById: Map<string, PlatformNormalizedTransaction>,
+): ChargeInspectorFinding {
+  return {
+    id: candidate.finding_id,
+    type: "duplicate_charge",
+    title: `${candidate.merchant_name} same-day match`,
+    summary: candidate.explanation,
+    explanation:
+      "The platform duplicate detector matched debit rows with the same merchant, date, and amount.",
+    amountLabel: money(candidate.amount),
+    evidenceRows: evidenceRows(candidate.evidence_transaction_ids, evidenceById),
+    limitations: candidate.limitations,
+    suggestedReviewSteps: [
+      "Check whether separate purchases occurred on that date.",
+      "Keep both rows visible until statement context resolves the match.",
+    ],
+  };
+}
+
+function mapBankFee(
+  candidate: PlatformBankFeeCandidate,
+  evidenceById: Map<string, PlatformNormalizedTransaction>,
+): ChargeInspectorFinding {
+  return {
+    id: candidate.finding_id,
+    type: "bank_fee",
+    title: `${titleCase(candidate.fee_type)} text`,
+    summary: candidate.explanation,
+    explanation:
+      "The platform bank-fee detector matched conservative fee language in the transaction description.",
+    amountLabel: money(candidate.amount),
+    evidenceRows: evidenceRows(candidate.evidence_transaction_ids, evidenceById),
+    limitations: candidate.limitations,
+    suggestedReviewSteps: [
+      "Compare the description with the source statement fee schedule.",
+      "Record whether this row should be tracked as an account cost.",
+    ],
+  };
+}
+
+function mapPriceIncrease(
+  candidate: PlatformPriceIncreaseCandidate,
+  evidenceById: Map<string, PlatformNormalizedTransaction>,
+): ChargeInspectorFinding {
+  return {
+    id: candidate.finding_id,
+    type: "price_increase",
+    title: `${candidate.merchant_name} amount changed`,
+    summary: candidate.explanation,
+    explanation:
+      `The platform price-increase detector compared a ${money(
+        candidate.previous_amount,
+      )} row with a later ${money(candidate.increased_amount)} row.`,
+    amountLabel: `${money(candidate.increase_amount)} increase`,
+    cadenceLabel: titleCase(candidate.cadence),
+    evidenceRows: evidenceRows(candidate.evidence_transaction_ids, evidenceById),
+    limitations: candidate.limitations,
+    suggestedReviewSteps: [
+      "Compare the changed amount with receipts or notices.",
+      "Keep the earlier and later rows visible for statement-level comparison.",
+    ],
+  };
+}
+
+function evidenceRows(
+  evidenceTransactionIds: string[],
+  evidenceById: Map<string, PlatformNormalizedTransaction>,
+): ChargeInspectorEvidenceRow[] {
+  return evidenceTransactionIds.map((transactionId) => {
+    const transaction = evidenceById.get(transactionId);
+    if (!transaction) {
+      return {
+        id: transactionId,
+        postedDate: "Missing",
+        merchantName: "Missing evidence row",
+        amount: "Missing",
+        detail: "The platform finding referenced an evidence row that was not returned.",
+      };
+    }
+
+    return {
+      id: transaction.transaction_id,
+      postedDate: transaction.posted_date,
+      merchantName: transaction.merchant_name,
+      amount: money(transaction.amount),
+      detail: `Source row ${transaction.source_row_number.toLocaleString("en-US")}.`,
+    };
+  });
+}
+
+function money(value: DecimalValue): string {
+  const amount = decimal(value);
+  if (amount === null) {
+    return "Missing";
+  }
+  return new Intl.NumberFormat("en-US", {
+    currency: "USD",
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 2,
+    style: "currency",
+  }).format(amount);
+}
+
+function decimal(value: DecimalValue): number | null {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function titleCase(value: string): string {
+  return value
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 }

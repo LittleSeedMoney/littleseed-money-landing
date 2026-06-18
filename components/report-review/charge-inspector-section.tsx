@@ -54,7 +54,7 @@ export function ChargeInspectorSection({
         eyebrow="CSV-only inspection"
         id="charge-inspector-heading"
         title="Charge Inspector findings"
-        description="Review deterministic sample findings from fixture rows. The view stays inside the current report-review session."
+        description="Review deterministic Charge Inspector findings for the current in-session CSV review."
       />
 
       <div className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
@@ -69,19 +69,19 @@ export function ChargeInspectorSection({
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <StatusPill label="Sample fixture" tone="stone" />
+            <StatusPill label={sourcePillLabel(review)} tone="stone" />
             <StatusPill label="Review only" tone="seed" />
           </div>
         </div>
 
         <dl className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
           <InspectorMetric
-            detail="Rows checked in the current fixture."
+            detail="Rows checked in the current review."
             label="Rows reviewed"
             value={summary.reviewedTransactionCount.toLocaleString("en-US")}
           />
           <InspectorMetric
-            detail="Visible before local hiding."
+            detail="Before local hiding."
             label="Findings"
             value={summary.totalFindings.toLocaleString("en-US")}
           />
@@ -215,7 +215,7 @@ function ChargeInspectorFindingCard({
           value={finding.evidenceRows.length.toLocaleString("en-US")}
         />
         <FindingFact
-          label="Fixture rows"
+          label="Reviewed rows"
           value={summary.reviewedTransactionCount.toLocaleString("en-US")}
         />
         <FindingFact label="Status" value="Needs review" />
@@ -252,8 +252,8 @@ function ChargeInspectorFindingCard({
       </div>
 
       <div className="mt-5 grid gap-4 border-t border-stone-200 pt-5 md:grid-cols-2">
-        <BoundaryList title="Review steps" items={finding.suggestedReviewSteps} />
-        <BoundaryList title="Limitations" items={finding.limitations} />
+        <DetailsList title="Review steps" items={finding.suggestedReviewSteps} />
+        <DetailsList title="Limitations" items={finding.limitations} />
       </div>
     </article>
   );
@@ -284,6 +284,23 @@ function BoundaryList({ title, items }: { title: string; items: string[] }) {
         ))}
       </ul>
     </div>
+  );
+}
+
+function DetailsList({ title, items }: { title: string; items: string[] }) {
+  return (
+    <details className="rounded-lg border border-stone-200 bg-stone-50 p-3">
+      <summary className="cursor-pointer text-sm font-semibold text-seed-950 focus:outline-none focus:ring-2 focus:ring-seed-500">
+        {title}
+      </summary>
+      <ul className="mt-3 space-y-2 text-sm leading-6 text-earth-700">
+        {items.map((item) => (
+          <li className="ml-4 list-disc" key={item}>
+            {item}
+          </li>
+        ))}
+      </ul>
+    </details>
   );
 }
 
@@ -337,4 +354,17 @@ function findingTone(type: ChargeInspectorFinding["type"]) {
   }
 
   return "seed";
+}
+
+function sourcePillLabel(review: ChargeInspectorReview) {
+  if (review.dataMode === "platform-sample") {
+    return "Platform sample";
+  }
+  if (review.dataMode === "user-csv") {
+    return "CSV review";
+  }
+  if (review.dataMode === "empty") {
+    return "No CSV loaded";
+  }
+  return "Sample fixture";
 }

@@ -10,8 +10,14 @@ import {
   type SummaryMetric,
 } from "@/data/report-review-sample";
 
+import {
+  chargeInspectorEmptyReview,
+  mapPlatformChargeInspectorReview,
+  type ChargeInspectorReview,
+} from "./charge-inspector";
+import { chargeInspectorSampleCsv } from "./charge-inspector-sample-csv";
 import { sampleFinancialProfile } from "./sample-profile";
-import { chargeInspectorEmptyReview } from "./charge-inspector";
+import { parseChargeInspectorReviewResponse } from "./platform-charge-inspector-response";
 import {
   parseWorkspaceReportResponse,
   type DecimalValue,
@@ -51,6 +57,7 @@ type WorkspaceReportRequest = {
 };
 
 export type ReportMappingOptions = {
+  chargeInspector?: ChargeInspectorReview;
   connectionMessage: string;
   dataMode: string;
   profileName: string;
@@ -62,13 +69,17 @@ export async function getReportReviewData(): Promise<ReportReviewSample> {
   }
 
   try {
-    const payload = await requestWorkspaceReport({
-      profile: sampleFinancialProfile,
-      snapshotId: "landing-review-sample-workspace",
-      reportId: "landing-review-sample-report",
-    });
+    const [payload, chargeInspector] = await Promise.all([
+      requestWorkspaceReport({
+        profile: sampleFinancialProfile,
+        snapshotId: "landing-review-sample-workspace",
+        reportId: "landing-review-sample-report",
+      }),
+      requestChargeInspectorSampleReview(),
+    ]);
 
     return mapPlatformReport(payload, {
+      chargeInspector,
       profileName: "Platform sample profile",
       dataMode: "Platform API",
       connectionMessage:
@@ -149,6 +160,42 @@ async function requestWorkspaceReport({
   }
 }
 
+async function requestChargeInspectorSampleReview(): Promise<ChargeInspectorReview> {
+  const platformApiUrl = requirePlatformApiUrl();
+  const controller = new AbortController();
+  const timeout = setTimeout(
+    () => controller.abort(),
+    PLATFORM_REQUEST_TIMEOUT_MS,
+  );
+
+  try {
+    const response = await fetch(
+      `${platformApiUrl.replace(/\/$/, "")}/v1/phase3/charge-inspector-review`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          csv_text: chargeInspectorSampleCsv,
+          review_id: "landing-sample-charge-review",
+          source: "sample_csv",
+        }),
+        cache: "no-store",
+        signal: controller.signal,
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error(`Platform Charge Inspector API returned ${response.status}`);
+    }
+
+    return mapPlatformChargeInspectorReview(
+      parseChargeInspectorReviewResponse(await response.json()),
+    );
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 function requirePlatformApiUrl(): string {
   if (!PLATFORM_API_URL) {
     throw new Error("Platform API URL is not configured.");
@@ -219,7 +266,7 @@ export function mapPlatformReport(
       ],
     },
     decisionReadiness: buildDecisionReadiness(snapshot),
-    chargeInspector: chargeInspectorEmptyReview,
+    chargeInspector: options.chargeInspector ?? chargeInspectorEmptyReview,
   };
 }
 
