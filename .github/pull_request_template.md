@@ -32,6 +32,10 @@ Roadmap impact:
 
 Human verification path:
 
+Manual test cases:
+1.
+   Expected result:
+
 Test evidence:
 
 Meaningful cases covered:
