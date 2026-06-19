@@ -284,7 +284,7 @@ function buildDataSources(options: ReportMappingOptions): ReviewDataSource[] {
   const dataMode = options.dataMode.toLowerCase();
   const isManualProfile = dataMode.includes("user");
   const chargeInspector = options.chargeInspector ?? chargeInspectorEmptyReview;
-  const csvStatus = chargeInspectorDataSourceStatus(chargeInspector);
+  const transactionStatus = chargeInspectorDataSourceStatus(chargeInspector);
   const reviewedTransactions =
     chargeInspector.reviewedTransactionCount.toLocaleString("en-US");
 
@@ -310,22 +310,22 @@ function buildDataSources(options: ReportMappingOptions): ReviewDataSource[] {
     },
     {
       id: "csv-transactions",
-      kind: "csv",
+      kind: chargeInspectorDataSourceKind(chargeInspector),
       label: chargeInspector.sourceLabel,
-      status: csvStatus,
-      summary:
-        csvStatus === "empty"
-          ? "No transaction source is attached to this report response."
-          : "The transaction review uses the current Charge Inspector response for deterministic review prompts, CSV backfills, or unsupported-account imports.",
+      status: transactionStatus,
+      summary: chargeInspectorDataSourceSummary(
+        chargeInspector,
+        transactionStatus,
+      ),
       detail:
         "Transaction rows are treated as review evidence for the current session. CSV and linked rows should be reconciled by account and date range before totals or findings use them.",
       freshnessLabel:
-        csvStatus === "fallback"
+        transactionStatus === "fallback"
           ? "Unavailable"
-          : csvStatus === "empty"
-            ? "No CSV loaded"
+          : transactionStatus === "empty"
+            ? "No transaction source"
             : `${reviewedTransactions} transactions reviewed`,
-      coverage: ["Transactions", "Backfills", "Unsupported accounts"],
+      coverage: chargeInspectorDataSourceCoverage(chargeInspector),
       limitations: chargeInspector.limitations,
     },
     {
@@ -345,6 +345,53 @@ function buildDataSources(options: ReportMappingOptions): ReviewDataSource[] {
       ],
     },
   ];
+}
+
+function chargeInspectorDataSourceKind(
+  review: ChargeInspectorReview,
+): ReviewDataSource["kind"] {
+  if (review.dataMode === "linked-account") {
+    return "linked-account";
+  }
+
+  if (review.dataMode === "mixed") {
+    return "mixed";
+  }
+
+  return "csv";
+}
+
+function chargeInspectorDataSourceSummary(
+  review: ChargeInspectorReview,
+  status: ReviewDataSource["status"],
+) {
+  if (status === "empty") {
+    return "No transaction source is attached to this report response.";
+  }
+
+  if (review.dataMode === "linked-account") {
+    return "The transaction review uses linked-account rows from the current Charge Inspector response while CSV remains available for backfills or unsupported accounts.";
+  }
+
+  if (review.dataMode === "mixed") {
+    return "The transaction review combines linked-account rows and CSV imports after account and date-range reconciliation.";
+  }
+
+  return "The transaction review uses the current Charge Inspector response for deterministic review prompts, CSV backfills, or unsupported-account imports.";
+}
+
+function chargeInspectorDataSourceCoverage(
+  review: ChargeInspectorReview,
+): string[] {
+  if (review.dataMode === "linked-account") {
+    return ["Transactions", "Linked accounts", "Sync status"];
+  }
+
+  if (review.dataMode === "mixed") {
+    return ["Transactions", "Linked accounts", "CSV backfills"];
+  }
+
+  return ["Transactions", "Backfills", "Unsupported accounts"];
 }
 
 function chargeInspectorDataSourceStatus(

@@ -17,6 +17,7 @@ export type ReviewDataSourceKind =
   | "manual"
   | "csv"
   | "linked-account"
+  | "mixed"
   | "sample";
 
 export type ReviewDataSourceStatus =

@@ -1,9 +1,11 @@
-import type {
-  ReportReviewSample,
-  ReviewDataSourceStatus,
-} from "@/data/report-review-sample";
+import type { ReportReviewSample } from "@/data/report-review-sample";
 
-import { MetaItem, StatusPill } from "./shared";
+import {
+  dataSourceStatusLabels,
+  dataSourceStatusTone,
+  MetaItem,
+  StatusPill,
+} from "./shared";
 
 export function ReviewRail({ report }: { report: ReportReviewSample }) {
   return (
@@ -56,8 +58,8 @@ export function ReviewRail({ report }: { report: ReportReviewSample }) {
                   {source.label}
                 </p>
                 <StatusPill
-                  label={statusLabel(source.status)}
-                  tone={statusTone(source.status)}
+                  label={dataSourceStatusLabels[source.status]}
+                  tone={dataSourceStatusTone(source.status)}
                 />
               </div>
               <p className="mt-2 text-xs leading-5 text-earth-600">
@@ -103,26 +105,4 @@ function sourceCountLabel(report: ReportReviewSample) {
   ).length;
 
   return `${activeCount.toLocaleString("en-US")} active / ${report.dataSources.length.toLocaleString("en-US")} mapped`;
-}
-
-function statusLabel(status: ReviewDataSourceStatus) {
-  return {
-    active: "Active",
-    available: "Available",
-    empty: "No data",
-    fallback: "Fallback",
-    future: "Future",
-  }[status];
-}
-
-function statusTone(status: ReviewDataSourceStatus) {
-  if (status === "active") {
-    return "seed";
-  }
-
-  if (status === "available") {
-    return "earth";
-  }
-
-  return "stone";
 }

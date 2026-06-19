@@ -1,13 +1,18 @@
 import type {
   ReviewDataSource,
   ReviewDataSourceKind,
-  ReviewDataSourceStatus,
   SourceMatchConfidence,
   SourceReconciliationPolicy,
   SourceReconciliationRule,
 } from "@/data/report-review-sample";
 
-import { MetaItem, ReviewSectionHeading, StatusPill } from "./shared";
+import {
+  dataSourceStatusLabels,
+  dataSourceStatusTone,
+  MetaItem,
+  ReviewSectionHeading,
+  StatusPill,
+} from "./shared";
 
 export function DataSourcesSection({
   dataMode,
@@ -75,8 +80,8 @@ function DataSourceCard({ source }: { source: ReviewDataSource }) {
           </h3>
         </div>
         <StatusPill
-          label={statusLabel(source.status)}
-          tone={statusTone(source.status)}
+          label={dataSourceStatusLabels[source.status]}
+          tone={dataSourceStatusTone(source.status)}
         />
       </div>
 
@@ -231,30 +236,9 @@ function kindLabel(kind: ReviewDataSourceKind) {
     csv: "Transaction import",
     "linked-account": "Provider source",
     manual: "Direct entry",
+    mixed: "Mixed sources",
     sample: "Sample fixture",
   }[kind];
-}
-
-function statusLabel(status: ReviewDataSourceStatus) {
-  return {
-    active: "Active",
-    available: "Available",
-    empty: "No data",
-    fallback: "Fallback",
-    future: "Future scope",
-  }[status];
-}
-
-function statusTone(status: ReviewDataSourceStatus) {
-  if (status === "active") {
-    return "seed";
-  }
-
-  if (status === "future" || status === "fallback") {
-    return "stone";
-  }
-
-  return "earth";
 }
 
 function sourceSummaryLabel(sources: ReviewDataSource[]) {

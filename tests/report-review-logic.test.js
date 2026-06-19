@@ -235,6 +235,31 @@ test("charge inspector platform mapper builds UI findings from contract evidence
   assert.match(review.limitations.join(" "), /charge_inspector_review_v0/);
 });
 
+test("charge inspector maps linked-account and mixed platform sources", () => {
+  for (const { source, mode, label } of [
+    {
+      source: "linked_account",
+      mode: "linked-account",
+      label: "Platform linked transaction review",
+    },
+    {
+      source: "mixed",
+      mode: "mixed",
+      label: "Platform mixed transaction review",
+    },
+  ]) {
+    const payload = chargeInspectorPlatformPayload();
+    payload.source = source;
+
+    const review = mapPlatformChargeInspectorReview(
+      parseChargeInspectorReviewResponse(payload),
+    );
+
+    assert.equal(review.dataMode, mode);
+    assert.equal(review.sourceLabel, label);
+  }
+});
+
 test("charge inspector recurring explanation uses the platform cadence", () => {
   const payload = chargeInspectorPlatformPayload();
   payload.findings.recurring_charges[0].cadence = "weekly";
@@ -941,6 +966,41 @@ test("platform report mapper builds user-selected target comparison", () => {
         "Optional preference target; it does not replace the baseline range.",
     },
   );
+});
+
+test("platform report data sources reflect linked and mixed transaction modes", () => {
+  for (const { source, kind, label } of [
+    {
+      source: "linked_account",
+      kind: "linked-account",
+      label: "Platform linked transaction review",
+    },
+    {
+      source: "mixed",
+      kind: "mixed",
+      label: "Platform mixed transaction review",
+    },
+  ]) {
+    const chargeInspectorPayload = chargeInspectorPlatformPayload();
+    chargeInspectorPayload.source = source;
+    const chargeInspector = mapPlatformChargeInspectorReview(
+      parseChargeInspectorReviewResponse(chargeInspectorPayload),
+    );
+    const mapped = mapPlatformReport(
+      parseWorkspaceReportResponse(workspacePayload()),
+      {
+        profileName: "Test profile",
+        dataMode: "Test Platform API",
+        connectionMessage: "Loaded for mapper tests.",
+        chargeInspector,
+      },
+    );
+    const transactionSource = itemById(mapped.dataSources, "csv-transactions");
+
+    assert.equal(transactionSource.kind, kind);
+    assert.equal(transactionSource.label, label);
+    assert.equal(transactionSource.status, "active");
+  }
 });
 
 test("platform report mapper preserves missing EFT values", () => {

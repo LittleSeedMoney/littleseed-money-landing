@@ -2,11 +2,16 @@ import type {
   MetricDisclosure,
   ReportReviewSample,
   ReviewDataSource,
-  ReviewDataSourceStatus,
   SummaryMetric,
 } from "@/data/report-review-sample";
 
-import { MetaItem, ProvenanceTag, StatusPill } from "./shared";
+import {
+  dataSourceStatusLabels,
+  dataSourceStatusTone,
+  MetaItem,
+  ProvenanceTag,
+  StatusPill,
+} from "./shared";
 
 export function OverviewSection({
   generatedAt,
@@ -80,8 +85,8 @@ function SourceSummaryStrip({ sources }: { sources: ReviewDataSource[] }) {
               {source.label}
             </h3>
             <StatusPill
-              label={sourceStatusLabel(source.status)}
-              tone={sourceStatusTone(source.status)}
+              label={dataSourceStatusLabels[source.status]}
+              tone={dataSourceStatusTone(source.status)}
             />
           </div>
           <p className="mt-2 text-xs leading-5 text-earth-600">
@@ -91,28 +96,6 @@ function SourceSummaryStrip({ sources }: { sources: ReviewDataSource[] }) {
       ))}
     </div>
   );
-}
-
-function sourceStatusLabel(status: ReviewDataSourceStatus) {
-  return {
-    active: "Active",
-    available: "Available",
-    empty: "No data",
-    fallback: "Fallback",
-    future: "Future",
-  }[status];
-}
-
-function sourceStatusTone(status: ReviewDataSourceStatus) {
-  if (status === "active") {
-    return "seed";
-  }
-
-  if (status === "available") {
-    return "earth";
-  }
-
-  return "stone";
 }
 
 function noticeToneClass(tone: ReportReviewSample["connectionNotice"]["tone"]) {
