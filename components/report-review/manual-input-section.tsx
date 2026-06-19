@@ -85,7 +85,7 @@ export function ManualInputSection({
       <ReviewSectionHeading
         eyebrow="Editable snapshot"
         id="manual-input-heading"
-        title="Build portfolio snapshot"
+        title="Edit snapshot values"
         description="Enter or adjust the profile, asset, and liability values that make up the current in-session portfolio snapshot."
       />
 

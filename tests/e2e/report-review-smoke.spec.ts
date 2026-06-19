@@ -5,7 +5,7 @@ const reportReviewPath = "/private/report-review";
 const smokeScreens = [
   {
     hash: "snapshot",
-    heading: "Build portfolio snapshot",
+    heading: "Edit snapshot values",
     tab: "Snapshot",
   },
   {
@@ -73,7 +73,7 @@ test.describe("private report review smoke", () => {
       await expect(
         panel.getByRole("heading", {
           exact: true,
-          name: "Build portfolio snapshot",
+          name: "Edit snapshot values",
         }),
       ).toBeVisible();
       await expect(page.getByRole("tab", { name: "Snapshot" })).toHaveAttribute(
@@ -126,7 +126,7 @@ test.describe("private report review smoke", () => {
     await page.goto(`${reportReviewPath}#report`);
 
     await clickTab(page, "Snapshot");
-    await expect(page.getByRole("heading", { name: "Build portfolio snapshot" }))
+    await expect(page.getByRole("heading", { name: "Edit snapshot values" }))
       .toBeVisible();
     await expect(page).toHaveURL(/#snapshot$/);
 
