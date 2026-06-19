@@ -165,7 +165,11 @@ function GoalNumberField({
 }) {
   return (
     <label className="block min-w-0">
-      <GoalFieldLabel label={label} required={required} />
+      <GoalFieldLabel
+        label={label}
+        required={required}
+        unitLabel={prefix === "$" ? "dollars" : undefined}
+      />
       <span className="relative mt-2 block">
         {prefix ? (
           <span
@@ -195,13 +199,18 @@ function GoalNumberField({
 function GoalFieldLabel({
   label,
   required = false,
+  unitLabel,
 }: {
   label: string;
   required?: boolean;
+  unitLabel?: string;
 }) {
   return (
     <span className="block min-h-5">
-      <span className="text-sm font-medium text-earth-800">{label}</span>
+      <span className="text-sm font-medium text-earth-800">
+        {label}
+        {unitLabel ? <span className="sr-only">, {unitLabel}</span> : null}
+      </span>
       {required ? <span className="sr-only"> required</span> : null}
     </span>
   );

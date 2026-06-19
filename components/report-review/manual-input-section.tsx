@@ -494,7 +494,11 @@ function NumberField({
 
   return (
     <label className="block">
-      <FieldLabel label={label} requirement={requirement} />
+      <FieldLabel
+        label={label}
+        requirement={requirement}
+        unitLabel={accessibleUnitLabel(prefix)}
+      />
       <span className="relative mt-2 block">
         {prefix ? <InputPrefix value={prefix} /> : null}
         <input
@@ -601,7 +605,11 @@ function NumberValueField({
 
   return (
     <label className="block">
-      <FieldLabel label={label} requirement={resolvedRequirement} />
+      <FieldLabel
+        label={label}
+        requirement={resolvedRequirement}
+        unitLabel={accessibleUnitLabel(prefix)}
+      />
       <span className="relative mt-2 block">
         {prefix ? <InputPrefix value={prefix} /> : null}
         <input
@@ -634,6 +642,10 @@ function numberInputClass(prefix?: string) {
   return `min-h-11 w-full rounded-lg border border-stone-300 bg-white py-2 pr-3 text-sm text-seed-950 shadow-sm outline-none focus:border-seed-500 focus:ring-2 focus:ring-seed-200 ${
     prefix ? "pl-7" : "pl-3"
   }`;
+}
+
+function accessibleUnitLabel(prefix?: string) {
+  return prefix === "$" ? "dollars" : undefined;
 }
 
 function SelectValueField({
@@ -674,9 +686,11 @@ function SelectValueField({
 function FieldLabel({
   label,
   requirement,
+  unitLabel,
 }: {
   label: string;
   requirement: ManualProfileFieldRequirement | "conditional";
+  unitLabel?: string;
 }) {
   const isRequired = requirement === "required";
   const isConditional = requirement === "conditional";
@@ -685,6 +699,7 @@ function FieldLabel({
     <span className="flex min-h-5 flex-wrap items-center gap-x-2 gap-y-1">
       <span className="text-sm font-medium text-earth-800">
         {label}
+        {unitLabel ? <span className="sr-only">, {unitLabel}</span> : null}
         {isRequired ? (
           <>
             <span aria-hidden="true" className="ml-1 text-seed-700">
