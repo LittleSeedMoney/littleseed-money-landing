@@ -26,9 +26,16 @@ const {
   chargeInspectorFindingTypeLabels,
   chargeInspectorSampleReview,
   isChargeInspectorEmpty,
+  mapPlatformChargeInspectorReview,
   summarizeChargeInspectorReview,
   visibleChargeInspectorFindings,
 } = require("../lib/report-review/charge-inspector.ts");
+const {
+  chargeInspectorSampleCsv,
+} = require("../lib/report-review/charge-inspector-sample-csv.ts");
+const {
+  parseChargeInspectorReviewResponse,
+} = require("../lib/report-review/platform-charge-inspector-response.ts");
 const {
   parseWorkspaceReportResponse,
 } = require("../lib/report-review/platform-workspace-response.ts");
@@ -45,6 +52,11 @@ const {
   defaultSavingGoalDraftValues,
   formatSavingGoalDraftMoney,
 } = require("../lib/report-review/saving-goal-draft.ts");
+const {
+  reportReviewScreenFromKeyboard,
+  reportReviewScreenFromHash,
+  reportReviewScreens,
+} = require("../lib/report-review/report-review-screens.ts");
 
 test("manual profile omits blank user target months", () => {
   const values = defaultManualProfileValues();
@@ -171,6 +183,73 @@ test("charge inspector sample covers every current finding type", () => {
   );
 });
 
+test("charge inspector sample CSV keeps the platform contract fixture shape", () => {
+  const rows = chargeInspectorSampleCsv.split("\n");
+
+  assert.equal(rows.length, 19);
+  assert.match(rows[0], /Posting Date,Description,Amount/);
+  assert.match(chargeInspectorSampleCsv, /Streamly Premium/);
+  assert.match(chargeInspectorSampleCsv, /Market Street Coffee/);
+  assert.match(chargeInspectorSampleCsv, /Monthly Service Fee/);
+  assert.match(chargeInspectorSampleCsv, /FitPlan App/);
+});
+
+test("charge inspector platform parser accepts the review contract", () => {
+  const parsed = parseChargeInspectorReviewResponse(
+    chargeInspectorPlatformPayload(),
+  );
+
+  assert.equal(parsed.schema_version, "charge_inspector_review_v0");
+  assert.equal(parsed.source, "sample_csv");
+  assert.equal(parsed.reviewed_transaction_count, 18);
+  assert.equal(parsed.findings.recurring_charges[0].merchant_name, "Streamly Premium");
+  assert.equal(parsed.evidence_transactions.length, 8);
+});
+
+test("charge inspector platform mapper builds UI findings from contract evidence", () => {
+  const review = mapPlatformChargeInspectorReview(
+    parseChargeInspectorReviewResponse(chargeInspectorPlatformPayload()),
+  );
+  const summary = summarizeChargeInspectorReview(review);
+
+  assert.equal(review.dataMode, "platform-sample");
+  assert.equal(review.sourceLabel, "Platform sample CSV review");
+  assert.deepEqual(summary, {
+    totalFindings: 4,
+    reviewedTransactionCount: 18,
+    recurringCount: 1,
+    duplicateCount: 1,
+    bankFeeCount: 1,
+    priceIncreaseCount: 1,
+  });
+  assert.deepEqual(
+    review.findings.map((finding) => finding.type).sort(),
+    Object.keys(chargeInspectorFindingTypeLabels).sort(),
+  );
+  assert.deepEqual(
+    review.findings.find((finding) => finding.type === "price_increase")
+      .evidenceRows.map((row) => row.postedDate),
+    ["2026-04-21", "2026-05-21"],
+  );
+  assert.match(review.limitations.join(" "), /charge_inspector_review_v0/);
+});
+
+test("charge inspector recurring explanation uses the platform cadence", () => {
+  const payload = chargeInspectorPlatformPayload();
+  payload.findings.recurring_charges[0].cadence = "weekly";
+
+  const review = mapPlatformChargeInspectorReview(
+    parseChargeInspectorReviewResponse(payload),
+  );
+  const recurring = review.findings.find(
+    (finding) => finding.type === "recurring_charge",
+  );
+
+  assert.equal(recurring.cadenceLabel, "Weekly");
+  assert.match(recurring.explanation, /3 weekly rows/);
+  assert.doesNotMatch(recurring.explanation, /monthly debit rows/);
+});
+
 test("charge inspector findings can be hidden without mutating the review", () => {
   const firstFindingId = chargeInspectorSampleReview.findings[0].id;
   const visibleFindings = visibleChargeInspectorFindings(
@@ -240,6 +319,41 @@ test("charge inspector copy stays inside review-only boundaries", () => {
     copy,
     /\b(definitely|wasteful|cancel|dispute|guaranteed|you should)\b/i,
   );
+});
+
+test("report review screen hash mapping preserves legacy section links", () => {
+  assert.deepEqual(
+    reportReviewScreens.map((screen) => screen.id),
+    ["inputs", "report", "portfolio", "charge-inspector", "education"],
+  );
+  assert.equal(reportReviewScreenFromHash("#manual-input"), "inputs");
+  assert.equal(reportReviewScreenFromHash("#findings"), "report");
+  assert.equal(reportReviewScreenFromHash("#portfolio"), "portfolio");
+  assert.equal(reportReviewScreenFromHash("#charge-inspector"), "charge-inspector");
+  assert.equal(reportReviewScreenFromHash("#evidence"), "education");
+  assert.equal(reportReviewScreenFromHash("#unknown"), "report");
+});
+
+test("report review keyboard navigation follows the tab order", () => {
+  assert.equal(
+    reportReviewScreenFromKeyboard("report", "ArrowRight"),
+    "portfolio",
+  );
+  assert.equal(reportReviewScreenFromKeyboard("report", "ArrowLeft"), "inputs");
+  assert.equal(
+    reportReviewScreenFromKeyboard("education", "ArrowRight"),
+    "inputs",
+  );
+  assert.equal(
+    reportReviewScreenFromKeyboard("inputs", "ArrowLeft"),
+    "education",
+  );
+  assert.equal(reportReviewScreenFromKeyboard("portfolio", "Home"), "inputs");
+  assert.equal(
+    reportReviewScreenFromKeyboard("portfolio", "End"),
+    "education",
+  );
+  assert.equal(reportReviewScreenFromKeyboard("portfolio", "Tab"), null);
 });
 
 test("report review sample exposes charge inspector review data", () => {
@@ -691,7 +805,7 @@ test("platform report mapper builds user-selected target comparison", () => {
     tone: "seed",
     message: "Loaded for mapper tests.",
   });
-  assert.equal(mapped.chargeInspector.sourceLabel, "Empty review fixture");
+  assert.equal(mapped.chargeInspector.sourceLabel, "No Charge Inspector CSV review");
   assert.deepEqual(mapped.chargeInspector.findings, []);
 
   const decision = mapped.decisionReadiness;
@@ -968,6 +1082,209 @@ test("platform report mapper maps portfolio totals and provenance", () => {
     },
   ]);
 });
+
+test("report review data preserves the workspace report when charge inspector fails", async () => {
+  const platformReportModulePath = require.resolve(
+    "../lib/report-review/platform-report.ts",
+  );
+  const previousPlatformApiUrl = process.env.LITTLESEED_PLATFORM_API_URL;
+  const previousFetch = globalThis.fetch;
+  const previousConsoleError = console.error;
+  const calls = [];
+
+  process.env.LITTLESEED_PLATFORM_API_URL = "http://platform.test";
+  delete require.cache[platformReportModulePath];
+  const { getReportReviewData } = require("../lib/report-review/platform-report.ts");
+
+  globalThis.fetch = async (url) => {
+    const urlText = String(url);
+    calls.push(urlText);
+
+    if (urlText.endsWith("/v1/phase3/workspace-report")) {
+      return jsonResponse(workspacePayload());
+    }
+
+    if (urlText.endsWith("/v1/phase3/charge-inspector-review")) {
+      return jsonResponse({ error: "temporary unavailable" }, 503);
+    }
+
+    return jsonResponse({ error: "not found" }, 404);
+  };
+  console.error = () => {};
+
+  try {
+    const report = await getReportReviewData();
+
+    assert.equal(report.profileName, "Platform sample profile");
+    assert.equal(report.dataMode, "Platform API");
+    assert.equal(
+      report.chargeInspector.sourceLabel,
+      "No Charge Inspector CSV review",
+    );
+    assert.deepEqual(report.chargeInspector.findings, []);
+    assert.equal(calls.length, 2);
+    assert.ok(
+      calls.some((url) => url.endsWith("/v1/phase3/workspace-report")),
+    );
+    assert.ok(
+      calls.some((url) =>
+        url.endsWith("/v1/phase3/charge-inspector-review"),
+      ),
+    );
+  } finally {
+    if (previousPlatformApiUrl === undefined) {
+      delete process.env.LITTLESEED_PLATFORM_API_URL;
+    } else {
+      process.env.LITTLESEED_PLATFORM_API_URL = previousPlatformApiUrl;
+    }
+    if (previousFetch === undefined) {
+      delete globalThis.fetch;
+    } else {
+      globalThis.fetch = previousFetch;
+    }
+    console.error = previousConsoleError;
+    delete require.cache[platformReportModulePath];
+  }
+});
+
+function chargeInspectorPlatformPayload() {
+  const evidence = [
+    transactionPayload("txn-streamly-1", 2, "2026-03-08", "Streamly Premium", "15.99"),
+    transactionPayload("txn-streamly-2", 3, "2026-04-08", "Streamly Premium", "15.99"),
+    transactionPayload("txn-streamly-3", 4, "2026-05-09", "Streamly Premium", "15.99"),
+    transactionPayload("txn-coffee-1", 5, "2026-05-14", "Market Street Coffee", "8.25"),
+    transactionPayload("txn-coffee-2", 6, "2026-05-14", "Market Street Coffee", "8.25"),
+    transactionPayload(
+      "txn-bank-fee",
+      7,
+      "2026-05-31",
+      "Neighborhood Bank Monthly Service Fee",
+      "12.00",
+    ),
+    transactionPayload("txn-fitplan-1", 9, "2026-04-21", "FitPlan App", "10.00"),
+    transactionPayload("txn-fitplan-2", 10, "2026-05-21", "FitPlan App", "12.50"),
+  ];
+
+  return {
+    schema_version: "charge_inspector_review_v0",
+    review_id: "landing-sample-charge-review",
+    csv_format: "chase_checking",
+    source: "sample_csv",
+    parser_schema_version: "charge_inspector_csv_parse_result_v0",
+    detector_versions: {
+      recurring_charge: "recurring_charge_detector_v0",
+      duplicate_charge: "duplicate_charge_detector_v0",
+      bank_fee: "bank_fee_detector_v0",
+      price_increase: "price_increase_detector_v0",
+    },
+    reviewed_transaction_count: 18,
+    parse_error_count: 0,
+    findings: {
+      recurring_charges: [
+        {
+          finding_id: "possible_recurring_charge_sample",
+          merchant_name: "Streamly Premium",
+          currency: "USD",
+          typical_amount: "15.99",
+          min_amount: "15.99",
+          max_amount: "15.99",
+          occurrence_count: 3,
+          first_seen_date: "2026-03-08",
+          last_seen_date: "2026-05-09",
+          cadence: "monthly",
+          evidence_transaction_ids: [
+            "txn-streamly-1",
+            "txn-streamly-2",
+            "txn-streamly-3",
+          ],
+          evidence_source_row_numbers: [2, 3, 4],
+          explanation:
+            "This looks like a recurring charge because a similar debit amount appeared monthly.",
+          limitations: ["Review the transaction evidence before acting."],
+        },
+      ],
+      duplicate_charges: [
+        {
+          finding_id: "possible_duplicate_charge_sample",
+          merchant_name: "Market Street Coffee",
+          currency: "USD",
+          amount: "8.25",
+          occurrence_count: 2,
+          posted_date: "2026-05-14",
+          evidence_transaction_ids: ["txn-coffee-1", "txn-coffee-2"],
+          evidence_source_row_numbers: [5, 6],
+          explanation:
+            "This looks like a possible duplicate charge because matching rows appeared.",
+          limitations: ["Two matching rows can still be separate purchases."],
+        },
+      ],
+      bank_fees: [
+        {
+          finding_id: "possible_bank_fee_sample",
+          fee_type: "monthly_service_fee",
+          merchant_name: "Neighborhood Bank Monthly Service Fee",
+          currency: "USD",
+          amount: "12.00",
+          occurrence_count: 1,
+          posted_date: "2026-05-31",
+          evidence_transaction_ids: ["txn-bank-fee"],
+          evidence_source_row_numbers: [7],
+          explanation:
+            "This looks like a possible bank fee because the description includes fee language.",
+          limitations: ["This does not determine whether the fee is avoidable."],
+        },
+      ],
+      price_increases: [
+        {
+          finding_id: "possible_price_increase_sample",
+          merchant_name: "FitPlan App",
+          currency: "USD",
+          previous_amount: "10.00",
+          increased_amount: "12.50",
+          increase_amount: "2.50",
+          increase_percent: "25.00",
+          previous_posted_date: "2026-04-21",
+          increased_posted_date: "2026-05-21",
+          cadence: "monthly",
+          occurrence_count: 2,
+          evidence_transaction_ids: ["txn-fitplan-1", "txn-fitplan-2"],
+          evidence_source_row_numbers: [9, 10],
+          explanation:
+            "This looks like a possible price increase because a monthly debit rose.",
+          limitations: ["Plan changes, taxes, or fees can change amounts."],
+        },
+      ],
+    },
+    evidence_transactions: evidence,
+    parse_errors: [],
+    limitations: [
+      "Findings are deterministic review prompts, not ranked actions or financial advice.",
+      "No account connection, continuous monitoring, merchant contact, or stored transaction history is introduced.",
+    ],
+  };
+}
+
+function jsonResponse(payload, status = 200) {
+  return new Response(JSON.stringify(payload), {
+    headers: { "content-type": "application/json" },
+    status,
+  });
+}
+
+function transactionPayload(id, rowNumber, postedDate, merchantName, amount) {
+  return {
+    transaction_id: id,
+    source: "sample_csv",
+    source_row_number: rowNumber,
+    posted_date: postedDate,
+    merchant_name: merchantName,
+    original_description: merchantName,
+    amount,
+    direction: "debit",
+    currency: "USD",
+    transaction_type: "DEBIT_CARD",
+  };
+}
 
 function mapWorkspacePayload(overrides = {}) {
   return mapPlatformReport(

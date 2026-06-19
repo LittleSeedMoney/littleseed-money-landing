@@ -5,9 +5,9 @@ export default function ReportReviewLoading() {
   return (
     <main className="min-h-screen bg-stone-50 text-earth-900">
       <ReportReviewHeader />
-      <div className="mx-auto grid max-w-7xl gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[220px_minmax(0,1fr)_280px] lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         <ReportReviewNav />
-        <section className="min-w-0 rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
+        <section className="mt-6 min-w-0 rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
           <p className="text-sm font-medium uppercase tracking-[0.16em] text-seed-700">
             Loading
           </p>
