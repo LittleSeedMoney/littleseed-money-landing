@@ -403,11 +403,14 @@ test("charge inspector copy stays inside review-only boundaries", () => {
 test("report review screen hash mapping preserves legacy section links", () => {
   assert.deepEqual(
     reportReviewScreens.map((screen) => screen.id),
-    ["inputs", "report", "portfolio", "charge-inspector", "education"],
+    ["snapshot", "report", "charge-inspector", "education"],
   );
-  assert.equal(reportReviewScreenFromHash("#manual-input"), "inputs");
+  assert.equal(reportReviewScreenFromHash("#snapshot"), "snapshot");
+  assert.equal(reportReviewScreenFromHash("#inputs"), "snapshot");
+  assert.equal(reportReviewScreenFromHash("#manual-input"), "snapshot");
   assert.equal(reportReviewScreenFromHash("#findings"), "report");
-  assert.equal(reportReviewScreenFromHash("#portfolio"), "portfolio");
+  assert.equal(reportReviewScreenFromHash("#portfolio"), "snapshot");
+  assert.equal(reportReviewScreenFromHash("#saving-goal-draft"), "snapshot");
   assert.equal(reportReviewScreenFromHash("#charge-inspector"), "charge-inspector");
   assert.equal(reportReviewScreenFromHash("#evidence"), "education");
   assert.equal(reportReviewScreenFromHash("#unknown"), "report");
@@ -416,23 +419,23 @@ test("report review screen hash mapping preserves legacy section links", () => {
 test("report review keyboard navigation follows the tab order", () => {
   assert.equal(
     reportReviewScreenFromKeyboard("report", "ArrowRight"),
-    "portfolio",
+    "charge-inspector",
   );
-  assert.equal(reportReviewScreenFromKeyboard("report", "ArrowLeft"), "inputs");
+  assert.equal(reportReviewScreenFromKeyboard("report", "ArrowLeft"), "snapshot");
   assert.equal(
     reportReviewScreenFromKeyboard("education", "ArrowRight"),
-    "inputs",
+    "snapshot",
   );
   assert.equal(
-    reportReviewScreenFromKeyboard("inputs", "ArrowLeft"),
+    reportReviewScreenFromKeyboard("snapshot", "ArrowLeft"),
     "education",
   );
-  assert.equal(reportReviewScreenFromKeyboard("portfolio", "Home"), "inputs");
+  assert.equal(reportReviewScreenFromKeyboard("charge-inspector", "Home"), "snapshot");
   assert.equal(
-    reportReviewScreenFromKeyboard("portfolio", "End"),
+    reportReviewScreenFromKeyboard("charge-inspector", "End"),
     "education",
   );
-  assert.equal(reportReviewScreenFromKeyboard("portfolio", "Tab"), null);
+  assert.equal(reportReviewScreenFromKeyboard("charge-inspector", "Tab"), null);
 });
 
 test("report review sample exposes charge inspector review data", () => {

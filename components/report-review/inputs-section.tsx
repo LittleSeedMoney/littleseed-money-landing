@@ -14,15 +14,15 @@ export function InputsSection({
 }) {
   return (
     <section
-      id="inputs"
-      aria-labelledby="inputs-heading"
+      id="snapshot-completeness"
+      aria-labelledby="snapshot-completeness-heading"
       className="space-y-3"
     >
       <ReviewSectionHeading
-        eyebrow="Inputs"
+        eyebrow="Snapshot context"
         title="Missing context and uncertainty"
         description="The surface keeps missing optional values separate from zero values, estimates, and calculated facts."
-        id="inputs-heading"
+        id="snapshot-completeness-heading"
       />
 
       <div className={reviewPanelClass("p-5")}>

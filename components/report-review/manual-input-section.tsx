@@ -83,10 +83,10 @@ export function ManualInputSection({
   return (
     <section id="manual-input" aria-labelledby="manual-input-heading">
       <ReviewSectionHeading
-        eyebrow="Input flow"
+        eyebrow="Editable snapshot"
         id="manual-input-heading"
-        title="Manual review inputs"
-        description="Enter the profile, asset, and liability values needed for the private report and Emergency Fund Target review."
+        title="Build portfolio snapshot"
+        description="Enter or adjust the profile, asset, and liability values that make up the current in-session portfolio snapshot."
       />
 
       <form
@@ -100,7 +100,7 @@ export function ManualInputSection({
                 Scenario presets
               </h3>
               <p className="mt-1 text-sm leading-6 text-earth-700">
-                In-session review inputs. Fields marked * build the request;
+                In-session snapshot values. Fields marked * build the request;
                 blank fields stay missing.
               </p>
             </div>

@@ -1,7 +1,6 @@
 export type ReportReviewScreenId =
-  | "inputs"
+  | "snapshot"
   | "report"
-  | "portfolio"
   | "charge-inspector"
   | "education";
 
@@ -13,24 +12,22 @@ export type ReportReviewScreen = {
 
 export const reportReviewScreens: ReportReviewScreen[] = [
   {
-    id: "inputs",
-    label: "Inputs",
+    id: "snapshot",
+    label: "Snapshot",
     legacyAnchors: [
       "data-sources",
-      "manual-input",
-      "validation-checklist",
       "inputs",
+      "manual-input",
+      "portfolio",
+      "saving-goal-draft",
+      "snapshot-completeness",
+      "validation-checklist",
     ],
   },
   {
     id: "report",
     label: "Report",
     legacyAnchors: ["overview", "sections", "findings"],
-  },
-  {
-    id: "portfolio",
-    label: "Portfolio",
-    legacyAnchors: ["portfolio", "saving-goal-draft"],
   },
   {
     id: "charge-inspector",

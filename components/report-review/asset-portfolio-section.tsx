@@ -36,8 +36,8 @@ export function AssetPortfolioSection({
     >
       <ReviewSectionHeading
         eyebrow="Workspace snapshot"
-        title="Personal asset portfolio"
-        description="Assets, liabilities, liquidity, and decision-slice readiness stay separate from report findings."
+        title="Current portfolio snapshot"
+        description="The report interprets the current assets, liabilities, liquidity, and decision-slice readiness from the snapshot values above."
         id="portfolio-heading"
       />
 

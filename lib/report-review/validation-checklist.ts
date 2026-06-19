@@ -19,7 +19,7 @@ export const REPORT_REVIEW_VALIDATION_CHECKLIST: ReportReviewValidationChecklist
         "Student loan, auto loan, and credit-card liabilities are present.",
       ],
       expectedResults: [
-        "Report review can render summary metrics, question-led sections, portfolio, findings, education, evidence, and inputs.",
+        "Report review can render the editable snapshot, portfolio interpretation, summary metrics, question-led sections, findings, education, and evidence.",
         "Emergency Fund Target shows calculated coverage near the middle of the baseline range.",
         "Connection state clearly labels sample data or user-entered data.",
       ],
