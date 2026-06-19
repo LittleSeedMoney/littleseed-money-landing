@@ -60,20 +60,23 @@ export function SavingGoalDraftSection() {
             value={values.goalName}
           />
           <GoalNumberField
-            label="Target amount, dollars"
+            label="Target amount"
             onChange={(event) => updateValue("targetAmount", event)}
+            prefix="$"
             required
             value={values.targetAmount}
           />
           <GoalNumberField
-            label="Current saved, dollars"
+            label="Current saved"
             onChange={(event) => updateValue("currentSaved", event)}
+            prefix="$"
             required
             value={values.currentSaved}
           />
           <GoalNumberField
-            label="Monthly contribution, dollars"
+            label="Monthly contribution"
             onChange={(event) => updateValue("monthlyContribution", event)}
+            prefix="$"
             required
             value={values.monthlyContribution}
           />
@@ -150,27 +153,41 @@ function GoalTextField({
 function GoalNumberField({
   label,
   onChange,
+  prefix,
   required = false,
   value,
 }: {
   label: string;
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  prefix?: string;
   required?: boolean;
   value: string;
 }) {
   return (
     <label className="block min-w-0">
       <GoalFieldLabel label={label} required={required} />
-      <input
-        className="mt-2 min-h-11 w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-seed-950 shadow-sm outline-none focus:border-seed-500 focus:ring-2 focus:ring-seed-200"
-        inputMode="decimal"
-        min="0"
-        onChange={onChange}
-        required={required}
-        step="0.01"
-        type="number"
-        value={value}
-      />
+      <span className="relative mt-2 block">
+        {prefix ? (
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-earth-600"
+          >
+            {prefix}
+          </span>
+        ) : null}
+        <input
+          className={`min-h-11 w-full rounded-lg border border-stone-300 bg-white py-2 pr-3 text-sm text-seed-950 shadow-sm outline-none focus:border-seed-500 focus:ring-2 focus:ring-seed-200 ${
+            prefix ? "pl-7" : "pl-3"
+          }`}
+          inputMode="decimal"
+          min="0"
+          onChange={onChange}
+          required={required}
+          step="0.01"
+          type="number"
+          value={value}
+        />
+      </span>
     </label>
   );
 }

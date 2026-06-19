@@ -148,8 +148,9 @@ export function ManualInputSection({
           />
           <NumberField
             field="monthlyTakeHomeIncome"
-            label="Monthly take-home income, dollars"
+            label="Monthly take-home income"
             onUpdate={onUpdate}
+            prefix="$"
             required
             value={values.monthlyTakeHomeIncome}
           />
@@ -167,36 +168,41 @@ export function ManualInputSection({
           />
           <NumberField
             field="monthlyHousingCost"
-            label="Monthly housing cost, dollars"
+            label="Monthly housing cost"
             onUpdate={onUpdate}
+            prefix="$"
             required
             value={values.monthlyHousingCost}
           />
           <NumberField
             field="monthlyNonHousingEssentialExpenses"
-            label="Other monthly essentials, dollars"
+            label="Other monthly essentials"
             onUpdate={onUpdate}
+            prefix="$"
             required
             value={values.monthlyNonHousingEssentialExpenses}
           />
           <NumberField
             field="monthlyDiscretionaryExpenses"
-            label="Monthly discretionary expenses, dollars"
+            label="Monthly discretionary expenses"
             onUpdate={onUpdate}
+            prefix="$"
             required
             value={values.monthlyDiscretionaryExpenses}
           />
           <NumberField
             field="monthlyInvestmentContribution"
-            label="Monthly investing contribution, dollars"
+            label="Monthly investing contribution"
             onUpdate={onUpdate}
+            prefix="$"
             required
             value={values.monthlyInvestmentContribution}
           />
           <NumberField
             field="grossAnnualIncome"
-            label="Gross annual income, dollars"
+            label="Gross annual income"
             onUpdate={onUpdate}
+            prefix="$"
             value={values.grossAnnualIncome}
           />
           <SelectField
@@ -305,10 +311,11 @@ export function ManualInputSection({
                     value={asset.category}
                   />
                   <NumberValueField
-                    label="Balance, dollars"
+                    label="Balance"
                     onChange={(event) =>
                       onAssetUpdate(asset.id, "balance", event.target.value)
                     }
+                    prefix="$"
                     required
                     value={asset.balance}
                   />
@@ -389,10 +396,11 @@ export function ManualInputSection({
                       value={debt.debtType}
                     />
                     <NumberValueField
-                      label="Balance, dollars"
+                      label="Balance"
                       onChange={(event) =>
                         onDebtUpdate(debt.id, "balance", event.target.value)
                       }
+                      prefix="$"
                       required
                       value={debt.balance}
                     />
@@ -409,7 +417,7 @@ export function ManualInputSection({
                       value={debt.annualInterestRate}
                     />
                     <NumberValueField
-                      label="Monthly payment, dollars"
+                      label="Monthly payment"
                       onChange={(event) =>
                         onDebtUpdate(
                           debt.id,
@@ -417,6 +425,7 @@ export function ManualInputSection({
                           event.target.value,
                         )
                       }
+                      prefix="$"
                       required
                       value={debt.monthlyPayment}
                     />
@@ -465,6 +474,7 @@ function NumberField({
   field,
   label,
   onUpdate,
+  prefix,
   required = false,
   step = "0.01",
   value,
@@ -475,6 +485,7 @@ function NumberField({
     field: ManualProfileScalarField,
     event: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => void;
+  prefix?: string;
   required?: boolean;
   step?: string;
   value: string;
@@ -484,16 +495,19 @@ function NumberField({
   return (
     <label className="block">
       <FieldLabel label={label} requirement={requirement} />
-      <input
-        className="mt-2 min-h-11 w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-seed-950 shadow-sm outline-none focus:border-seed-500 focus:ring-2 focus:ring-seed-200"
-        inputMode="decimal"
-        min="0"
-        onChange={(event) => onUpdate(field, event)}
-        required={required}
-        step={step}
-        type="number"
-        value={value}
-      />
+      <span className="relative mt-2 block">
+        {prefix ? <InputPrefix value={prefix} /> : null}
+        <input
+          className={numberInputClass(prefix)}
+          inputMode="decimal"
+          min="0"
+          onChange={(event) => onUpdate(field, event)}
+          required={required}
+          step={step}
+          type="number"
+          value={value}
+        />
+      </span>
     </label>
   );
 }
@@ -568,6 +582,7 @@ function TextValueField({
 function NumberValueField({
   label,
   onChange,
+  prefix,
   requirement,
   required = false,
   step = "0.01",
@@ -575,6 +590,7 @@ function NumberValueField({
 }: {
   label: string;
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  prefix?: string;
   requirement?: ManualProfileFieldRequirement | "conditional";
   required?: boolean;
   step?: string;
@@ -586,18 +602,38 @@ function NumberValueField({
   return (
     <label className="block">
       <FieldLabel label={label} requirement={resolvedRequirement} />
-      <input
-        className="mt-2 min-h-11 w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-seed-950 shadow-sm outline-none focus:border-seed-500 focus:ring-2 focus:ring-seed-200"
-        inputMode="decimal"
-        min="0"
-        onChange={onChange}
-        required={required}
-        step={step}
-        type="number"
-        value={value}
-      />
+      <span className="relative mt-2 block">
+        {prefix ? <InputPrefix value={prefix} /> : null}
+        <input
+          className={numberInputClass(prefix)}
+          inputMode="decimal"
+          min="0"
+          onChange={onChange}
+          required={required}
+          step={step}
+          type="number"
+          value={value}
+        />
+      </span>
     </label>
   );
+}
+
+function InputPrefix({ value }: { value: string }) {
+  return (
+    <span
+      aria-hidden="true"
+      className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-earth-600"
+    >
+      {value}
+    </span>
+  );
+}
+
+function numberInputClass(prefix?: string) {
+  return `min-h-11 w-full rounded-lg border border-stone-300 bg-white py-2 pr-3 text-sm text-seed-950 shadow-sm outline-none focus:border-seed-500 focus:ring-2 focus:ring-seed-200 ${
+    prefix ? "pl-7" : "pl-3"
+  }`;
 }
 
 function SelectValueField({
