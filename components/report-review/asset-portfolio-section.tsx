@@ -28,7 +28,7 @@ export function AssetPortfolioSection({
     <section
       id="portfolio"
       aria-labelledby="portfolio-heading"
-      className="space-y-3"
+      className="scroll-mt-28 space-y-3"
     >
       <ReviewSectionHeading
         eyebrow="Workspace snapshot"
@@ -37,14 +37,14 @@ export function AssetPortfolioSection({
         id="portfolio-heading"
       />
 
-      <div className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
+      <div className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {portfolio.totals.map((metric) => (
             <PortfolioMetricCard key={metric.id} metric={metric} />
           ))}
         </div>
 
-        <div className="mt-5 grid gap-5 xl:grid-cols-2">
+        <div className="mt-4 grid gap-4 xl:grid-cols-2">
           <SnapshotTable
             description="Current asset balances grouped by liquidity."
             descriptionId="assets-snapshot-description"
@@ -59,7 +59,7 @@ export function AssetPortfolioSection({
           />
         </div>
 
-        <div className="mt-5 grid gap-3 md:grid-cols-2">
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
           {portfolio.notes.map((note) => (
             <PortfolioNoteCard key={note.id} note={note} />
           ))}
@@ -76,15 +76,15 @@ export function AssetPortfolioSection({
 
 function PortfolioMetricCard({ metric }: { metric: SummaryMetric }) {
   return (
-    <article className="rounded-lg border border-stone-200 bg-stone-50 p-4">
+    <article className="rounded-lg border border-stone-200 bg-stone-50 p-3">
       <div className="flex items-start justify-between gap-3">
         <h3 className="text-sm font-medium text-earth-700">{metric.label}</h3>
         <ProvenanceTag provenance={metric.provenance} />
       </div>
-      <p className="mt-3 text-xl font-semibold tabular-nums text-seed-950">
+      <p className="mt-2 text-xl font-semibold tabular-nums text-seed-950">
         {metric.value}
       </p>
-      <p className="mt-2 text-sm leading-6 text-earth-700">{metric.detail}</p>
+      <p className="mt-1 text-sm leading-6 text-earth-700">{metric.detail}</p>
     </article>
   );
 }
@@ -103,29 +103,29 @@ function SnapshotTable({
   return (
     <div className="min-w-0">
       <h3 className="text-sm font-semibold text-seed-950">{title}</h3>
-      <p id={descriptionId} className="mt-1 text-sm leading-6 text-earth-700">
+      <p id={descriptionId} className="mt-0.5 text-sm leading-6 text-earth-700">
         {description}
       </p>
-      <div className="mt-3 overflow-x-auto rounded-lg border border-stone-200">
+      <div className="mt-2 overflow-x-auto rounded-lg border border-stone-200">
         <table
           aria-describedby={descriptionId}
           className="min-w-full divide-y divide-stone-200 text-left text-sm"
         >
-          <thead className="bg-stone-50 text-xs uppercase tracking-[0.12em] text-earth-500">
+          <thead className="bg-stone-50 text-xs font-semibold text-earth-500">
             <tr>
-              <th scope="col" className="px-3 py-3 font-semibold">
+              <th scope="col" className="px-3 py-2">
                 Name
               </th>
-              <th scope="col" className="px-3 py-3 font-semibold">
+              <th scope="col" className="px-3 py-2">
                 Value
               </th>
-              <th scope="col" className="px-3 py-3 font-semibold">
+              <th scope="col" className="px-3 py-2">
                 Liquidity
               </th>
-              <th scope="col" className="px-3 py-3 font-semibold">
+              <th scope="col" className="px-3 py-2">
                 Emergency reserve
               </th>
-              <th scope="col" className="px-3 py-3 font-semibold">
+              <th scope="col" className="px-3 py-2">
                 Source
               </th>
             </tr>
@@ -133,22 +133,22 @@ function SnapshotTable({
           <tbody className="divide-y divide-stone-200 bg-white">
             {items.map((item) => (
               <tr key={item.id}>
-                <td className="px-3 py-3 align-top">
+                <td className="px-3 py-2.5 align-top">
                   <div className="font-medium text-seed-950">{item.name}</div>
                   <div className="mt-1 text-xs text-earth-600">
                     {item.category}
                   </div>
                 </td>
-                <td className="px-3 py-3 align-top font-medium tabular-nums text-seed-950">
+                <td className="px-3 py-2.5 align-top font-medium tabular-nums text-seed-950">
                   {item.value}
                 </td>
-                <td className="px-3 py-3 align-top text-earth-700">
+                <td className="px-3 py-2.5 align-top text-earth-700">
                   {item.liquidity}
                 </td>
-                <td className="px-3 py-3 align-top text-earth-700">
+                <td className="px-3 py-2.5 align-top text-earth-700">
                   {item.emergencyEligible ? "Counts" : "Excluded"}
                 </td>
-                <td className="px-3 py-3 align-top text-earth-700">
+                <td className="px-3 py-2.5 align-top text-earth-700">
                   {provenanceLabels[item.provenance]}
                 </td>
               </tr>
@@ -162,9 +162,9 @@ function SnapshotTable({
 
 function PortfolioNoteCard({ note }: { note: PortfolioNote }) {
   return (
-    <article className="rounded-lg border border-stone-200 bg-stone-50 p-4">
+    <article className="rounded-lg border border-stone-200 bg-stone-50 p-3">
       <h3 className="text-sm font-semibold text-seed-950">{note.title}</h3>
-      <p className="mt-2 text-sm leading-6 text-earth-700">{note.body}</p>
+      <p className="mt-1 text-sm leading-6 text-earth-700">{note.body}</p>
     </article>
   );
 }

@@ -4,7 +4,6 @@ import type { ReportReviewSample } from "@/data/report-review-sample";
 import type { ReportReviewScreenId } from "@/lib/report-review/report-review-screens";
 
 import { ReportReviewHeader } from "./report-review-header";
-import { ReportReviewNav } from "./report-review-nav";
 import { ReviewRail } from "./review-rail";
 
 export function ReportReviewShell({
@@ -22,18 +21,17 @@ export function ReportReviewShell({
 }) {
   return (
     <main className="report-review-app min-h-screen bg-stone-50 text-earth-900">
-      <ReportReviewHeader dataLabel={dataLabel} />
+      <ReportReviewHeader
+        activeScreen={activeScreen}
+        dataLabel={dataLabel}
+        onScreenSelect={onScreenSelect}
+      />
 
-      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <ReportReviewNav
-          activeScreen={activeScreen}
-          onScreenSelect={onScreenSelect}
-        />
-
-        <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
+      <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
           <section
             aria-labelledby={`report-review-tab-${activeScreen}`}
-            className="min-w-0 space-y-6"
+            className="min-w-0 space-y-4"
             id={`report-review-screen-${activeScreen}`}
             role="tabpanel"
           >

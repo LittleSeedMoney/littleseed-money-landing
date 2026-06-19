@@ -85,12 +85,12 @@ export function ReviewSectionHeading({
   id: string;
 }) {
   return (
-    <div className="pt-2">
+    <div className="pt-1">
       <p className="text-sm font-semibold text-seed-700">{eyebrow}</p>
-      <h2 id={id} className="mt-1 text-2xl font-semibold text-seed-950">
+      <h2 id={id} className="mt-1 text-xl font-semibold text-seed-950">
         {title}
       </h2>
-      <p className="mt-2 max-w-3xl text-sm leading-6 text-earth-700 sm:text-base sm:leading-7">
+      <p className="mt-1 max-w-3xl text-sm leading-6 text-earth-700">
         {description}
       </p>
     </div>

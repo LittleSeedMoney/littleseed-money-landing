@@ -46,7 +46,7 @@ export function ChargeInspectorSection({
     <section
       id="charge-inspector"
       aria-labelledby="charge-inspector-heading"
-      className="scroll-mt-6 space-y-3"
+      className="scroll-mt-28 space-y-3"
       data-testid="charge-inspector-section"
     >
       <ReviewSectionHeading
