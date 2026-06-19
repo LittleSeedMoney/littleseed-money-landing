@@ -40,6 +40,10 @@ Read core docs:
 - `../littleseed-money-product-docs/docs/20_FINANCIAL_REPORT_UX.md`
 - `../littleseed-money-product-docs/docs/24_WEB_APP_UX_STANDARDS.md`
 
+Read local engineering standards:
+
+- `docs/CODING_STANDARDS.md`
+
 Add task-specific docs:
 
 - Financial model claims or disclaimers: `06_FINANCIAL_MODELS`,
@@ -66,7 +70,15 @@ Before editing:
    meaning, roadmap, content, brand, AI, report UX, or compliance may affect
    the task.
 3. Inspect relevant local diffs before relying on changed files.
-4. Do not overwrite unrelated user changes.
+4. Before creating a new branch, check whether the current branch is an
+   unmerged PR branch and whether uncommitted or untracked files overlap the
+   planned files.
+5. Do not create a new branch from an unmerged work branch when the next task is
+   likely to touch the same files. Wait for merge, rebase from the merged base,
+   or ask the user for explicit stacked-branch approval.
+6. Untracked files may be ignored only after confirming they do not overlap the
+   planned work or collide with the target base branch.
+7. Do not overwrite unrelated user changes.
 
 Before non-trivial work, give the user a short pre-brief: what will change,
 affected surface/docs, expected benefit, risks/boundaries, and verification
