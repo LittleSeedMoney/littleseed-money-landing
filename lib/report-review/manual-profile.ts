@@ -85,8 +85,8 @@ export const MANUAL_PROFILE_PRESETS = [
   },
   {
     id: "required_only",
-    label: "Required fields only",
-    description: "Optional income, dependents, debts, and target removed.",
+    label: "Minimum request",
+    description: "Extra income, dependents, debts, and target removed.",
   },
 ] as const;
 

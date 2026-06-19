@@ -62,7 +62,7 @@ export const REPORT_REVIEW_VALIDATION_CHECKLIST: ReportReviewValidationChecklist
       presetId: "required_only",
       focus: "Missing optional context without converting blanks to zero.",
       inputChecks: [
-        "Required fields only preset is selected.",
+        "Minimum request preset is selected.",
         "Fields labeled Optional are blank or absent: gross annual income, dependents, user target months, and liabilities.",
         "Sample income pattern, job stability, asset balances, and monthly investing contribution remain intact.",
       ],

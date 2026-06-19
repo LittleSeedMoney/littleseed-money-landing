@@ -95,8 +95,8 @@ export function ManualInputSection({
                 Scenario presets
               </h3>
               <p className="mt-1 text-sm leading-6 text-earth-700">
-                In-session review inputs. Required fields build the request;
-                blank optional fields stay missing.
+                In-session review inputs. Fields marked * build the request;
+                blank fields stay missing.
               </p>
             </div>
             <StatusPill
@@ -254,7 +254,6 @@ export function ManualInputSection({
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <StatusPill label="Required" tone="stone" />
               <button
                 className="rounded-lg border border-stone-300 px-3 py-2 text-sm font-semibold text-earth-800 hover:bg-stone-50 focus:outline-none focus:ring-2 focus:ring-seed-500"
                 onClick={onAddAsset}
@@ -330,7 +329,6 @@ export function ManualInputSection({
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <StatusPill label="Optional" tone="stone" />
               <button
                 className="rounded-lg border border-stone-300 px-3 py-2 text-sm font-semibold text-earth-800 hover:bg-stone-50 focus:outline-none focus:ring-2 focus:ring-seed-500"
                 onClick={onAddDebt}
@@ -644,21 +642,27 @@ function FieldLabel({
   label: string;
   requirement: ManualProfileFieldRequirement | "conditional";
 }) {
-  const labelText =
-    requirement === "conditional" ? "Required if balance > 0" : requirement;
+  const isRequired = requirement === "required";
+  const isConditional = requirement === "conditional";
 
   return (
     <span className="flex min-h-5 flex-wrap items-center gap-x-2 gap-y-1">
-      <span className="text-sm font-medium text-earth-800">{label}</span>
-      <span
-        className={`text-xs font-semibold ${
-          requirement === "required" || requirement === "conditional"
-            ? "text-seed-700"
-            : "text-earth-500"
-        }`}
-      >
-        {labelText}
+      <span className="text-sm font-medium text-earth-800">
+        {label}
+        {isRequired ? (
+          <>
+            <span aria-hidden="true" className="ml-1 text-seed-700">
+              *
+            </span>
+            <span className="sr-only"> required</span>
+          </>
+        ) : null}
       </span>
+      {isConditional ? (
+        <span className="text-xs font-semibold text-seed-700">
+          * if balance &gt; 0
+        </span>
+      ) : null}
     </span>
   );
 }
