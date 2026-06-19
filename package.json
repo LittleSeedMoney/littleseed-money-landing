@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "tsc --noEmit",
-    "test": "node --require ./tests/register.js --test"
+    "test": "node --require ./tests/register.js --test",
+    "test:e2e": "playwright test",
+    "test:e2e:report-review": "playwright test tests/e2e/report-review-smoke.spec.ts"
   },
   "dependencies": {
     "next": "16.2.9",
@@ -15,6 +17,7 @@
     "react-dom": "19.0.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.0",
     "@types/node": "22.13.10",
     "@types/react": "19.0.10",
     "@types/react-dom": "19.0.4",

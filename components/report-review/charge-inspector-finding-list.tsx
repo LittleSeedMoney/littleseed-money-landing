@@ -21,7 +21,7 @@ export function ChargeInspectorFindingList({
       className="divide-y divide-stone-200 overflow-hidden rounded-lg border border-stone-200 bg-white shadow-sm"
     >
       {findings.map((finding) => (
-        <li key={finding.id}>
+        <li data-testid="charge-inspector-finding" key={finding.id}>
           <ChargeInspectorFindingListItem
             finding={finding}
             onHide={onHide}
