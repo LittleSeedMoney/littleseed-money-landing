@@ -134,18 +134,22 @@ function ChargeInspectorDashboard({
           <dl className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
             <InspectorMetric
               label="Rows"
+              testId="charge-inspector-metric-rows"
               value={summary.reviewedTransactionCount.toLocaleString("en-US")}
             />
             <InspectorMetric
               label="Findings"
+              testId="charge-inspector-metric-findings"
               value={summary.totalFindings.toLocaleString("en-US")}
             />
             <InspectorMetric
               label="Visible"
+              testId="charge-inspector-metric-visible"
               value={visibleCount.toLocaleString("en-US")}
             />
             <InspectorMetric
               label="Hidden"
+              testId="charge-inspector-metric-hidden"
               value={hiddenCount.toLocaleString("en-US")}
             />
           </dl>
@@ -180,13 +184,18 @@ function ChargeInspectorDashboard({
 
 function InspectorMetric({
   label,
+  testId,
   value,
 }: {
   label: string;
+  testId: string;
   value: string;
 }) {
   return (
-    <div className="rounded-md border border-stone-200 bg-stone-50 px-3 py-2">
+    <div
+      className="rounded-md border border-stone-200 bg-stone-50 px-3 py-2"
+      data-testid={testId}
+    >
       <dt className="text-xs font-medium text-earth-600">{label}</dt>
       <dd className="mt-1 text-xl font-semibold tabular-nums text-seed-950">
         {value}
