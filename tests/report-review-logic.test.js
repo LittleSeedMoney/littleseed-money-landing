@@ -58,6 +58,13 @@ const {
   reportReviewScreenFromHash,
   reportReviewScreens,
 } = require("../lib/report-review/report-review-screens.ts");
+const {
+  joinClasses,
+} = require("../components/report-review/class-names.ts");
+
+function classListIncludes(className, token) {
+  return className.split(/\s+/).includes(token);
+}
 
 test("manual profile omits blank user target months", () => {
   const values = defaultManualProfileValues();
@@ -66,6 +73,20 @@ test("manual profile omits blank user target months", () => {
 
   assert.equal(request.userTargetMonths, undefined);
   assert.equal(request.profile.monthly_take_home_income, "5200.00");
+});
+
+test("report review class names resolve Tailwind utility conflicts", () => {
+  const className = joinClasses(
+    "rounded-lg border border-stone-200 bg-white shadow-sm",
+    "rounded-md border-seed-300 p-3 shadow-none",
+  );
+
+  assert.equal(classListIncludes(className, "rounded-lg"), false);
+  assert.equal(classListIncludes(className, "rounded-md"), true);
+  assert.equal(classListIncludes(className, "border-stone-200"), false);
+  assert.equal(classListIncludes(className, "border-seed-300"), true);
+  assert.equal(classListIncludes(className, "shadow-sm"), false);
+  assert.equal(classListIncludes(className, "shadow-none"), true);
 });
 
 test("saving goal draft calculates the baseline arithmetic", () => {

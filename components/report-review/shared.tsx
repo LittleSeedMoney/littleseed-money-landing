@@ -9,6 +9,10 @@ import {
   resolveEducationTopic,
 } from "@/lib/report-review/education-topics";
 
+import { joinClasses } from "./class-names";
+
+export { joinClasses } from "./class-names";
+
 export const provenanceLabels: Record<Provenance, string> = {
   sample: "Sample",
   "user-entered": "User-entered",
@@ -38,12 +42,6 @@ export function dataSourceStatusTone(status: ReviewDataSourceStatus) {
   }
 
   return "stone";
-}
-
-export function joinClasses(
-  ...classes: Array<string | false | null | undefined>
-) {
-  return classes.filter(Boolean).join(" ");
 }
 
 export function reviewPanelClass(className?: string) {
