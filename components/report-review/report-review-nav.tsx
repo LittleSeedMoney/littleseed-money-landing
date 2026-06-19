@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, type KeyboardEvent } from "react";
+import { useEffect, useRef, type KeyboardEvent } from "react";
 
 import {
   reportReviewScreenFromKeyboard,
@@ -17,6 +17,16 @@ export function ReportReviewNav({
 }) {
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const controlsPanel = typeof onScreenSelect === "function";
+
+  useEffect(() => {
+    const screenIndex = reportReviewScreens.findIndex(
+      (screen) => screen.id === activeScreen,
+    );
+    tabRefs.current[screenIndex]?.scrollIntoView({
+      block: "nearest",
+      inline: "center",
+    });
+  }, [activeScreen]);
 
   function selectAndFocusScreen(screen: ReportReviewScreenId) {
     const screenIndex = reportReviewScreens.findIndex(
@@ -48,38 +58,44 @@ export function ReportReviewNav({
       aria-label="Report review screens"
       className="min-w-0 max-w-full rounded-lg border border-stone-200 bg-stone-50/80 p-1"
     >
-      <div
-        className="report-review-tablist flex gap-2 overflow-x-auto"
-        role="tablist"
-        aria-orientation="horizontal"
-      >
-        {reportReviewScreens.map((screen, index) => {
-          const isActive = screen.id === activeScreen;
-          return (
-            <button
-              aria-controls={
-                isActive && controlsPanel
-                  ? `report-review-screen-${screen.id}`
-                  : undefined
-              }
-              aria-selected={isActive}
-              className={screenTabClass(isActive)}
-              data-screen-id={screen.id}
-              id={`report-review-tab-${screen.id}`}
-              key={screen.id}
-              onClick={() => onScreenSelect?.(screen.id)}
-              onKeyDown={(event) => handleTabKeyDown(event, screen.id)}
-              ref={(node) => {
-                tabRefs.current[index] = node;
-              }}
-              role="tab"
-              tabIndex={isActive ? 0 : -1}
-              type="button"
-            >
-              {screen.label}
-            </button>
-          );
-        })}
+      <div className="relative min-w-0">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-1 right-0 z-10 w-8 rounded-r-md bg-gradient-to-l from-stone-50 via-stone-50/80 to-transparent sm:hidden"
+        />
+        <div
+          className="report-review-tablist flex gap-2 overflow-x-auto pr-10 sm:pr-0"
+          role="tablist"
+          aria-orientation="horizontal"
+        >
+          {reportReviewScreens.map((screen, index) => {
+            const isActive = screen.id === activeScreen;
+            return (
+              <button
+                aria-controls={
+                  isActive && controlsPanel
+                    ? `report-review-screen-${screen.id}`
+                    : undefined
+                }
+                aria-selected={isActive}
+                className={screenTabClass(isActive)}
+                data-screen-id={screen.id}
+                id={`report-review-tab-${screen.id}`}
+                key={screen.id}
+                onClick={() => onScreenSelect?.(screen.id)}
+                onKeyDown={(event) => handleTabKeyDown(event, screen.id)}
+                ref={(node) => {
+                  tabRefs.current[index] = node;
+                }}
+                role="tab"
+                tabIndex={isActive ? 0 : -1}
+                type="button"
+              >
+                {screen.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
     </nav>
   );

@@ -114,6 +114,7 @@ function ChargeInspectorDashboard({
   visibleCount: number;
 }) {
   const otherSignalCount = summary.bankFeeCount + summary.priceIncreaseCount;
+  const showDashboardMetrics = summary.reviewedTransactionCount > 0;
 
   return (
     <div className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm sm:p-5">
@@ -134,40 +135,44 @@ function ChargeInspectorDashboard({
         </div>
       </div>
 
-      <dl className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <InspectorMetric
-          label="Rows"
-          value={summary.reviewedTransactionCount.toLocaleString("en-US")}
-        />
-        <InspectorMetric
-          label="Findings"
-          value={summary.totalFindings.toLocaleString("en-US")}
-        />
-        <InspectorMetric
-          label="Visible"
-          value={visibleCount.toLocaleString("en-US")}
-        />
-        <InspectorMetric
-          label="Hidden"
-          value={hiddenCount.toLocaleString("en-US")}
-        />
-      </dl>
+      {showDashboardMetrics ? (
+        <>
+          <dl className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <InspectorMetric
+              label="Rows"
+              value={summary.reviewedTransactionCount.toLocaleString("en-US")}
+            />
+            <InspectorMetric
+              label="Findings"
+              value={summary.totalFindings.toLocaleString("en-US")}
+            />
+            <InspectorMetric
+              label="Visible"
+              value={visibleCount.toLocaleString("en-US")}
+            />
+            <InspectorMetric
+              label="Hidden"
+              value={hiddenCount.toLocaleString("en-US")}
+            />
+          </dl>
 
-      <p className="mt-3 text-sm leading-6 text-earth-700">
-        Signal mix:{" "}
-        <span className="font-semibold text-seed-950">
-          {summary.recurringCount.toLocaleString("en-US")} recurring
-        </span>
-        ,{" "}
-        <span className="font-semibold text-seed-950">
-          {summary.duplicateCount.toLocaleString("en-US")} duplicate
-        </span>
-        ,{" "}
-        <span className="font-semibold text-seed-950">
-          {otherSignalCount.toLocaleString("en-US")} other
-        </span>
-        .
-      </p>
+          <p className="mt-3 text-sm leading-6 text-earth-700">
+            Signal mix:{" "}
+            <span className="font-semibold text-seed-950">
+              {summary.recurringCount.toLocaleString("en-US")} recurring
+            </span>
+            ,{" "}
+            <span className="font-semibold text-seed-950">
+              {summary.duplicateCount.toLocaleString("en-US")} duplicate
+            </span>
+            ,{" "}
+            <span className="font-semibold text-seed-950">
+              {otherSignalCount.toLocaleString("en-US")} other
+            </span>
+            .
+          </p>
+        </>
+      ) : null}
 
       <details className="mt-4 rounded-md border border-stone-200 bg-stone-50 p-3">
         <summary className="cursor-pointer text-sm font-semibold text-seed-950 focus:outline-none focus:ring-2 focus:ring-seed-500">
