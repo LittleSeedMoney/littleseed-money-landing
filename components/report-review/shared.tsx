@@ -7,6 +7,8 @@ import {
 export const provenanceLabels: Record<Provenance, string> = {
   sample: "Sample",
   "user-entered": "User-entered",
+  "csv-imported": "CSV import",
+  "linked-account": "Linked account",
   calculated: "Calculated",
   estimated: "Estimated",
   "source-backed": "Source-backed",

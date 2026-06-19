@@ -395,6 +395,40 @@ test("report review sample exposes charge inspector review data", () => {
     "Sample CSV review fixture",
   );
   assert.equal(reportReviewSample.chargeInspector.findings.length, 4);
+  assert.deepEqual(
+    reportReviewSample.dataSources.map((source) => [
+      source.id,
+      source.kind,
+      source.status,
+    ]),
+    [
+      ["manual-profile", "manual", "active"],
+      ["csv-transactions", "csv", "available"],
+      ["linked-accounts", "linked-account", "future"],
+    ],
+  );
+  assert.deepEqual(
+    reportReviewSample.sourceReconciliation.accountMatching.map((rule) => [
+      rule.id,
+      rule.confidence,
+    ]),
+    [
+      ["account-high-confidence", "high"],
+      ["account-medium-confidence", "medium"],
+      ["account-low-confidence", "low"],
+    ],
+  );
+  assert.deepEqual(
+    reportReviewSample.sourceReconciliation.transactionMatching.map((rule) => [
+      rule.id,
+      rule.confidence,
+    ]),
+    [
+      ["transaction-high-confidence", "high"],
+      ["transaction-medium-confidence", "medium"],
+      ["transaction-low-confidence", "low"],
+    ],
+  );
 });
 
 test("manual profile presets expose the expected review scenarios", () => {
@@ -838,8 +872,30 @@ test("platform report mapper builds user-selected target comparison", () => {
     tone: "seed",
     message: "Loaded for mapper tests.",
   });
-  assert.equal(mapped.chargeInspector.sourceLabel, "No Charge Inspector CSV review");
+  assert.equal(mapped.chargeInspector.sourceLabel, "No transaction review source");
   assert.deepEqual(mapped.chargeInspector.findings, []);
+  assert.deepEqual(
+    mapped.dataSources.map((source) => [
+      source.id,
+      source.kind,
+      source.status,
+    ]),
+    [
+      ["manual-profile", "sample", "active"],
+      ["csv-transactions", "csv", "empty"],
+      ["linked-accounts", "linked-account", "future"],
+    ],
+  );
+  assert.match(
+    mapped.sourceReconciliation.summary,
+    /account-level sources/,
+  );
+  assert.match(
+    mapped.sourceReconciliation.resolution
+      .map((rule) => rule.value)
+      .join(" "),
+    /CSV as backfill/,
+  );
 
   const decision = mapped.decisionReadiness;
   assert.deepEqual(decision.evidenceSourceIds, ["cfpb_emergency_fund_guide"]);

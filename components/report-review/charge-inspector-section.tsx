@@ -52,7 +52,7 @@ export function ChargeInspectorSection({
         eyebrow="Charge review"
         id="charge-inspector-heading"
         title="Charge Inspector"
-        description="Deterministic CSV review prompts for recurring charges, possible duplicates, fee-like rows, and price changes."
+        description="Deterministic transaction review prompts for recurring charges, possible duplicates, fee-like rows, and price changes."
       />
 
       <ChargeInspectorDashboard
@@ -119,7 +119,8 @@ function ChargeInspectorDashboard({
           </h3>
           <p className="mt-1 max-w-3xl text-sm leading-6 text-earth-700">
             Current-session review prompts only. Local hide actions are
-            temporary, and no transaction history is stored.
+            temporary, and no transaction history or account connection is
+            stored.
           </p>
         </div>
         <div className="flex flex-wrap gap-2 xl:justify-end">
@@ -273,8 +274,14 @@ function sourcePillLabel(review: ChargeInspectorReview) {
   if (review.dataMode === "user-csv") {
     return "CSV review";
   }
+  if (review.dataMode === "linked-account") {
+    return "Linked transactions";
+  }
+  if (review.dataMode === "mixed") {
+    return "Mixed sources";
+  }
   if (review.dataMode === "empty") {
-    return "No CSV loaded";
+    return "No transactions";
   }
   if (review.dataMode === "fallback") {
     return "API fallback";

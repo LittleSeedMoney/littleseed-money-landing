@@ -1,6 +1,9 @@
-import type { ReportReviewSample } from "@/data/report-review-sample";
+import type {
+  ReportReviewSample,
+  ReviewDataSourceStatus,
+} from "@/data/report-review-sample";
 
-import { MetaItem } from "./shared";
+import { MetaItem, StatusPill } from "./shared";
 
 export function ReviewRail({ report }: { report: ReportReviewSample }) {
   return (
@@ -18,6 +21,7 @@ export function ReviewRail({ report }: { report: ReportReviewSample }) {
         <dl className="mt-4 space-y-3 text-sm">
           <MetaItem label="Data mode" value={report.dataMode} />
           <MetaItem label="Completeness" value={report.dataCompleteness.status} />
+          <MetaItem label="Sources" value={sourceCountLabel(report)} />
           <MetaItem label="Persistence" value="In-session only" />
         </dl>
         <p className="mt-4 text-sm leading-6 text-earth-700">
@@ -29,6 +33,39 @@ export function ReviewRail({ report }: { report: ReportReviewSample }) {
         >
           Review context and uncertainty
         </a>
+      </section>
+
+      <section
+        aria-labelledby="data-source-state-heading"
+        className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm"
+      >
+        <h2
+          id="data-source-state-heading"
+          className="text-sm font-semibold text-seed-950"
+        >
+          Data source state
+        </h2>
+        <ul className="mt-3 space-y-3 text-sm">
+          {report.dataSources.map((source) => (
+            <li
+              className="rounded-lg border border-stone-200 bg-stone-50 p-3"
+              key={source.id}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <p className="min-w-0 font-medium text-seed-950">
+                  {source.label}
+                </p>
+                <StatusPill
+                  label={statusLabel(source.status)}
+                  tone={statusTone(source.status)}
+                />
+              </div>
+              <p className="mt-2 text-xs leading-5 text-earth-600">
+                {source.freshnessLabel}
+              </p>
+            </li>
+          ))}
+        </ul>
       </section>
 
       <section
@@ -58,4 +95,34 @@ export function ReviewRail({ report }: { report: ReportReviewSample }) {
       </section>
     </aside>
   );
+}
+
+function sourceCountLabel(report: ReportReviewSample) {
+  const activeCount = report.dataSources.filter(
+    (source) => source.status === "active",
+  ).length;
+
+  return `${activeCount.toLocaleString("en-US")} active / ${report.dataSources.length.toLocaleString("en-US")} mapped`;
+}
+
+function statusLabel(status: ReviewDataSourceStatus) {
+  return {
+    active: "Active",
+    available: "Available",
+    empty: "No data",
+    fallback: "Fallback",
+    future: "Future",
+  }[status];
+}
+
+function statusTone(status: ReviewDataSourceStatus) {
+  if (status === "active") {
+    return "seed";
+  }
+
+  if (status === "available") {
+    return "earth";
+  }
+
+  return "stone";
 }

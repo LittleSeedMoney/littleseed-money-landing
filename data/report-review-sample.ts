@@ -6,10 +6,60 @@ import {
 export type Provenance =
   | "sample"
   | "user-entered"
+  | "csv-imported"
+  | "linked-account"
   | "calculated"
   | "estimated"
   | "source-backed"
   | "missing";
+
+export type ReviewDataSourceKind =
+  | "manual"
+  | "csv"
+  | "linked-account"
+  | "sample";
+
+export type ReviewDataSourceStatus =
+  | "active"
+  | "available"
+  | "future"
+  | "empty"
+  | "fallback";
+
+export type ReviewDataSource = {
+  id: string;
+  kind: ReviewDataSourceKind;
+  label: string;
+  status: ReviewDataSourceStatus;
+  summary: string;
+  detail: string;
+  freshnessLabel: string;
+  coverage: string[];
+  limitations: string[];
+};
+
+export type SourceMatchConfidence = "high" | "medium" | "low";
+
+export type SourceReconciliationRule = {
+  id: string;
+  label: string;
+  confidence: SourceMatchConfidence;
+  criteria: string[];
+  outcome: string;
+};
+
+export type SourceResolutionRule = {
+  id: string;
+  label: string;
+  value: string;
+};
+
+export type SourceReconciliationPolicy = {
+  summary: string;
+  accountMatching: SourceReconciliationRule[];
+  transactionMatching: SourceReconciliationRule[];
+  resolution: SourceResolutionRule[];
+};
 
 export type MetricDisclosure = {
   measures: string;
@@ -133,6 +183,8 @@ export type ReportReviewSample = {
     tone: "amber" | "red" | "seed";
     message: string;
   };
+  dataSources: ReviewDataSource[];
+  sourceReconciliation: SourceReconciliationPolicy;
   summaryMetrics: SummaryMetric[];
   sections: ReportSection[];
   findings: Finding[];
@@ -154,6 +206,105 @@ export type ReportReviewSample = {
   chargeInspector: ChargeInspectorReview;
 };
 
+export const defaultSourceReconciliationPolicy: SourceReconciliationPolicy = {
+  summary:
+    "CSV imports and linked accounts are account-level sources. They can coexist when source accounts are mapped to a canonical account and overlapping transaction coverage is reconciled before calculations use it.",
+  accountMatching: [
+    {
+      id: "account-high-confidence",
+      label: "Same account",
+      confidence: "high",
+      criteria: [
+        "User maps the CSV import to an existing account.",
+        "Institution, account type, currency, and last four digits match.",
+        "Statement-period balance is close to the linked balance for the same date.",
+      ],
+      outcome:
+        "Map to the same canonical account and allow automatic overlap handling.",
+    },
+    {
+      id: "account-medium-confidence",
+      label: "Possible account match",
+      confidence: "medium",
+      criteria: [
+        "Institution and account type match but last four digits or balance evidence is missing.",
+        "Account name is similar and balance is close, but date evidence is weak.",
+      ],
+      outcome:
+        "Show as a possible match and require review before merging sources.",
+    },
+    {
+      id: "account-low-confidence",
+      label: "Separate source account",
+      confidence: "low",
+      criteria: [
+        "Only institution, account name, or balance is similar.",
+        "The account match cannot be tied to a statement period or user mapping.",
+      ],
+      outcome:
+        "Keep as a separate CSV-only or manual source account until reviewed.",
+    },
+  ],
+  transactionMatching: [
+    {
+      id: "transaction-high-confidence",
+      label: "Duplicate transaction",
+      confidence: "high",
+      criteria: [
+        "Same canonical account.",
+        "Same amount and currency.",
+        "Posted dates match or sit inside the approved short date window.",
+        "Normalized merchant or description is very similar.",
+      ],
+      outcome:
+        "Deduplicate automatically and mark the overlap as reconciled.",
+    },
+    {
+      id: "transaction-medium-confidence",
+      label: "Possible overlap",
+      confidence: "medium",
+      criteria: [
+        "Amount and date match but merchant text is generic or weak.",
+        "Pending-to-posted timing drift may explain the mismatch.",
+        "Recurring merchants create several nearby same-amount candidates.",
+      ],
+      outcome:
+        "Mark as overlap needs review; do not silently merge or double count.",
+    },
+    {
+      id: "transaction-low-confidence",
+      label: "Separate transaction",
+      confidence: "low",
+      criteria: [
+        "Account match is uncertain.",
+        "Amount differs, the date window is too wide, or merchant text points to a different transaction.",
+      ],
+      outcome:
+        "Keep as a separate source transaction.",
+    },
+  ],
+  resolution: [
+    {
+      id: "linked-primary",
+      label: "Fresh linked coverage",
+      value:
+        "Use linked data as primary for its covered date range; CSV may verify but must not double count.",
+    },
+    {
+      id: "csv-backfill",
+      label: "Coverage gap",
+      value:
+        "Use CSV as backfill when linked history is stale, unavailable, or shorter than the statement period.",
+    },
+    {
+      id: "unsupported-account",
+      label: "Unsupported account",
+      value:
+        "Keep unlinked accounts enabled as CSV-only or manual-only sources inside the same review.",
+    },
+  ],
+};
+
 export const reportReviewSample: ReportReviewSample = {
   profileName: "Sample household profile",
   reportStatus: "Complete",
@@ -165,6 +316,57 @@ export const reportReviewSample: ReportReviewSample = {
     message:
       "Platform API connector is not configured in this environment. Showing sample report data for layout review. No user data was sent or saved.",
   },
+  dataSources: [
+    {
+      id: "manual-profile",
+      kind: "manual",
+      label: "Manual profile snapshot",
+      status: "active",
+      summary: "Profile, assets, liabilities, and household context are entered directly for the current review.",
+      detail:
+        "Manual inputs remain the source of truth for this private report slice until an import or linked-account source is explicitly added.",
+      freshnessLabel: "Current browser session",
+      coverage: ["Profile", "Assets", "Liabilities", "Emergency Fund Target"],
+      limitations: [
+        "Manual balances are not refreshed automatically.",
+        "Aggregated expenses can hide detailed recurring obligations.",
+      ],
+    },
+    {
+      id: "csv-transactions",
+      kind: "csv",
+      label: "CSV transaction review",
+      status: "available",
+      summary:
+        "Charge Inspector can consume temporary CSV rows for linked-account backfills, unsupported accounts, recurring charges, possible duplicates, fees, and price changes.",
+      detail:
+        "CSV review is intentionally in-session and can coexist with linked accounts when account/date coverage is reconciled.",
+      freshnessLabel: "Sample fixture loaded",
+      coverage: ["Transactions", "Backfills", "Unsupported accounts"],
+      limitations: [
+        "CSV rows depend on the exported statement range and bank format.",
+        "CSV row identifiers are not durable account identifiers.",
+        "Overlapping CSV and linked rows need reconciliation before totals or findings use them.",
+      ],
+    },
+    {
+      id: "linked-accounts",
+      kind: "linked-account",
+      label: "Linked account source",
+      status: "future",
+      summary:
+        "Future provider-linked accounts would supply refreshed balances and transaction history after explicit consent, while CSV can remain enabled for gaps or unsupported accounts.",
+      detail:
+        "No Plaid, MX, Yodlee, OAuth, bank credentials, or provider tokens are implemented in this slice.",
+      freshnessLabel: "Not connected",
+      coverage: ["Balances", "Transactions", "Sync status"],
+      limitations: [
+        "Provider linking requires approved security, consent, retention, deletion, and support workflows.",
+        "A linked account can still need manual corrections, exclusions, or missing-context review.",
+      ],
+    },
+  ],
+  sourceReconciliation: defaultSourceReconciliationPolicy,
   disclaimer:
     "This review surface is educational and uses sample data. It is not individualized legal, tax, or investment advice.",
   summaryMetrics: [

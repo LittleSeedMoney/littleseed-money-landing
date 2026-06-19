@@ -209,7 +209,7 @@ export function ReportReviewWorkspace({
   return (
     <ReportReviewShell
       activeScreen={activeScreen}
-      dataLabel={dataLabel(report.dataMode)}
+      dataLabel={dataLabel(report)}
       onScreenSelect={selectScreen}
       report={report}
     >
@@ -236,11 +236,21 @@ export function ReportReviewWorkspace({
   );
 }
 
-function dataLabel(dataMode: string) {
-  if (dataMode.toLowerCase().includes("user")) {
+function dataLabel(report: ReportReviewSample) {
+  const activeSource = report.dataSources.find(
+    (source) => source.status === "active",
+  );
+
+  if (activeSource) {
+    return activeSource.kind === "manual"
+      ? "Manual source"
+      : activeSource.label;
+  }
+
+  if (report.dataMode.toLowerCase().includes("user")) {
     return "User-entered data";
   }
-  if (dataMode.toLowerCase().includes("api")) {
+  if (report.dataMode.toLowerCase().includes("api")) {
     return "Sample via API";
   }
   return "Sample data";

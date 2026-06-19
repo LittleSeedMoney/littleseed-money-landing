@@ -15,7 +15,12 @@ export const reportReviewScreens: ReportReviewScreen[] = [
   {
     id: "inputs",
     label: "Inputs",
-    legacyAnchors: ["manual-input", "validation-checklist", "inputs"],
+    legacyAnchors: [
+      "data-sources",
+      "manual-input",
+      "validation-checklist",
+      "inputs",
+    ],
   },
   {
     id: "report",
