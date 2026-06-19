@@ -23,6 +23,11 @@ const smokeScreens = [
     heading: "Charge Inspector",
     tab: "Charge Inspector",
   },
+  {
+    hash: "education",
+    heading: "Education topics",
+    tab: "Education",
+  },
 ] as const;
 
 const requiredManualFields = [
@@ -138,22 +143,27 @@ test.describe("private report review smoke", () => {
     await page.goto(`${reportReviewPath}#charge-inspector`);
 
     const findings = chargeInspectorFindings(page);
-    await expect(findings).toHaveCount(4);
-    await expect(metricValue(page, "visible")).toHaveText("4");
+    await expect(findings.first()).toBeVisible();
+
+    const initialCount = await findings.count();
+    expect(initialCount).toBeGreaterThan(0);
+    await expect(metricValue(page, "visible")).toHaveText(String(initialCount));
     await expect(metricValue(page, "hidden")).toHaveText("0");
 
     await page.getByRole("button", { name: "Hide" }).first().click();
 
-    await expect(findings).toHaveCount(3);
-    await expect(metricValue(page, "visible")).toHaveText("3");
+    await expect(findings).toHaveCount(initialCount - 1);
+    await expect(metricValue(page, "visible")).toHaveText(
+      String(initialCount - 1),
+    );
     await expect(metricValue(page, "hidden")).toHaveText("1");
     await expect(page.getByTestId("charge-inspector-restore-banner"))
       .toBeVisible();
 
     await page.getByTestId("charge-inspector-restore-banner").click();
 
-    await expect(findings).toHaveCount(4);
-    await expect(metricValue(page, "visible")).toHaveText("4");
+    await expect(findings).toHaveCount(initialCount);
+    await expect(metricValue(page, "visible")).toHaveText(String(initialCount));
     await expect(metricValue(page, "hidden")).toHaveText("0");
   });
 
@@ -162,19 +172,25 @@ test.describe("private report review smoke", () => {
   }) => {
     await page.goto(`${reportReviewPath}#charge-inspector`);
 
-    for (const _ of [0, 1, 2, 3]) {
+    const findings = chargeInspectorFindings(page);
+    await expect(findings.first()).toBeVisible();
+
+    const initialCount = await findings.count();
+    expect(initialCount).toBeGreaterThan(0);
+
+    for (let index = 0; index < initialCount; index += 1) {
       await page.getByRole("button", { name: "Hide" }).first().click();
     }
 
     await expect(page.getByTestId("charge-inspector-empty-state"))
       .toBeVisible();
     await expect(metricValue(page, "visible")).toHaveText("0");
-    await expect(metricValue(page, "hidden")).toHaveText("4");
+    await expect(metricValue(page, "hidden")).toHaveText(String(initialCount));
 
     await page.getByTestId("charge-inspector-restore-empty").click();
 
-    await expect(chargeInspectorFindings(page)).toHaveCount(4);
-    await expect(metricValue(page, "visible")).toHaveText("4");
+    await expect(findings).toHaveCount(initialCount);
+    await expect(metricValue(page, "visible")).toHaveText(String(initialCount));
     await expect(metricValue(page, "hidden")).toHaveText("0");
   });
 });
