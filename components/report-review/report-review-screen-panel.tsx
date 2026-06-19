@@ -12,6 +12,7 @@ import type { ReportReviewScreenId } from "@/lib/report-review/report-review-scr
 
 import { AssetPortfolioSection } from "./asset-portfolio-section";
 import { ChargeInspectorSection } from "./charge-inspector-section";
+import { DataSourcesSection } from "./data-sources-section";
 import { EducationSection } from "./education-section";
 import { EvidenceSection } from "./evidence-section";
 import { FindingsSection } from "./findings-section";
@@ -77,6 +78,11 @@ export function ReportReviewScreenPanel({
   if (activeScreen === "inputs") {
     return (
       <>
+        <DataSourcesSection
+          dataMode={report.dataMode}
+          reconciliation={report.sourceReconciliation}
+          sources={report.dataSources}
+        />
         <ManualInputSection
           errorMessage={errorMessage}
           onAddAsset={onAddAsset}

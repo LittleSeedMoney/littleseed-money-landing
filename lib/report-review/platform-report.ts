@@ -1,9 +1,11 @@
 import {
   reportReviewSample,
+  defaultSourceReconciliationPolicy,
   type DecisionReadinessMissingInput,
   type EvidenceSource,
   type Finding,
   type Provenance,
+  type ReviewDataSource,
   type ReportReviewSample,
   type ReportSection,
   type SnapshotItem,
@@ -241,6 +243,8 @@ export function mapPlatformReport(
       tone: "seed",
       message: options.connectionMessage,
     },
+    dataSources: buildDataSources(options),
+    sourceReconciliation: defaultSourceReconciliationPolicy,
     summaryMetrics: buildSummaryMetrics(report, snapshot),
     sections: report.sections.map(mapSection),
     findings: report.findings.map(mapFinding),
@@ -274,6 +278,138 @@ export function mapPlatformReport(
     decisionReadiness: buildDecisionReadiness(snapshot),
     chargeInspector: options.chargeInspector ?? chargeInspectorEmptyReview,
   };
+}
+
+function buildDataSources(options: ReportMappingOptions): ReviewDataSource[] {
+  const dataMode = options.dataMode.toLowerCase();
+  const isManualProfile = dataMode.includes("user");
+  const chargeInspector = options.chargeInspector ?? chargeInspectorEmptyReview;
+  const transactionStatus = chargeInspectorDataSourceStatus(chargeInspector);
+  const reviewedTransactions =
+    chargeInspector.reviewedTransactionCount.toLocaleString("en-US");
+
+  return [
+    {
+      id: "manual-profile",
+      kind: isManualProfile ? "manual" : "sample",
+      label: isManualProfile
+        ? "Manual profile snapshot"
+        : "Platform sample profile",
+      status: "active",
+      summary: isManualProfile
+        ? "The report uses the current manual profile values submitted for this browser session."
+        : "The report uses the platform sample profile for layout and contract review.",
+      detail:
+        "Profile data is passed to the platform report endpoint for the current request and is not persisted by this landing route.",
+      freshnessLabel: "Current API response",
+      coverage: ["Profile", "Assets", "Liabilities", "Decision slice"],
+      limitations: [
+        "Manual or sample balances are not background-refreshed.",
+        "Detailed transactions remain separate from profile-level report inputs.",
+      ],
+    },
+    {
+      id: "csv-transactions",
+      kind: chargeInspectorDataSourceKind(chargeInspector),
+      label: chargeInspector.sourceLabel,
+      status: transactionStatus,
+      summary: chargeInspectorDataSourceSummary(
+        chargeInspector,
+        transactionStatus,
+      ),
+      detail:
+        "Transaction rows are treated as review evidence for the current session. CSV and linked rows should be reconciled by account and date range before totals or findings use them.",
+      freshnessLabel:
+        transactionStatus === "fallback"
+          ? "Unavailable"
+          : transactionStatus === "empty"
+            ? "No transaction source"
+            : `${reviewedTransactions} transactions reviewed`,
+      coverage: chargeInspectorDataSourceCoverage(chargeInspector),
+      limitations: chargeInspector.limitations,
+    },
+    {
+      id: "linked-accounts",
+      kind: "linked-account",
+      label: "Linked account source",
+      status: "future",
+      summary:
+        "Future provider-linked accounts would supply refreshed balances and transactions after explicit consent, while CSV can remain enabled for gaps or unsupported accounts.",
+      detail:
+        "No Plaid, MX, Yodlee, OAuth, bank credentials, or provider-token storage is implemented by this route.",
+      freshnessLabel: "Not connected",
+      coverage: ["Balances", "Transactions", "Sync status"],
+      limitations: [
+        "Provider linking needs approved security, consent, retention, deletion, and support workflows.",
+        "Linked data can still require manual correction, exclusion, and missing-context review.",
+      ],
+    },
+  ];
+}
+
+function chargeInspectorDataSourceKind(
+  review: ChargeInspectorReview,
+): ReviewDataSource["kind"] {
+  if (review.dataMode === "linked-account") {
+    return "linked-account";
+  }
+
+  if (review.dataMode === "mixed") {
+    return "mixed";
+  }
+
+  return "csv";
+}
+
+function chargeInspectorDataSourceSummary(
+  review: ChargeInspectorReview,
+  status: ReviewDataSource["status"],
+) {
+  if (status === "empty") {
+    return "No transaction source is attached to this report response.";
+  }
+
+  if (review.dataMode === "linked-account") {
+    return "The transaction review uses linked-account rows from the current Charge Inspector response while CSV remains available for backfills or unsupported accounts.";
+  }
+
+  if (review.dataMode === "mixed") {
+    return "The transaction review combines linked-account rows and CSV imports after account and date-range reconciliation.";
+  }
+
+  return "The transaction review uses the current Charge Inspector response for deterministic review prompts, CSV backfills, or unsupported-account imports.";
+}
+
+function chargeInspectorDataSourceCoverage(
+  review: ChargeInspectorReview,
+): string[] {
+  if (review.dataMode === "linked-account") {
+    return ["Transactions", "Linked accounts", "Sync status"];
+  }
+
+  if (review.dataMode === "mixed") {
+    return ["Transactions", "Linked accounts", "CSV backfills"];
+  }
+
+  return ["Transactions", "Backfills", "Unsupported accounts"];
+}
+
+function chargeInspectorDataSourceStatus(
+  review: ChargeInspectorReview,
+): ReviewDataSource["status"] {
+  if (review.dataMode === "fallback") {
+    return "fallback";
+  }
+
+  if (review.reviewedTransactionCount === 0) {
+    return "empty";
+  }
+
+  return review.dataMode === "user-csv" ||
+    review.dataMode === "linked-account" ||
+    review.dataMode === "mixed"
+    ? "active"
+    : "available";
 }
 
 function buildSummaryMetrics(
@@ -702,10 +838,15 @@ function mapLiability(liability: PlatformWorkspaceLiability): SnapshotItem {
 
 function mapProvenance(value: string): Provenance {
   const provenanceMap: Record<string, Provenance> = {
+    account_linked: "linked-account",
     calculated: "calculated",
+    csv_imported: "csv-imported",
     estimated: "estimated",
+    linked_account: "linked-account",
     missing: "missing",
+    plaid: "linked-account",
     reference_data: "source-backed",
+    user_csv: "csv-imported",
     user_entered: "user-entered",
   };
   const provenance = provenanceMap[value];

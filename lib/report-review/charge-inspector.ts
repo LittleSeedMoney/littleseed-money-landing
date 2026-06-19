@@ -18,6 +18,8 @@ export type ChargeInspectorDataMode =
   | "sample"
   | "platform-sample"
   | "user-csv"
+  | "linked-account"
+  | "mixed"
   | "empty"
   | "fallback";
 
@@ -245,7 +247,7 @@ export const chargeInspectorSampleReview: ChargeInspectorReview = {
 
 export const chargeInspectorEmptyReview: ChargeInspectorReview = {
   dataMode: "empty",
-  sourceLabel: "No Charge Inspector CSV review",
+  sourceLabel: "No transaction review source",
   reviewedTransactionCount: 0,
   findings: [],
   emptyState: chargeInspectorSampleReview.emptyState,
@@ -317,11 +319,8 @@ export function mapPlatformChargeInspectorReview(
       : [];
 
   return {
-    dataMode: response.source === "sample_csv" ? "platform-sample" : "user-csv",
-    sourceLabel:
-      response.source === "sample_csv"
-        ? "Platform sample CSV review"
-        : "Platform CSV review",
+    dataMode: mapPlatformChargeInspectorDataMode(response.source),
+    sourceLabel: platformChargeInspectorSourceLabel(response.source),
     reviewedTransactionCount: response.reviewed_transaction_count,
     findings: [
       ...response.findings.recurring_charges.map((candidate) =>
@@ -344,6 +343,40 @@ export function mapPlatformChargeInspectorReview(
       `Platform review schema: ${response.schema_version}.`,
     ],
   };
+}
+
+function mapPlatformChargeInspectorDataMode(
+  source: string,
+): ChargeInspectorDataMode {
+  if (source === "sample_csv") {
+    return "platform-sample";
+  }
+
+  if (source === "linked_account") {
+    return "linked-account";
+  }
+
+  if (source === "mixed") {
+    return "mixed";
+  }
+
+  return "user-csv";
+}
+
+function platformChargeInspectorSourceLabel(source: string) {
+  if (source === "sample_csv") {
+    return "Platform sample CSV review";
+  }
+
+  if (source === "linked_account") {
+    return "Platform linked transaction review";
+  }
+
+  if (source === "mixed") {
+    return "Platform mixed transaction review";
+  }
+
+  return "Platform CSV review";
 }
 
 function countFindings(

@@ -1,10 +1,17 @@
 import type {
   MetricDisclosure,
   ReportReviewSample,
+  ReviewDataSource,
   SummaryMetric,
 } from "@/data/report-review-sample";
 
-import { MetaItem, ProvenanceTag } from "./shared";
+import {
+  dataSourceStatusLabels,
+  dataSourceStatusTone,
+  MetaItem,
+  ProvenanceTag,
+  StatusPill,
+} from "./shared";
 
 export function OverviewSection({
   generatedAt,
@@ -51,12 +58,43 @@ export function OverviewSection({
         {report.connectionNotice.message}
       </div>
 
+      <SourceSummaryStrip sources={report.dataSources} />
+
       <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {report.summaryMetrics.map((metric) => (
           <MetricCard key={metric.id} metric={metric} />
         ))}
       </div>
     </section>
+  );
+}
+
+function SourceSummaryStrip({ sources }: { sources: ReviewDataSource[] }) {
+  return (
+    <div
+      aria-label="Review data source summary"
+      className="mt-4 grid gap-2 md:grid-cols-3"
+    >
+      {sources.map((source) => (
+        <div
+          className="rounded-lg border border-stone-200 bg-stone-50 p-3"
+          key={source.id}
+        >
+          <div className="flex items-start justify-between gap-3">
+            <h3 className="min-w-0 text-sm font-semibold text-seed-950">
+              {source.label}
+            </h3>
+            <StatusPill
+              label={dataSourceStatusLabels[source.status]}
+              tone={dataSourceStatusTone(source.status)}
+            />
+          </div>
+          <p className="mt-2 text-xs leading-5 text-earth-600">
+            {source.freshnessLabel}
+          </p>
+        </div>
+      ))}
+    </div>
   );
 }
 

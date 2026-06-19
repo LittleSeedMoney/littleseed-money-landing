@@ -1,4 +1,7 @@
-import type { Provenance } from "@/data/report-review-sample";
+import type {
+  Provenance,
+  ReviewDataSourceStatus,
+} from "@/data/report-review-sample";
 import {
   educationTopicAnchor,
   resolveEducationTopic,
@@ -7,11 +10,33 @@ import {
 export const provenanceLabels: Record<Provenance, string> = {
   sample: "Sample",
   "user-entered": "User-entered",
+  "csv-imported": "CSV import",
+  "linked-account": "Linked account",
   calculated: "Calculated",
   estimated: "Estimated",
   "source-backed": "Source-backed",
   missing: "Missing context",
 };
+
+export const dataSourceStatusLabels: Record<ReviewDataSourceStatus, string> = {
+  active: "Active",
+  available: "Available",
+  empty: "No data",
+  fallback: "Fallback",
+  future: "Future",
+};
+
+export function dataSourceStatusTone(status: ReviewDataSourceStatus) {
+  if (status === "active") {
+    return "seed";
+  }
+
+  if (status === "available") {
+    return "earth";
+  }
+
+  return "stone";
+}
 
 export function StatusPill({
   label,

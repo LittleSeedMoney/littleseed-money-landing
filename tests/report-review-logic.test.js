@@ -235,6 +235,31 @@ test("charge inspector platform mapper builds UI findings from contract evidence
   assert.match(review.limitations.join(" "), /charge_inspector_review_v0/);
 });
 
+test("charge inspector maps linked-account and mixed platform sources", () => {
+  for (const { source, mode, label } of [
+    {
+      source: "linked_account",
+      mode: "linked-account",
+      label: "Platform linked transaction review",
+    },
+    {
+      source: "mixed",
+      mode: "mixed",
+      label: "Platform mixed transaction review",
+    },
+  ]) {
+    const payload = chargeInspectorPlatformPayload();
+    payload.source = source;
+
+    const review = mapPlatformChargeInspectorReview(
+      parseChargeInspectorReviewResponse(payload),
+    );
+
+    assert.equal(review.dataMode, mode);
+    assert.equal(review.sourceLabel, label);
+  }
+});
+
 test("charge inspector recurring explanation uses the platform cadence", () => {
   const payload = chargeInspectorPlatformPayload();
   payload.findings.recurring_charges[0].cadence = "weekly";
@@ -395,6 +420,40 @@ test("report review sample exposes charge inspector review data", () => {
     "Sample CSV review fixture",
   );
   assert.equal(reportReviewSample.chargeInspector.findings.length, 4);
+  assert.deepEqual(
+    reportReviewSample.dataSources.map((source) => [
+      source.id,
+      source.kind,
+      source.status,
+    ]),
+    [
+      ["manual-profile", "manual", "active"],
+      ["csv-transactions", "csv", "available"],
+      ["linked-accounts", "linked-account", "future"],
+    ],
+  );
+  assert.deepEqual(
+    reportReviewSample.sourceReconciliation.accountMatching.map((rule) => [
+      rule.id,
+      rule.confidence,
+    ]),
+    [
+      ["account-high-confidence", "high"],
+      ["account-medium-confidence", "medium"],
+      ["account-low-confidence", "low"],
+    ],
+  );
+  assert.deepEqual(
+    reportReviewSample.sourceReconciliation.transactionMatching.map((rule) => [
+      rule.id,
+      rule.confidence,
+    ]),
+    [
+      ["transaction-high-confidence", "high"],
+      ["transaction-medium-confidence", "medium"],
+      ["transaction-low-confidence", "low"],
+    ],
+  );
 });
 
 test("manual profile presets expose the expected review scenarios", () => {
@@ -838,8 +897,30 @@ test("platform report mapper builds user-selected target comparison", () => {
     tone: "seed",
     message: "Loaded for mapper tests.",
   });
-  assert.equal(mapped.chargeInspector.sourceLabel, "No Charge Inspector CSV review");
+  assert.equal(mapped.chargeInspector.sourceLabel, "No transaction review source");
   assert.deepEqual(mapped.chargeInspector.findings, []);
+  assert.deepEqual(
+    mapped.dataSources.map((source) => [
+      source.id,
+      source.kind,
+      source.status,
+    ]),
+    [
+      ["manual-profile", "sample", "active"],
+      ["csv-transactions", "csv", "empty"],
+      ["linked-accounts", "linked-account", "future"],
+    ],
+  );
+  assert.match(
+    mapped.sourceReconciliation.summary,
+    /account-level sources/,
+  );
+  assert.match(
+    mapped.sourceReconciliation.resolution
+      .map((rule) => rule.value)
+      .join(" "),
+    /CSV as backfill/,
+  );
 
   const decision = mapped.decisionReadiness;
   assert.deepEqual(decision.evidenceSourceIds, ["cfpb_emergency_fund_guide"]);
@@ -885,6 +966,41 @@ test("platform report mapper builds user-selected target comparison", () => {
         "Optional preference target; it does not replace the baseline range.",
     },
   );
+});
+
+test("platform report data sources reflect linked and mixed transaction modes", () => {
+  for (const { source, kind, label } of [
+    {
+      source: "linked_account",
+      kind: "linked-account",
+      label: "Platform linked transaction review",
+    },
+    {
+      source: "mixed",
+      kind: "mixed",
+      label: "Platform mixed transaction review",
+    },
+  ]) {
+    const chargeInspectorPayload = chargeInspectorPlatformPayload();
+    chargeInspectorPayload.source = source;
+    const chargeInspector = mapPlatformChargeInspectorReview(
+      parseChargeInspectorReviewResponse(chargeInspectorPayload),
+    );
+    const mapped = mapPlatformReport(
+      parseWorkspaceReportResponse(workspacePayload()),
+      {
+        profileName: "Test profile",
+        dataMode: "Test Platform API",
+        connectionMessage: "Loaded for mapper tests.",
+        chargeInspector,
+      },
+    );
+    const transactionSource = itemById(mapped.dataSources, "csv-transactions");
+
+    assert.equal(transactionSource.kind, kind);
+    assert.equal(transactionSource.label, label);
+    assert.equal(transactionSource.status, "active");
+  }
 });
 
 test("platform report mapper preserves missing EFT values", () => {
