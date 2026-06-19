@@ -52,3 +52,35 @@ export function reportReviewScreenFromHash(hash: string): ReportReviewScreenId {
   );
   return screen?.id ?? "report";
 }
+
+export function reportReviewScreenFromKeyboard(
+  currentScreen: ReportReviewScreenId,
+  key: string,
+): ReportReviewScreenId | null {
+  const currentIndex = reportReviewScreens.findIndex(
+    (screen) => screen.id === currentScreen,
+  );
+  const safeIndex = currentIndex >= 0 ? currentIndex : 0;
+  const lastIndex = reportReviewScreens.length - 1;
+
+  if (key === "ArrowRight" || key === "ArrowDown") {
+    return reportReviewScreens[(safeIndex + 1) % reportReviewScreens.length].id;
+  }
+
+  if (key === "ArrowLeft" || key === "ArrowUp") {
+    return reportReviewScreens[
+      (safeIndex - 1 + reportReviewScreens.length) %
+        reportReviewScreens.length
+    ].id;
+  }
+
+  if (key === "Home") {
+    return reportReviewScreens[0].id;
+  }
+
+  if (key === "End") {
+    return reportReviewScreens[lastIndex].id;
+  }
+
+  return null;
+}

@@ -250,7 +250,7 @@ export function ReportReviewWorkspace({
 
         <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
           <section
-            aria-labelledby={`report-review-screen-${activeScreen}-heading`}
+            aria-labelledby={`report-review-tab-${activeScreen}`}
             className="min-w-0 space-y-6"
             id={`report-review-screen-${activeScreen}`}
             role="tabpanel"

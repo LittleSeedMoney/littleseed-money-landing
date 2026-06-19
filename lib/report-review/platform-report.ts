@@ -75,7 +75,7 @@ export async function getReportReviewData(): Promise<ReportReviewSample> {
         snapshotId: "landing-review-sample-workspace",
         reportId: "landing-review-sample-report",
       }),
-      requestChargeInspectorSampleReview(),
+      requestChargeInspectorSampleReview().catch(fallbackChargeInspectorReview),
     ]);
 
     return mapPlatformReport(payload, {
@@ -201,6 +201,11 @@ function requirePlatformApiUrl(): string {
     throw new Error("Platform API URL is not configured.");
   }
   return PLATFORM_API_URL;
+}
+
+function fallbackChargeInspectorReview(error: unknown): ChargeInspectorReview {
+  console.error("Platform Charge Inspector API request failed", error);
+  return chargeInspectorEmptyReview;
 }
 
 function fallbackReport(error: unknown): ReportReviewSample {

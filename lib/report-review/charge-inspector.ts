@@ -335,6 +335,8 @@ function mapRecurringCharge(
   candidate: PlatformRecurringChargeCandidate,
   evidenceById: Map<string, PlatformNormalizedTransaction>,
 ): ChargeInspectorFinding {
+  const cadenceText = titleCase(candidate.cadence).toLowerCase();
+
   return {
     id: candidate.finding_id,
     type: "recurring_charge",
@@ -342,7 +344,7 @@ function mapRecurringCharge(
     summary: candidate.explanation,
     explanation:
       "The platform recurring detector matched " +
-      `${candidate.occurrence_count.toLocaleString("en-US")} monthly debit rows from ` +
+      `${candidate.occurrence_count.toLocaleString("en-US")} ${cadenceText} rows from ` +
       `${candidate.first_seen_date} to ${candidate.last_seen_date}.`,
     amountLabel: money(candidate.typical_amount),
     cadenceLabel: titleCase(candidate.cadence),

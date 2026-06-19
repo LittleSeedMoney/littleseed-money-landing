@@ -53,6 +53,7 @@ const {
   formatSavingGoalDraftMoney,
 } = require("../lib/report-review/saving-goal-draft.ts");
 const {
+  reportReviewScreenFromKeyboard,
   reportReviewScreenFromHash,
   reportReviewScreens,
 } = require("../lib/report-review/report-review-screens.ts");
@@ -233,6 +234,22 @@ test("charge inspector platform mapper builds UI findings from contract evidence
   assert.match(review.limitations.join(" "), /charge_inspector_review_v0/);
 });
 
+test("charge inspector recurring explanation uses the platform cadence", () => {
+  const payload = chargeInspectorPlatformPayload();
+  payload.findings.recurring_charges[0].cadence = "weekly";
+
+  const review = mapPlatformChargeInspectorReview(
+    parseChargeInspectorReviewResponse(payload),
+  );
+  const recurring = review.findings.find(
+    (finding) => finding.type === "recurring_charge",
+  );
+
+  assert.equal(recurring.cadenceLabel, "Weekly");
+  assert.match(recurring.explanation, /3 weekly rows/);
+  assert.doesNotMatch(recurring.explanation, /monthly debit rows/);
+});
+
 test("charge inspector findings can be hidden without mutating the review", () => {
   const firstFindingId = chargeInspectorSampleReview.findings[0].id;
   const visibleFindings = visibleChargeInspectorFindings(
@@ -315,6 +332,28 @@ test("report review screen hash mapping preserves legacy section links", () => {
   assert.equal(reportReviewScreenFromHash("#charge-inspector"), "charge-inspector");
   assert.equal(reportReviewScreenFromHash("#evidence"), "education");
   assert.equal(reportReviewScreenFromHash("#unknown"), "report");
+});
+
+test("report review keyboard navigation follows the tab order", () => {
+  assert.equal(
+    reportReviewScreenFromKeyboard("report", "ArrowRight"),
+    "portfolio",
+  );
+  assert.equal(reportReviewScreenFromKeyboard("report", "ArrowLeft"), "inputs");
+  assert.equal(
+    reportReviewScreenFromKeyboard("education", "ArrowRight"),
+    "inputs",
+  );
+  assert.equal(
+    reportReviewScreenFromKeyboard("inputs", "ArrowLeft"),
+    "education",
+  );
+  assert.equal(reportReviewScreenFromKeyboard("portfolio", "Home"), "inputs");
+  assert.equal(
+    reportReviewScreenFromKeyboard("portfolio", "End"),
+    "education",
+  );
+  assert.equal(reportReviewScreenFromKeyboard("portfolio", "Tab"), null);
 });
 
 test("report review sample exposes charge inspector review data", () => {
@@ -1044,6 +1083,70 @@ test("platform report mapper maps portfolio totals and provenance", () => {
   ]);
 });
 
+test("report review data preserves the workspace report when charge inspector fails", async () => {
+  const platformReportModulePath = require.resolve(
+    "../lib/report-review/platform-report.ts",
+  );
+  const previousPlatformApiUrl = process.env.LITTLESEED_PLATFORM_API_URL;
+  const previousFetch = globalThis.fetch;
+  const previousConsoleError = console.error;
+  const calls = [];
+
+  process.env.LITTLESEED_PLATFORM_API_URL = "http://platform.test";
+  delete require.cache[platformReportModulePath];
+  const { getReportReviewData } = require("../lib/report-review/platform-report.ts");
+
+  globalThis.fetch = async (url) => {
+    const urlText = String(url);
+    calls.push(urlText);
+
+    if (urlText.endsWith("/v1/phase3/workspace-report")) {
+      return jsonResponse(workspacePayload());
+    }
+
+    if (urlText.endsWith("/v1/phase3/charge-inspector-review")) {
+      return jsonResponse({ error: "temporary unavailable" }, 503);
+    }
+
+    return jsonResponse({ error: "not found" }, 404);
+  };
+  console.error = () => {};
+
+  try {
+    const report = await getReportReviewData();
+
+    assert.equal(report.profileName, "Platform sample profile");
+    assert.equal(report.dataMode, "Platform API");
+    assert.equal(
+      report.chargeInspector.sourceLabel,
+      "No Charge Inspector CSV review",
+    );
+    assert.deepEqual(report.chargeInspector.findings, []);
+    assert.equal(calls.length, 2);
+    assert.ok(
+      calls.some((url) => url.endsWith("/v1/phase3/workspace-report")),
+    );
+    assert.ok(
+      calls.some((url) =>
+        url.endsWith("/v1/phase3/charge-inspector-review"),
+      ),
+    );
+  } finally {
+    if (previousPlatformApiUrl === undefined) {
+      delete process.env.LITTLESEED_PLATFORM_API_URL;
+    } else {
+      process.env.LITTLESEED_PLATFORM_API_URL = previousPlatformApiUrl;
+    }
+    if (previousFetch === undefined) {
+      delete globalThis.fetch;
+    } else {
+      globalThis.fetch = previousFetch;
+    }
+    console.error = previousConsoleError;
+    delete require.cache[platformReportModulePath];
+  }
+});
+
 function chargeInspectorPlatformPayload() {
   const evidence = [
     transactionPayload("txn-streamly-1", 2, "2026-03-08", "Streamly Premium", "15.99"),
@@ -1159,6 +1262,13 @@ function chargeInspectorPlatformPayload() {
       "No account connection, continuous monitoring, merchant contact, or stored transaction history is introduced.",
     ],
   };
+}
+
+function jsonResponse(payload, status = 200) {
+  return new Response(JSON.stringify(payload), {
+    headers: { "content-type": "application/json" },
+    status,
+  });
 }
 
 function transactionPayload(id, rowNumber, postedDate, merchantName, amount) {

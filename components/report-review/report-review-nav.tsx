@@ -1,6 +1,9 @@
 "use client";
 
+import { useRef, type KeyboardEvent } from "react";
+
 import {
+  reportReviewScreenFromKeyboard,
   reportReviewScreens,
   type ReportReviewScreenId,
 } from "@/lib/report-review/report-review-screens";
@@ -12,6 +15,34 @@ export function ReportReviewNav({
   activeScreen?: ReportReviewScreenId;
   onScreenSelect?: (screen: ReportReviewScreenId) => void;
 }) {
+  const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const controlsPanel = typeof onScreenSelect === "function";
+
+  function selectAndFocusScreen(screen: ReportReviewScreenId) {
+    const screenIndex = reportReviewScreens.findIndex(
+      (item) => item.id === screen,
+    );
+    onScreenSelect?.(screen);
+    tabRefs.current[screenIndex]?.focus();
+  }
+
+  function handleTabKeyDown(
+    event: KeyboardEvent<HTMLButtonElement>,
+    currentScreen: ReportReviewScreenId,
+  ) {
+    const nextScreen = reportReviewScreenFromKeyboard(
+      currentScreen,
+      event.key,
+    );
+
+    if (!nextScreen) {
+      return;
+    }
+
+    event.preventDefault();
+    selectAndFocusScreen(nextScreen);
+  }
+
   return (
     <nav
       aria-label="Report review screens"
@@ -22,17 +53,27 @@ export function ReportReviewNav({
         role="tablist"
         aria-orientation="horizontal"
       >
-        {reportReviewScreens.map((screen) => {
+        {reportReviewScreens.map((screen, index) => {
           const isActive = screen.id === activeScreen;
           return (
             <button
-              aria-controls={`report-review-screen-${screen.id}`}
+              aria-controls={
+                isActive && controlsPanel
+                  ? `report-review-screen-${screen.id}`
+                  : undefined
+              }
               aria-selected={isActive}
               className={screenTabClass(isActive)}
               data-screen-id={screen.id}
+              id={`report-review-tab-${screen.id}`}
               key={screen.id}
               onClick={() => onScreenSelect?.(screen.id)}
+              onKeyDown={(event) => handleTabKeyDown(event, screen.id)}
+              ref={(node) => {
+                tabRefs.current[index] = node;
+              }}
               role="tab"
+              tabIndex={isActive ? 0 : -1}
               type="button"
             >
               <span className="block text-sm font-semibold">{screen.label}</span>
