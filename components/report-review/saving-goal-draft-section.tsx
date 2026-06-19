@@ -10,7 +10,14 @@ import {
   type SavingGoalDraftValues,
 } from "@/lib/report-review/saving-goal-draft";
 
-import { ReviewSectionHeading, StatusPill } from "./shared";
+import {
+  ReviewDisclosure,
+  reviewInlineDisclosureSummaryClass,
+  reviewPanelClass,
+  ReviewSectionHeading,
+  reviewSubtlePanelClass,
+  StatusPill,
+} from "./shared";
 
 export function SavingGoalDraftSection() {
   const [values, setValues] = useState(defaultSavingGoalDraftValues);
@@ -36,7 +43,7 @@ export function SavingGoalDraftSection() {
         description="Draft a single savings goal with manual, in-session inputs. The check shows simple math only; it does not rank goals or recommend financial products."
       />
 
-      <div className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm sm:p-5">
+      <div className={reviewPanelClass("p-4 sm:p-5")}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <h3 className="text-sm font-semibold text-seed-950">
@@ -226,14 +233,14 @@ function GoalMetric({
   value: string;
 }) {
   return (
-    <div className="rounded-lg border border-stone-200 bg-stone-50 p-3">
+    <div className={reviewSubtlePanelClass("p-3")}>
       <dt className="text-sm font-medium text-earth-700">{label}</dt>
       <dd className="mt-1 text-xl font-semibold tabular-nums text-seed-950">
         {value}
       </dd>
       <dd>
         <details className="mt-2">
-          <summary className="cursor-pointer text-sm font-semibold text-seed-700 outline-none underline-offset-4 hover:underline focus:ring-2 focus:ring-seed-500">
+          <summary className={reviewInlineDisclosureSummaryClass()}>
             Detail
           </summary>
           <p className="mt-2 text-sm leading-6 text-earth-700">{detail}</p>
@@ -245,10 +252,7 @@ function GoalMetric({
 
 function BoundaryList({ title, items }: { title: string; items: string[] }) {
   return (
-    <details className="rounded-md border border-stone-200 bg-stone-50 p-3">
-      <summary className="cursor-pointer text-sm font-semibold text-seed-950 outline-none focus:ring-2 focus:ring-seed-500">
-        {title}
-      </summary>
+    <ReviewDisclosure className="p-3" summary={title}>
       <ul className="mt-2 space-y-2 text-sm leading-6 text-earth-700">
         {items.map((item) => (
           <li className="ml-4 list-disc" key={item}>
@@ -256,7 +260,7 @@ function BoundaryList({ title, items }: { title: string; items: string[] }) {
           </li>
         ))}
       </ul>
-    </details>
+    </ReviewDisclosure>
   );
 }
 

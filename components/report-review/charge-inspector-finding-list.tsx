@@ -4,7 +4,14 @@ import {
   type ChargeInspectorSummary,
 } from "@/lib/report-review/charge-inspector";
 
-import { StatusPill } from "./shared";
+import {
+  ReviewEvidenceRowList,
+  reviewAccordionSummaryClass,
+  reviewDisclosureClass,
+  reviewDisclosureSummaryClass,
+  reviewPanelClass,
+  StatusPill,
+} from "./shared";
 
 export function ChargeInspectorFindingList({
   findings,
@@ -18,7 +25,7 @@ export function ChargeInspectorFindingList({
   return (
     <ul
       aria-label="Charge Inspector findings"
-      className="divide-y divide-stone-200 overflow-hidden rounded-lg border border-stone-200 bg-white shadow-sm"
+      className={reviewPanelClass("divide-y divide-stone-200 overflow-hidden")}
     >
       {findings.map((finding) => (
         <li data-testid="charge-inspector-finding" key={finding.id}>
@@ -45,7 +52,7 @@ function ChargeInspectorFindingListItem({
   return (
     <article data-finding-id={finding.id}>
       <details className="group" open>
-        <summary className="cursor-pointer list-none p-4 outline-none focus:ring-2 focus:ring-seed-500 [&::-webkit-details-marker]:hidden">
+        <summary className={reviewAccordionSummaryClass()}>
           <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-2">
@@ -91,25 +98,15 @@ function ChargeInspectorFindingListItem({
             <h4 className="text-sm font-semibold text-seed-950">
               Evidence rows
             </h4>
-            <ul className="mt-2 divide-y divide-stone-200 overflow-hidden rounded-md border border-stone-200 bg-white">
-              {finding.evidenceRows.map((row) => (
-                <li
-                  className="grid gap-2 p-2.5 text-sm sm:grid-cols-[112px_minmax(0,1fr)_96px] sm:items-start"
-                  key={row.id}
-                >
-                  <span className="font-medium tabular-nums text-earth-800">
-                    {row.postedDate}
-                  </span>
-                  <span className="min-w-0 break-words text-earth-800">
-                    {row.merchantName}
-                    <span className="block text-earth-600">{row.detail}</span>
-                  </span>
-                  <span className="font-semibold tabular-nums text-seed-950 sm:text-right">
-                    {row.amount}
-                  </span>
-                </li>
-              ))}
-            </ul>
+            <ReviewEvidenceRowList
+              rows={finding.evidenceRows.map((row) => ({
+                amount: row.amount,
+                detail: row.detail,
+                id: row.id,
+                label: row.merchantName,
+                postedDate: row.postedDate,
+              }))}
+            />
           </div>
 
           <div className="space-y-2">
@@ -130,7 +127,7 @@ function FindingFactPanel({
   summary: ChargeInspectorSummary;
 }) {
   return (
-    <div className="rounded-md border border-stone-200 bg-stone-50 p-2.5">
+    <div className={reviewDisclosureClass("p-2.5")}>
       <dl>
         <div>
           <dt className="text-xs font-medium text-earth-600">Amount</dt>
@@ -171,8 +168,8 @@ function FindingReviewNotes({
   finding: ChargeInspectorFinding;
 }) {
   return (
-    <details className="rounded-md border border-stone-200 bg-stone-50 p-2.5">
-      <summary className="cursor-pointer text-sm font-semibold text-seed-950 focus:outline-none focus:ring-2 focus:ring-seed-500">
+    <details className={reviewDisclosureClass("p-2.5")}>
+      <summary className={reviewDisclosureSummaryClass()}>
         Review notes
       </summary>
       <div className="mt-3 space-y-3 text-sm leading-6 text-earth-700">

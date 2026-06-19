@@ -1,6 +1,11 @@
 import type { ReportReviewSample } from "@/data/report-review-sample";
 
-import { ReviewSectionHeading, StatusPill } from "./shared";
+import {
+  ReviewDisclosure,
+  reviewPanelClass,
+  ReviewSectionHeading,
+  StatusPill,
+} from "./shared";
 
 export function InputsSection({
   dataCompleteness,
@@ -20,7 +25,7 @@ export function InputsSection({
         id="inputs-heading"
       />
 
-      <div className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
+      <div className={reviewPanelClass("p-5")}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h3 className="text-lg font-semibold text-seed-950">
@@ -65,10 +70,7 @@ function InputStateList({
   title: string;
 }) {
   return (
-    <details className="rounded-lg border border-stone-200 bg-stone-50 p-3">
-      <summary className="cursor-pointer text-sm font-semibold text-seed-950 outline-none focus:ring-2 focus:ring-seed-500">
-        {title}
-      </summary>
+    <ReviewDisclosure className="rounded-lg p-3" summary={title}>
       {items.length > 0 ? (
         <ul className="mt-3 space-y-2 text-sm leading-6 text-earth-700">
           {items.map((item, index) => (
@@ -78,6 +80,6 @@ function InputStateList({
       ) : (
         <p className="mt-3 text-sm leading-6 text-earth-700">{emptyText}</p>
       )}
-    </details>
+    </ReviewDisclosure>
   );
 }

@@ -4,6 +4,8 @@ import {
   dataSourceStatusLabels,
   dataSourceStatusTone,
   MetaItem,
+  reviewPanelClass,
+  reviewSubtlePanelClass,
   StatusPill,
 } from "./shared";
 
@@ -12,7 +14,7 @@ export function ReviewRail({ report }: { report: ReportReviewSample }) {
     <aside className="min-w-0 space-y-4">
       <section
         aria-labelledby="review-state-heading"
-        className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm"
+        className={reviewPanelClass("p-4")}
       >
         <h2
           id="review-state-heading"
@@ -39,7 +41,7 @@ export function ReviewRail({ report }: { report: ReportReviewSample }) {
 
       <section
         aria-labelledby="data-source-state-heading"
-        className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm"
+        className={reviewPanelClass("p-4")}
       >
         <h2
           id="data-source-state-heading"
@@ -50,7 +52,7 @@ export function ReviewRail({ report }: { report: ReportReviewSample }) {
         <ul className="mt-3 space-y-3 text-sm">
           {report.dataSources.map((source) => (
             <li
-              className="rounded-lg border border-stone-200 bg-stone-50 p-3"
+              className={reviewSubtlePanelClass("p-3")}
               key={source.id}
             >
               <div className="flex items-start justify-between gap-3">
@@ -72,7 +74,7 @@ export function ReviewRail({ report }: { report: ReportReviewSample }) {
 
       <section
         aria-labelledby="quick-sources-heading"
-        className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm"
+        className={reviewPanelClass("p-4")}
       >
         <h2
           id="quick-sources-heading"

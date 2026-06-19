@@ -10,7 +10,11 @@ import {
   dataSourceStatusLabels,
   dataSourceStatusTone,
   MetaItem,
+  reviewDisclosureClass,
+  reviewDisclosureSummaryClass,
+  reviewPanelClass,
   ReviewSectionHeading,
+  reviewSubtlePanelClass,
   StatusPill,
 } from "./shared";
 
@@ -38,7 +42,7 @@ export function DataSourcesSection({
         description="Manual entries, temporary CSV transaction reviews, and future linked-account data stay visible as separate sources."
       />
 
-      <div className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
+      <div className={reviewPanelClass("p-5")}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h3 className="text-sm font-semibold text-seed-950">
@@ -69,7 +73,7 @@ export function DataSourcesSection({
 
 function DataSourceCard({ source }: { source: ReviewDataSource }) {
   return (
-    <article className="flex min-h-full flex-col rounded-lg border border-stone-200 bg-stone-50 p-4">
+    <article className={reviewSubtlePanelClass("flex min-h-full flex-col p-4")}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs font-semibold text-earth-600">
@@ -104,8 +108,8 @@ function DataSourceCard({ source }: { source: ReviewDataSource }) {
         </div>
       </dl>
 
-      <details className="mt-4 rounded-md border border-stone-200 bg-white p-3">
-        <summary className="cursor-pointer text-sm font-semibold text-seed-950 outline-none focus:ring-2 focus:ring-seed-500">
+      <details className={reviewDisclosureClass("mt-4 bg-white p-3")}>
+        <summary className={reviewDisclosureSummaryClass()}>
           Boundaries
         </summary>
         <p className="mt-3 text-sm leading-6 text-earth-700">{source.detail}</p>
@@ -127,7 +131,7 @@ function MixedSourcePolicy({
   reconciliation: SourceReconciliationPolicy;
 }) {
   return (
-    <div className="mt-5 rounded-lg border border-stone-200 bg-stone-50 p-4">
+    <div className={reviewSubtlePanelClass("mt-5 p-4")}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h3 className="text-sm font-semibold text-seed-950">
@@ -168,15 +172,12 @@ function PolicyRuleGroup({
   title: string;
 }) {
   return (
-    <section className="rounded-lg border border-stone-200 bg-white p-3">
+    <section className={reviewPanelClass("p-3 shadow-none")}>
       <h4 className="text-sm font-semibold text-seed-950">{title}</h4>
       <div className="mt-3 space-y-3">
         {rules.map((rule) => (
-          <details
-            className="rounded-md border border-stone-200 bg-stone-50 p-3"
-            key={rule.id}
-          >
-            <summary className="cursor-pointer text-sm font-semibold text-seed-950 outline-none focus:ring-2 focus:ring-seed-500">
+          <details className={reviewDisclosureClass("p-3")} key={rule.id}>
+            <summary className={reviewDisclosureSummaryClass()}>
               <span>{rule.label}</span>
               <span className="ml-2 inline-flex">
                 <StatusPill
@@ -204,7 +205,7 @@ function PolicyRuleGroup({
 
 function PolicyItem({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-md border border-stone-200 bg-white p-3">
+    <div className={reviewPanelClass("rounded-md p-3 shadow-none")}>
       <dt className="text-xs font-medium text-earth-500">{label}</dt>
       <dd className="mt-1 text-sm leading-6 text-earth-800">{value}</dd>
     </div>

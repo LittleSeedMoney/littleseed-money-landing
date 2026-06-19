@@ -2,6 +2,8 @@ import type { Finding } from "@/data/report-review-sample";
 
 import {
   EducationTopicLink,
+  reviewAccordionCardClass,
+  reviewAccordionSummaryClass,
   ReviewSectionHeading,
   StatusPill,
 } from "./shared";
@@ -24,9 +26,9 @@ export function FindingsSection({ findings }: { findings: Finding[] }) {
         {findings.map((finding) => (
           <details
             key={finding.id}
-            className="group rounded-lg border border-stone-200 bg-white shadow-sm"
+            className={reviewAccordionCardClass()}
           >
-            <summary className="cursor-pointer list-none p-4 outline-none focus:ring-2 focus:ring-seed-500 sm:p-5 [&::-webkit-details-marker]:hidden">
+            <summary className={reviewAccordionSummaryClass("sm:p-5")}>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
