@@ -32,7 +32,7 @@ export function ReviewRail({ report }: { report: ReportReviewSample }) {
           {report.dataCompleteness.explanation}
         </p>
         <a
-          href="#inputs"
+          href="#snapshot"
           className="mt-4 inline-flex rounded-lg text-sm font-medium text-seed-700 underline-offset-4 hover:underline focus:outline-none focus:ring-2 focus:ring-seed-500"
         >
           Review context and uncertainty

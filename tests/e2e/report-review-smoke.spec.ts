@@ -4,19 +4,14 @@ const reportReviewPath = "/private/report-review";
 
 const smokeScreens = [
   {
-    hash: "inputs",
-    heading: "Manual review inputs",
-    tab: "Inputs",
+    hash: "snapshot",
+    heading: "Edit snapshot values",
+    tab: "Snapshot",
   },
   {
     hash: "report",
     heading: "Financial health report review",
     tab: "Report",
-  },
-  {
-    hash: "portfolio",
-    heading: "Personal asset portfolio",
-    tab: "Portfolio",
   },
   {
     hash: "charge-inspector",
@@ -66,13 +61,36 @@ test.describe("private report review smoke", () => {
     }
   });
 
+  test("legacy input and portfolio links open the snapshot screen", async ({
+    page,
+  }) => {
+    for (const legacyHash of ["inputs", "manual-input", "portfolio"]) {
+      await page.goto(`${reportReviewPath}#${legacyHash}`);
+
+      const panel = page.locator("#report-review-screen-snapshot");
+
+      await expect(panel).toBeVisible();
+      await expect(
+        panel.getByRole("heading", {
+          exact: true,
+          name: "Edit snapshot values",
+        }),
+      ).toBeVisible();
+      await expect(page.getByRole("tab", { name: "Snapshot" })).toHaveAttribute(
+        "aria-selected",
+        "true",
+      );
+      await expect(page).toHaveURL(new RegExp(`#${legacyHash}$`));
+    }
+  });
+
   test("manual inputs expose visible required markers and native required controls", async ({
     page,
   }) => {
-    await page.goto(`${reportReviewPath}#inputs`);
+    await page.goto(`${reportReviewPath}#snapshot`);
 
     await expect(
-      page.getByText("Fields marked * build the request"),
+      page.getByText("In-session snapshot values"),
     ).toBeVisible();
 
     for (const field of requiredManualFields) {
@@ -107,30 +125,30 @@ test.describe("private report review smoke", () => {
   }) => {
     await page.goto(`${reportReviewPath}#report`);
 
-    await clickTab(page, "Inputs");
-    await expect(page.getByRole("heading", { name: "Manual review inputs" }))
+    await clickTab(page, "Snapshot");
+    await expect(page.getByRole("heading", { name: "Edit snapshot values" }))
       .toBeVisible();
-    await expect(page).toHaveURL(/#inputs$/);
+    await expect(page).toHaveURL(/#snapshot$/);
 
     await clickTab(page, "Report");
     const reportTab = page.getByRole("tab", { name: "Report" });
     await reportTab.focus();
 
     await page.keyboard.press("ArrowRight");
-    await expect(page.getByRole("tab", { name: "Portfolio" })).toBeFocused();
-    await expect(page.getByRole("tab", { name: "Portfolio" })).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
-    await expect(page).toHaveURL(/#portfolio$/);
+    await expect(page.getByRole("tab", { name: "Charge Inspector" }))
+      .toBeFocused();
+    await expect(
+      page.getByRole("tab", { name: "Charge Inspector" }),
+    ).toHaveAttribute("aria-selected", "true");
+    await expect(page).toHaveURL(/#charge-inspector$/);
 
     await page.keyboard.press("ArrowLeft");
     await expect(page.getByRole("tab", { name: "Report" })).toBeFocused();
     await expect(page).toHaveURL(/#report$/);
 
     await page.keyboard.press("Home");
-    await expect(page.getByRole("tab", { name: "Inputs" })).toBeFocused();
-    await expect(page).toHaveURL(/#inputs$/);
+    await expect(page.getByRole("tab", { name: "Snapshot" })).toBeFocused();
+    await expect(page).toHaveURL(/#snapshot$/);
 
     await page.keyboard.press("End");
     await expect(page.getByRole("tab", { name: "Education" })).toBeFocused();

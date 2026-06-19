@@ -10,22 +10,15 @@ import type {
 } from "@/lib/report-review/manual-profile";
 import type { ReportReviewScreenId } from "@/lib/report-review/report-review-screens";
 
-import { AssetPortfolioSection } from "./asset-portfolio-section";
 import { ChargeInspectorSection } from "./charge-inspector-section";
-import { DataSourcesSection } from "./data-sources-section";
 import { EducationSection } from "./education-section";
 import { EvidenceSection } from "./evidence-section";
 import { FindingsSection } from "./findings-section";
-import { InputsSection } from "./inputs-section";
-import {
-  ManualInputSection,
-  type ManualRequestState,
-} from "./manual-input-section";
+import type { ManualRequestState } from "./manual-input-section";
 import { OverviewSection } from "./overview-section";
 import { ReportSections } from "./report-sections";
-import { SavingGoalDraftSection } from "./saving-goal-draft-section";
+import { SnapshotScreen } from "./snapshot-screen";
 import { reviewPanelClass, ReviewSectionHeading } from "./shared";
-import { ValidationChecklistSection } from "./validation-checklist-section";
 
 export function ReportReviewScreenPanel({
   activeScreen,
@@ -75,54 +68,31 @@ export function ReportReviewScreenPanel({
   sourceById: Map<string, ReportReviewSample["evidenceSources"][number]>;
   values: ManualProfileValues;
 }) {
-  if (activeScreen === "inputs") {
+  if (activeScreen === "snapshot") {
     return (
-      <>
-        <DataSourcesSection
-          dataMode={report.dataMode}
-          reconciliation={report.sourceReconciliation}
-          sources={report.dataSources}
-        />
-        <ManualInputSection
-          errorMessage={errorMessage}
-          onAddAsset={onAddAsset}
-          onAddDebt={onAddDebt}
-          onAssetUpdate={onAssetUpdate}
-          onDebtUpdate={onDebtUpdate}
-          onRemoveAsset={onRemoveAsset}
-          onRemoveDebt={onRemoveDebt}
-          onPresetSelect={onPresetSelect}
-          onSubmit={onSubmit}
-          onUpdate={onUpdate}
-          requestState={requestState}
-          selectedPreset={selectedPreset}
-          values={values}
-        />
-        <ValidationChecklistSection selectedPreset={selectedPreset} />
-        {hasReportContent(report) ? (
-          <InputsSection dataCompleteness={report.dataCompleteness} />
-        ) : (
-          <EmptyReportState />
-        )}
-      </>
+      <SnapshotScreen
+        errorMessage={errorMessage}
+        hasReportContent={hasReportContent(report)}
+        onAddAsset={onAddAsset}
+        onAddDebt={onAddDebt}
+        onAssetUpdate={onAssetUpdate}
+        onDebtUpdate={onDebtUpdate}
+        onRemoveAsset={onRemoveAsset}
+        onRemoveDebt={onRemoveDebt}
+        onPresetSelect={onPresetSelect}
+        onSubmit={onSubmit}
+        onUpdate={onUpdate}
+        report={report}
+        requestState={requestState}
+        selectedPreset={selectedPreset}
+        sourceById={sourceById}
+        values={values}
+      />
     );
   }
 
   if (!hasReportContent(report)) {
     return <EmptyReportState />;
-  }
-
-  if (activeScreen === "portfolio") {
-    return (
-      <>
-        <AssetPortfolioSection
-          decisionReadiness={report.decisionReadiness}
-          portfolio={report.assetPortfolio}
-          sourceById={sourceById}
-        />
-        <SavingGoalDraftSection />
-      </>
-    );
   }
 
   if (activeScreen === "charge-inspector") {
