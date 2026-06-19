@@ -28,7 +28,7 @@ export function StatusPill({
 
   return (
     <span
-      className={`inline-flex min-h-8 items-center self-start rounded-lg border px-3 text-xs font-semibold ${toneClass}`}
+      className={`inline-flex min-h-7 items-center self-start rounded-md border px-2.5 text-xs font-semibold ${toneClass}`}
     >
       {label}
     </span>
@@ -38,9 +38,7 @@ export function StatusPill({
 export function MetaItem({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-xs font-medium uppercase tracking-[0.14em] text-earth-500">
-        {label}
-      </dt>
+      <dt className="text-xs font-medium text-earth-500">{label}</dt>
       <dd className="mt-1 break-words font-medium text-earth-900">{value}</dd>
     </div>
   );
@@ -87,14 +85,12 @@ export function ReviewSectionHeading({
   id: string;
 }) {
   return (
-    <div className="pt-2">
-      <p className="text-sm font-medium uppercase tracking-[0.16em] text-seed-700">
-        {eyebrow}
-      </p>
+    <div className="pt-1">
+      <p className="text-sm font-semibold text-seed-700">{eyebrow}</p>
       <h2 id={id} className="mt-1 text-xl font-semibold text-seed-950">
         {title}
       </h2>
-      <p className="mt-2 max-w-3xl text-sm leading-6 text-earth-700">
+      <p className="mt-1 max-w-3xl text-sm leading-6 text-earth-700">
         {description}
       </p>
     </div>

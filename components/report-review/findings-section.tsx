@@ -2,7 +2,6 @@ import type { Finding } from "@/data/report-review-sample";
 
 import {
   EducationTopicLink,
-  InfoList,
   ReviewSectionHeading,
   StatusPill,
 } from "./shared";
@@ -21,32 +20,58 @@ export function FindingsSection({ findings }: { findings: Finding[] }) {
         id="findings-heading"
       />
 
-      {findings.map((finding) => (
-        <article
-          key={finding.id}
-          className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm"
-        >
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <h3 className="text-lg font-semibold text-seed-950">
-                {finding.title}
-              </h3>
-              <p className="mt-2 text-sm leading-6 text-earth-700">
-                {finding.summary}
-              </p>
-            </div>
-            <StatusPill label="Education only" tone="seed" />
-          </div>
+      <div className="space-y-3">
+        {findings.map((finding) => (
+          <details
+            key={finding.id}
+            className="group rounded-lg border border-stone-200 bg-white shadow-sm"
+          >
+            <summary className="cursor-pointer list-none p-4 outline-none focus:ring-2 focus:ring-seed-500 sm:p-5 [&::-webkit-details-marker]:hidden">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span
+                      aria-hidden="true"
+                      className="h-0 w-0 shrink-0 border-y-[5px] border-l-[7px] border-y-transparent border-l-earth-700 transition-transform group-open:rotate-90"
+                    />
+                    <h3 className="text-base font-semibold text-seed-950">
+                      {finding.title}
+                    </h3>
+                  </div>
+                  <p className="mt-2 text-sm leading-6 text-earth-700">
+                    {finding.summary}
+                  </p>
+                </div>
+                <StatusPill label="Education only" tone="seed" />
+              </div>
+            </summary>
 
-          <div className="mt-5 grid gap-4 md:grid-cols-2">
-            <InfoList title="Why it matters" items={[finding.whyItMatters]} />
-            <InfoList title="Review options" items={finding.options} />
-            <InfoList title="Limitations" items={finding.limitations} />
-            <EducationTopicList topicIds={finding.educationTopics} />
-          </div>
-        </article>
-      ))}
+            <div className="grid gap-4 border-t border-stone-200 px-4 pb-4 pt-3 md:grid-cols-2 sm:px-5">
+              <FindingInfoList
+                title="Why it matters"
+                items={[finding.whyItMatters]}
+              />
+              <FindingInfoList title="Review options" items={finding.options} />
+              <FindingInfoList title="Limitations" items={finding.limitations} />
+              <EducationTopicList topicIds={finding.educationTopics} />
+            </div>
+          </details>
+        ))}
+      </div>
     </section>
+  );
+}
+
+function FindingInfoList({ title, items }: { title: string; items: string[] }) {
+  return (
+    <div>
+      <h4 className="text-sm font-semibold text-seed-950">{title}</h4>
+      <ul className="mt-2 space-y-2 text-sm leading-6 text-earth-700">
+        {items.map((item, index) => (
+          <li key={`${item}-${index}`}>{item}</li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

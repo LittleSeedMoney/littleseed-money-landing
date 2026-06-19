@@ -36,9 +36,9 @@ export function SavingGoalDraftSection() {
         description="Draft a single savings goal with manual, in-session inputs. The check shows simple math only; it does not rank goals or recommend financial products."
       />
 
-      <div className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
+      <div className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm sm:p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
+          <div className="min-w-0">
             <h3 className="text-sm font-semibold text-seed-950">
               {summary.goalName}
             </h3>
@@ -53,27 +53,30 @@ export function SavingGoalDraftSection() {
           />
         </div>
 
-        <div className="mt-5 grid gap-4 lg:grid-cols-5">
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
           <GoalTextField
             label="Goal name"
             onChange={(event) => updateValue("goalName", event)}
             value={values.goalName}
           />
           <GoalNumberField
-            label="Target amount, dollars"
+            label="Target amount"
             onChange={(event) => updateValue("targetAmount", event)}
+            prefix="$"
             required
             value={values.targetAmount}
           />
           <GoalNumberField
-            label="Current saved, dollars"
+            label="Current saved"
             onChange={(event) => updateValue("currentSaved", event)}
+            prefix="$"
             required
             value={values.currentSaved}
           />
           <GoalNumberField
-            label="Monthly contribution, dollars"
+            label="Monthly contribution"
             onChange={(event) => updateValue("monthlyContribution", event)}
+            prefix="$"
             required
             value={values.monthlyContribution}
           />
@@ -116,7 +119,7 @@ export function SavingGoalDraftSection() {
           />
         </dl>
 
-        <div className="mt-5 grid gap-4 border-t border-stone-200 pt-5 md:grid-cols-2">
+        <div className="mt-5 grid gap-3 border-t border-stone-200 pt-4 md:grid-cols-2">
           <BoundaryList title="Assumptions" items={summary.assumptions} />
           <BoundaryList title="Limits" items={summary.limitations} />
         </div>
@@ -136,7 +139,7 @@ function GoalTextField({
 }) {
   return (
     <label className="block min-w-0">
-      <GoalFieldLabel label={label} requirement="Optional" />
+      <GoalFieldLabel label={label} />
       <input
         className="mt-2 min-h-11 w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-seed-950 shadow-sm outline-none focus:border-seed-500 focus:ring-2 focus:ring-seed-200"
         onChange={onChange}
@@ -150,48 +153,65 @@ function GoalTextField({
 function GoalNumberField({
   label,
   onChange,
+  prefix,
   required = false,
   value,
 }: {
   label: string;
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  prefix?: string;
   required?: boolean;
   value: string;
 }) {
   return (
     <label className="block min-w-0">
-      <GoalFieldLabel label={label} requirement={required ? "Required" : "Optional"} />
-      <input
-        className="mt-2 min-h-11 w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-seed-950 shadow-sm outline-none focus:border-seed-500 focus:ring-2 focus:ring-seed-200"
-        inputMode="decimal"
-        min="0"
-        onChange={onChange}
+      <GoalFieldLabel
+        label={label}
         required={required}
-        step="0.01"
-        type="number"
-        value={value}
+        unitLabel={prefix === "$" ? "dollars" : undefined}
       />
+      <span className="relative mt-2 block">
+        {prefix ? (
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-earth-600"
+          >
+            {prefix}
+          </span>
+        ) : null}
+        <input
+          className={`min-h-11 w-full rounded-lg border border-stone-300 bg-white py-2 pr-3 text-sm text-seed-950 shadow-sm outline-none focus:border-seed-500 focus:ring-2 focus:ring-seed-200 ${
+            prefix ? "pl-7" : "pl-3"
+          }`}
+          inputMode="decimal"
+          min="0"
+          onChange={onChange}
+          required={required}
+          step="0.01"
+          type="number"
+          value={value}
+        />
+      </span>
     </label>
   );
 }
 
 function GoalFieldLabel({
   label,
-  requirement,
+  required = false,
+  unitLabel,
 }: {
   label: string;
-  requirement: "Required" | "Optional";
+  required?: boolean;
+  unitLabel?: string;
 }) {
   return (
-    <span className="flex min-h-5 flex-wrap items-center gap-x-2 gap-y-1">
-      <span className="text-sm font-medium text-earth-800">{label}</span>
-      <span
-        className={`text-xs font-semibold uppercase tracking-[0.12em] ${
-          requirement === "Required" ? "text-seed-700" : "text-earth-500"
-        }`}
-      >
-        {requirement}
+    <span className="block min-h-5">
+      <span className="text-sm font-medium text-earth-800">
+        {label}
+        {unitLabel ? <span className="sr-only">, {unitLabel}</span> : null}
       </span>
+      {required ? <span className="sr-only"> required</span> : null}
     </span>
   );
 }
@@ -206,20 +226,29 @@ function GoalMetric({
   value: string;
 }) {
   return (
-    <div className="rounded-lg border border-stone-200 bg-stone-50 p-4">
+    <div className="rounded-lg border border-stone-200 bg-stone-50 p-3">
       <dt className="text-sm font-medium text-earth-700">{label}</dt>
-      <dd className="mt-2 text-xl font-semibold tabular-nums text-seed-950">
+      <dd className="mt-1 text-xl font-semibold tabular-nums text-seed-950">
         {value}
       </dd>
-      <dd className="mt-2 text-sm leading-6 text-earth-700">{detail}</dd>
+      <dd>
+        <details className="mt-2">
+          <summary className="cursor-pointer text-sm font-semibold text-seed-700 outline-none underline-offset-4 hover:underline focus:ring-2 focus:ring-seed-500">
+            Detail
+          </summary>
+          <p className="mt-2 text-sm leading-6 text-earth-700">{detail}</p>
+        </details>
+      </dd>
     </div>
   );
 }
 
 function BoundaryList({ title, items }: { title: string; items: string[] }) {
   return (
-    <div>
-      <h4 className="text-sm font-semibold text-seed-950">{title}</h4>
+    <details className="rounded-md border border-stone-200 bg-stone-50 p-3">
+      <summary className="cursor-pointer text-sm font-semibold text-seed-950 outline-none focus:ring-2 focus:ring-seed-500">
+        {title}
+      </summary>
       <ul className="mt-2 space-y-2 text-sm leading-6 text-earth-700">
         {items.map((item) => (
           <li className="ml-4 list-disc" key={item}>
@@ -227,7 +256,7 @@ function BoundaryList({ title, items }: { title: string; items: string[] }) {
           </li>
         ))}
       </ul>
-    </div>
+    </details>
   );
 }
 

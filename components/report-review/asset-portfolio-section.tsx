@@ -3,17 +3,16 @@ import type {
   EvidenceSource,
   PortfolioNote,
   ReportReviewSample,
-  SnapshotItem,
   SummaryMetric,
 } from "@/data/report-review-sample";
 
 import {
   EducationTopicLink,
-  provenanceLabels,
   ProvenanceTag,
   ReviewSectionHeading,
   StatusPill,
 } from "./shared";
+import { PortfolioSnapshotList } from "./portfolio-snapshot-list";
 
 export function AssetPortfolioSection({
   decisionReadiness,
@@ -28,7 +27,7 @@ export function AssetPortfolioSection({
     <section
       id="portfolio"
       aria-labelledby="portfolio-heading"
-      className="space-y-3"
+      className="scroll-mt-28 space-y-3"
     >
       <ReviewSectionHeading
         eyebrow="Workspace snapshot"
@@ -37,21 +36,21 @@ export function AssetPortfolioSection({
         id="portfolio-heading"
       />
 
-      <div className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
+      <div className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm">
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {portfolio.totals.map((metric) => (
             <PortfolioMetricCard key={metric.id} metric={metric} />
           ))}
         </div>
 
-        <div className="mt-5 grid gap-5 xl:grid-cols-2">
-          <SnapshotTable
+        <div className="mt-4 space-y-4">
+          <PortfolioSnapshotList
             description="Current asset balances grouped by liquidity."
             descriptionId="assets-snapshot-description"
             items={portfolio.assets}
             title="Assets"
           />
-          <SnapshotTable
+          <PortfolioSnapshotList
             description="Current debt balances grouped by obligation type."
             descriptionId="liabilities-snapshot-description"
             items={portfolio.liabilities}
@@ -59,7 +58,7 @@ export function AssetPortfolioSection({
           />
         </div>
 
-        <div className="mt-5 grid gap-3 md:grid-cols-2">
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
           {portfolio.notes.map((note) => (
             <PortfolioNoteCard key={note.id} note={note} />
           ))}
@@ -76,96 +75,27 @@ export function AssetPortfolioSection({
 
 function PortfolioMetricCard({ metric }: { metric: SummaryMetric }) {
   return (
-    <article className="rounded-lg border border-stone-200 bg-stone-50 p-4">
+    <article className="rounded-lg border border-stone-200 bg-stone-50 p-3">
       <div className="flex items-start justify-between gap-3">
         <h3 className="text-sm font-medium text-earth-700">{metric.label}</h3>
         <ProvenanceTag provenance={metric.provenance} />
       </div>
-      <p className="mt-3 text-xl font-semibold tabular-nums text-seed-950">
+      <p className="mt-2 text-xl font-semibold tabular-nums text-seed-950">
         {metric.value}
       </p>
-      <p className="mt-2 text-sm leading-6 text-earth-700">{metric.detail}</p>
+      <p className="mt-1 text-sm leading-6 text-earth-700">{metric.detail}</p>
     </article>
-  );
-}
-
-function SnapshotTable({
-  description,
-  descriptionId,
-  items,
-  title,
-}: {
-  description: string;
-  descriptionId: string;
-  items: SnapshotItem[];
-  title: string;
-}) {
-  return (
-    <div className="min-w-0">
-      <h3 className="text-sm font-semibold text-seed-950">{title}</h3>
-      <p id={descriptionId} className="mt-1 text-sm leading-6 text-earth-700">
-        {description}
-      </p>
-      <div className="mt-3 overflow-x-auto rounded-lg border border-stone-200">
-        <table
-          aria-describedby={descriptionId}
-          className="min-w-full divide-y divide-stone-200 text-left text-sm"
-        >
-          <thead className="bg-stone-50 text-xs uppercase tracking-[0.12em] text-earth-500">
-            <tr>
-              <th scope="col" className="px-3 py-3 font-semibold">
-                Name
-              </th>
-              <th scope="col" className="px-3 py-3 font-semibold">
-                Value
-              </th>
-              <th scope="col" className="px-3 py-3 font-semibold">
-                Liquidity
-              </th>
-              <th scope="col" className="px-3 py-3 font-semibold">
-                Emergency reserve
-              </th>
-              <th scope="col" className="px-3 py-3 font-semibold">
-                Source
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-stone-200 bg-white">
-            {items.map((item) => (
-              <tr key={item.id}>
-                <td className="px-3 py-3 align-top">
-                  <div className="font-medium text-seed-950">{item.name}</div>
-                  <div className="mt-1 text-xs text-earth-600">
-                    {item.category}
-                  </div>
-                </td>
-                <td className="px-3 py-3 align-top font-medium tabular-nums text-seed-950">
-                  {item.value}
-                </td>
-                <td className="px-3 py-3 align-top text-earth-700">
-                  {item.liquidity}
-                </td>
-                <td className="px-3 py-3 align-top text-earth-700">
-                  {item.emergencyEligible ? "Counts" : "Excluded"}
-                </td>
-                <td className="px-3 py-3 align-top text-earth-700">
-                  {provenanceLabels[item.provenance]}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
   );
 }
 
 function PortfolioNoteCard({ note }: { note: PortfolioNote }) {
   return (
-    <article className="rounded-lg border border-stone-200 bg-stone-50 p-4">
-      <h3 className="text-sm font-semibold text-seed-950">{note.title}</h3>
-      <p className="mt-2 text-sm leading-6 text-earth-700">{note.body}</p>
-    </article>
+    <details className="rounded-lg border border-stone-200 bg-stone-50 p-3">
+      <summary className="cursor-pointer text-sm font-semibold text-seed-950 outline-none focus:ring-2 focus:ring-seed-500">
+        {note.title}
+      </summary>
+      <p className="mt-1 text-sm leading-6 text-earth-700">{note.body}</p>
+    </details>
   );
 }
 
@@ -212,9 +142,14 @@ function DecisionReadinessCard({
                     <ProvenanceTag provenance={metric.provenance} />
                   </span>
                   {metric.detail ? (
-                    <p className="mt-2 text-sm leading-6 text-earth-700">
-                      {metric.detail}
-                    </p>
+                    <details className="mt-2">
+                      <summary className="cursor-pointer text-sm font-semibold text-seed-700 outline-none underline-offset-4 hover:underline focus:ring-2 focus:ring-seed-500">
+                        Detail
+                      </summary>
+                      <p className="mt-2 text-sm leading-6 text-earth-700">
+                        {metric.detail}
+                      </p>
+                    </details>
                   ) : null}
                 </dd>
               </div>
@@ -252,15 +187,15 @@ function DecisionReadinessCard({
           </dl>
         </div>
 
-        <div>
-          <h4 className="text-sm font-semibold text-seed-950">
+        <details className="rounded-md border border-stone-200 bg-stone-50 p-3">
+          <summary className="cursor-pointer text-sm font-semibold text-seed-950 outline-none focus:ring-2 focus:ring-seed-500">
             Missing optional context
-          </h4>
+          </summary>
           <ul className="mt-3 space-y-3">
             {decisionReadiness.missingInputs.map((input) => (
               <li
                 key={input.id}
-                className="rounded-lg border border-stone-200 bg-stone-50 p-3"
+                className="rounded-lg border border-stone-200 bg-white p-3"
               >
                 <p className="text-sm font-medium text-seed-950">
                   {input.label}
@@ -271,7 +206,7 @@ function DecisionReadinessCard({
               </li>
             ))}
           </ul>
-        </div>
+        </details>
       </div>
 
       {decisionReadiness.educationTopics.length > 0 ? (
@@ -290,14 +225,16 @@ function DecisionReadinessCard({
       ) : null}
 
       {decisionReadiness.assumptions.length > 0 ? (
-        <div className="mt-5 border-t border-stone-200 pt-4">
-          <h4 className="text-sm font-semibold text-seed-950">Assumptions</h4>
+        <details className="mt-5 border-t border-stone-200 pt-4">
+          <summary className="cursor-pointer text-sm font-semibold text-seed-950 outline-none focus:ring-2 focus:ring-seed-500">
+            Assumptions
+          </summary>
           <ul className="mt-2 space-y-2 text-sm leading-6 text-earth-700">
             {decisionReadiness.assumptions.map((assumption, index) => (
               <li key={`${assumption}-${index}`}>{assumption}</li>
             ))}
           </ul>
-        </div>
+        </details>
       ) : null}
 
       <DecisionTrace
@@ -305,14 +242,16 @@ function DecisionReadinessCard({
         sourceById={sourceById}
       />
 
-      <div className="mt-5 border-t border-stone-200 pt-4">
-        <h4 className="text-sm font-semibold text-seed-950">Limits</h4>
+      <details className="mt-5 border-t border-stone-200 pt-4">
+        <summary className="cursor-pointer text-sm font-semibold text-seed-950 outline-none focus:ring-2 focus:ring-seed-500">
+          Limits
+        </summary>
         <ul className="mt-2 space-y-2 text-sm leading-6 text-earth-700">
           {decisionReadiness.limitations.map((limitation, index) => (
             <li key={`${limitation}-${index}`}>{limitation}</li>
           ))}
         </ul>
-      </div>
+      </details>
     </article>
   );
 }
@@ -329,9 +268,14 @@ function UserSelectedTargetSummary({
           <h4 className="text-sm font-semibold text-seed-950">
             User-selected target comparison
           </h4>
-          <p className="mt-2 text-sm leading-6 text-earth-700">
-            {target.alignmentDetail}
-          </p>
+          <details className="mt-2">
+            <summary className="cursor-pointer text-sm font-semibold text-seed-700 outline-none underline-offset-4 hover:underline focus:ring-2 focus:ring-seed-500">
+              Alignment detail
+            </summary>
+            <p className="mt-2 text-sm leading-6 text-earth-700">
+              {target.alignmentDetail}
+            </p>
+          </details>
         </div>
         <StatusPill label={target.alignmentLabel} tone="stone" />
       </div>
@@ -369,10 +313,10 @@ function DecisionTrace({
   sourceById: ReadonlyMap<string, EvidenceSource>;
 }) {
   return (
-    <div className="mt-5 border-t border-stone-200 pt-4">
-      <h4 className="text-sm font-semibold text-seed-950">
+    <details className="mt-5 border-t border-stone-200 pt-4">
+      <summary className="cursor-pointer text-sm font-semibold text-seed-950 outline-none focus:ring-2 focus:ring-seed-500">
         Evidence and rule trace
-      </h4>
+      </summary>
       <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
         <div>
           <dt className="font-medium text-earth-700">Model version</dt>
@@ -480,6 +424,6 @@ function DecisionTrace({
           No evidence source IDs were returned for this decision result.
         </p>
       )}
-    </div>
+    </details>
   );
 }

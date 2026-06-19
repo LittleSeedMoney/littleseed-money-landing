@@ -18,7 +18,8 @@ export type ChargeInspectorDataMode =
   | "sample"
   | "platform-sample"
   | "user-csv"
-  | "empty";
+  | "empty"
+  | "fallback";
 
 export type ChargeInspectorEvidenceRow = {
   id: string;
@@ -249,6 +250,27 @@ export const chargeInspectorEmptyReview: ChargeInspectorReview = {
   findings: [],
   emptyState: chargeInspectorSampleReview.emptyState,
   limitations: chargeInspectorSampleReview.limitations,
+};
+
+export const chargeInspectorFallbackReview: ChargeInspectorReview = {
+  dataMode: "fallback",
+  sourceLabel: "Charge Inspector temporarily unavailable",
+  reviewedTransactionCount: 0,
+  findings: [],
+  emptyState: {
+    title: "Charge Inspector did not load",
+    body: "The platform Charge Inspector review was unavailable for this session. The report stays visible and no transaction data is saved.",
+    checks: [
+      "No CSV upload, account connection, or stored transaction history is introduced.",
+      "The view is showing a safe fallback state instead of sample transactions.",
+      "A fallback state does not mean a transaction review found no issues.",
+    ],
+  },
+  limitations: [
+    "The Charge Inspector API request did not complete for this render.",
+    "Findings are review prompts, not ranked actions or financial advice.",
+    "No account connection, continuous monitoring, or stored transaction history is introduced.",
+  ],
 };
 
 export function summarizeChargeInspectorReview(

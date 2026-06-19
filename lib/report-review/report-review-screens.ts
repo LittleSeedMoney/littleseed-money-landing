@@ -8,7 +8,6 @@ export type ReportReviewScreenId =
 export type ReportReviewScreen = {
   id: ReportReviewScreenId;
   label: string;
-  description: string;
   legacyAnchors: string[];
 };
 
@@ -16,31 +15,26 @@ export const reportReviewScreens: ReportReviewScreen[] = [
   {
     id: "inputs",
     label: "Inputs",
-    description: "Manual profile, presets, validation, and missing context.",
     legacyAnchors: ["manual-input", "validation-checklist", "inputs"],
   },
   {
     id: "report",
     label: "Report",
-    description: "Report overview, model sections, and findings.",
     legacyAnchors: ["overview", "sections", "findings"],
   },
   {
     id: "portfolio",
     label: "Portfolio",
-    description: "Assets, liabilities, and in-session goal arithmetic.",
     legacyAnchors: ["portfolio", "saving-goal-draft"],
   },
   {
     id: "charge-inspector",
     label: "Charge Inspector",
-    description: "CSV-only deterministic transaction review.",
     legacyAnchors: ["charge-inspector"],
   },
   {
     id: "education",
     label: "Education",
-    description: "Education topics and source evidence.",
     legacyAnchors: ["education", "evidence"],
   },
 ];

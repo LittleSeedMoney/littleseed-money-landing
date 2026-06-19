@@ -25,46 +25,58 @@ export function ReportSections({
         id="sections-heading"
       />
 
-      {sections.map((section) => (
-        <article
-          key={section.id}
-          className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm"
-        >
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <p className="text-sm font-medium uppercase tracking-[0.16em] text-seed-700">
-                {section.evidenceLevel}
-              </p>
-              <h3 className="mt-1 text-lg font-semibold text-seed-950">
-                {section.question}
-              </h3>
-            </div>
-            <span className="rounded-lg border border-stone-200 px-3 py-1 text-xs font-medium text-earth-700">
-              {section.id.replaceAll("_", " ")}
-            </span>
-          </div>
+      <div className="space-y-3">
+        {sections.map((section) => (
+          <details
+            key={section.id}
+            className="group rounded-lg border border-stone-200 bg-white shadow-sm"
+          >
+            <summary className="cursor-pointer list-none p-4 outline-none focus:ring-2 focus:ring-seed-500 [&::-webkit-details-marker]:hidden">
+              <div className="flex gap-3">
+                <span
+                  aria-hidden="true"
+                  className="mt-2 h-0 w-0 shrink-0 border-y-[5px] border-l-[7px] border-y-transparent border-l-earth-700 transition-transform group-open:rotate-90"
+                />
+                <div className="min-w-0">
+                  <h3 className="mt-1 text-base font-semibold text-seed-950">
+                    {section.question}
+                  </h3>
+                  <p className="mt-2 text-sm leading-6 text-earth-700">
+                    {answerPreview(section.answer)}
+                  </p>
+                </div>
+              </div>
+            </summary>
 
-          <p className="mt-4 text-sm leading-6 text-earth-800">
-            {section.answer}
-          </p>
-
-          <div className="mt-4 grid gap-4 border-t border-stone-200 pt-4 md:grid-cols-2">
-            <SourceFooting section={section} sourceById={sourceById} />
-            <div>
-              <h4 className="text-sm font-semibold text-seed-950">
-                Limitations
-              </h4>
-              <ul className="mt-2 space-y-2 text-sm leading-6 text-earth-700">
-                {section.limitations.map((limitation, index) => (
-                  <li key={`${limitation}-${index}`}>{limitation}</li>
-                ))}
-              </ul>
+            <div className="grid gap-4 border-t border-stone-200 px-4 pb-4 pt-3 md:grid-cols-2">
+              <div className="md:col-span-2">
+                <h4 className="text-sm font-semibold text-seed-950">Answer</h4>
+                <p className="mt-2 text-sm leading-6 text-earth-700">
+                  {section.answer}
+                </p>
+              </div>
+              <SourceFooting section={section} sourceById={sourceById} />
+              <div>
+                <h4 className="text-sm font-semibold text-seed-950">
+                  Limitations
+                </h4>
+                <ul className="mt-2 space-y-1 text-sm leading-6 text-earth-700">
+                  {section.limitations.map((limitation, index) => (
+                    <li key={`${limitation}-${index}`}>{limitation}</li>
+                  ))}
+                </ul>
+              </div>
             </div>
-          </div>
-        </article>
-      ))}
+          </details>
+        ))}
+      </div>
     </section>
   );
+}
+
+function answerPreview(answer: string) {
+  const firstSentence = answer.match(/^.+?[.!?](?=\s+[A-Z]|$)/);
+  return firstSentence?.[0] ?? answer;
 }
 
 function SourceFooting({
@@ -78,7 +90,7 @@ function SourceFooting({
     <div>
       <h4 className="text-sm font-semibold text-seed-950">Source footing</h4>
       {section.evidenceSourceIds.length > 0 ? (
-        <ul className="mt-2 space-y-2 text-sm leading-6 text-earth-700">
+        <ul className="mt-2 space-y-1 text-sm leading-6 text-earth-700">
           {section.evidenceSourceIds.map((sourceId) => {
             const source = sourceById.get(sourceId);
 

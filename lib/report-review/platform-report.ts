@@ -12,6 +12,7 @@ import {
 
 import {
   chargeInspectorEmptyReview,
+  chargeInspectorFallbackReview,
   mapPlatformChargeInspectorReview,
   type ChargeInspectorReview,
 } from "./charge-inspector";
@@ -205,7 +206,7 @@ function requirePlatformApiUrl(): string {
 
 function fallbackChargeInspectorReview(error: unknown): ChargeInspectorReview {
   console.error("Platform Charge Inspector API request failed", error);
-  return chargeInspectorEmptyReview;
+  return chargeInspectorFallbackReview;
 }
 
 function fallbackReport(error: unknown): ReportReviewSample {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, type KeyboardEvent } from "react";
+import { useEffect, useRef, type KeyboardEvent } from "react";
 
 import {
   reportReviewScreenFromKeyboard,
@@ -17,6 +17,16 @@ export function ReportReviewNav({
 }) {
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const controlsPanel = typeof onScreenSelect === "function";
+
+  useEffect(() => {
+    const screenIndex = reportReviewScreens.findIndex(
+      (screen) => screen.id === activeScreen,
+    );
+    tabRefs.current[screenIndex]?.scrollIntoView({
+      block: "nearest",
+      inline: "center",
+    });
+  }, [activeScreen]);
 
   function selectAndFocusScreen(screen: ReportReviewScreenId) {
     const screenIndex = reportReviewScreens.findIndex(
@@ -46,43 +56,46 @@ export function ReportReviewNav({
   return (
     <nav
       aria-label="Report review screens"
-      className="rounded-lg border border-stone-200 bg-white p-2 shadow-sm"
+      className="min-w-0 max-w-full rounded-lg border border-stone-200 bg-stone-50/80 p-1"
     >
-      <div
-        className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5"
-        role="tablist"
-        aria-orientation="horizontal"
-      >
-        {reportReviewScreens.map((screen, index) => {
-          const isActive = screen.id === activeScreen;
-          return (
-            <button
-              aria-controls={
-                isActive && controlsPanel
-                  ? `report-review-screen-${screen.id}`
-                  : undefined
-              }
-              aria-selected={isActive}
-              className={screenTabClass(isActive)}
-              data-screen-id={screen.id}
-              id={`report-review-tab-${screen.id}`}
-              key={screen.id}
-              onClick={() => onScreenSelect?.(screen.id)}
-              onKeyDown={(event) => handleTabKeyDown(event, screen.id)}
-              ref={(node) => {
-                tabRefs.current[index] = node;
-              }}
-              role="tab"
-              tabIndex={isActive ? 0 : -1}
-              type="button"
-            >
-              <span className="block text-sm font-semibold">{screen.label}</span>
-              <span className="mt-1 block text-xs leading-5">
-                {screen.description}
-              </span>
-            </button>
-          );
-        })}
+      <div className="relative min-w-0">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-y-1 right-0 z-10 w-8 rounded-r-md bg-gradient-to-l from-stone-50 via-stone-50/80 to-transparent sm:hidden"
+        />
+        <div
+          className="report-review-tablist flex gap-2 overflow-x-auto pr-10 sm:pr-0"
+          role="tablist"
+          aria-orientation="horizontal"
+        >
+          {reportReviewScreens.map((screen, index) => {
+            const isActive = screen.id === activeScreen;
+            return (
+              <button
+                aria-controls={
+                  isActive && controlsPanel
+                    ? `report-review-screen-${screen.id}`
+                    : undefined
+                }
+                aria-selected={isActive}
+                className={screenTabClass(isActive)}
+                data-screen-id={screen.id}
+                id={`report-review-tab-${screen.id}`}
+                key={screen.id}
+                onClick={() => onScreenSelect?.(screen.id)}
+                onKeyDown={(event) => handleTabKeyDown(event, screen.id)}
+                ref={(node) => {
+                  tabRefs.current[index] = node;
+                }}
+                role="tab"
+                tabIndex={isActive ? 0 : -1}
+                type="button"
+              >
+                {screen.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
     </nav>
   );
@@ -90,9 +103,9 @@ export function ReportReviewNav({
 
 function screenTabClass(isActive: boolean) {
   const base =
-    "min-h-20 rounded-lg border px-3 py-2 text-left transition focus:outline-none focus:ring-2 focus:ring-seed-500";
+    "min-h-9 shrink-0 rounded-md border px-3 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-seed-500";
   if (isActive) {
-    return `${base} border-seed-300 bg-seed-50 text-seed-950 shadow-sm`;
+    return `${base} border-seed-700 bg-seed-700 text-white shadow-sm`;
   }
-  return `${base} border-transparent bg-white text-earth-700 hover:border-stone-200 hover:bg-stone-50 hover:text-seed-950`;
+  return `${base} border-transparent text-earth-700 hover:border-stone-200 hover:bg-white hover:text-seed-950`;
 }
