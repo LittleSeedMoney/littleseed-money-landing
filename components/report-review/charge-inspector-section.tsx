@@ -11,7 +11,15 @@ import {
 } from "@/lib/report-review/charge-inspector";
 
 import { ChargeInspectorFindingList } from "./charge-inspector-finding-list";
-import { ReviewSectionHeading, StatusPill } from "./shared";
+import {
+  ReviewEmptyState,
+  reviewDisclosureClass,
+  reviewDisclosureSummaryClass,
+  reviewPanelClass,
+  ReviewSectionHeading,
+  reviewSubtlePanelClass,
+  StatusPill,
+} from "./shared";
 
 export function ChargeInspectorSection({
   review,
@@ -63,7 +71,11 @@ export function ChargeInspectorSection({
       />
 
       {hiddenCount > 0 && !showEmptyState ? (
-        <div className="flex flex-col gap-3 rounded-lg border border-stone-200 bg-stone-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div
+          className={reviewSubtlePanelClass(
+            "flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between",
+          )}
+        >
           <p className="text-sm leading-6 text-earth-700">
             {hiddenCount.toLocaleString("en-US")} finding
             {hiddenCount === 1 ? "" : "s"} hidden in this browser session.
@@ -111,7 +123,7 @@ function ChargeInspectorDashboard({
   const showDashboardMetrics = summary.reviewedTransactionCount > 0;
 
   return (
-    <div className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm sm:p-5">
+    <div className={reviewPanelClass("p-4 sm:p-5")}>
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-start">
         <div>
           <h3 className="text-base font-semibold text-seed-950">
@@ -173,8 +185,8 @@ function ChargeInspectorDashboard({
         </>
       ) : null}
 
-      <details className="mt-4 rounded-md border border-stone-200 bg-stone-50 p-3">
-        <summary className="cursor-pointer text-sm font-semibold text-seed-950 focus:outline-none focus:ring-2 focus:ring-seed-500">
+      <details className={reviewDisclosureClass("mt-4 p-3")}>
+        <summary className={reviewDisclosureSummaryClass()}>
           Detection boundaries
         </summary>
         <BoundaryList items={review.limitations} />
@@ -194,7 +206,7 @@ function InspectorMetric({
 }) {
   return (
     <div
-      className="rounded-md border border-stone-200 bg-stone-50 px-3 py-2"
+      className={reviewDisclosureClass("px-3 py-2")}
       data-testid={testId}
     >
       <dt className="text-xs font-medium text-earth-600">{label}</dt>
@@ -227,21 +239,9 @@ function ChargeInspectorEmptyState({
   showRestore: boolean;
 }) {
   return (
-    <div
-      className="rounded-lg border border-dashed border-stone-300 bg-white p-5"
-      data-testid="charge-inspector-empty-state"
-    >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <StatusPill label={emptyStatePillLabel(review)} tone="stone" />
-          <h3 className="mt-3 text-lg font-semibold text-seed-950">
-            {review.emptyState.title}
-          </h3>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-earth-700">
-            {review.emptyState.body}
-          </p>
-        </div>
-        {showRestore ? (
+    <ReviewEmptyState
+      action={
+        showRestore ? (
           <button
             className="min-h-10 rounded-lg border border-stone-300 bg-white px-4 text-sm font-semibold text-earth-800 shadow-sm hover:border-seed-300 hover:text-seed-900 focus:outline-none focus:ring-2 focus:ring-seed-500"
             data-testid="charge-inspector-restore-empty"
@@ -250,13 +250,20 @@ function ChargeInspectorEmptyState({
           >
             Restore findings
           </button>
-        ) : null}
-      </div>
-      <div className="mt-5">
-        <h4 className="text-sm font-semibold text-seed-950">Checks</h4>
-        <BoundaryList items={review.emptyState.checks} />
-      </div>
-    </div>
+        ) : null
+      }
+      footer={
+        <div className="mt-5">
+          <h4 className="text-sm font-semibold text-seed-950">Checks</h4>
+          <BoundaryList items={review.emptyState.checks} />
+        </div>
+      }
+      label={emptyStatePillLabel(review)}
+      testId="charge-inspector-empty-state"
+      title={review.emptyState.title}
+    >
+      <p>{review.emptyState.body}</p>
+    </ReviewEmptyState>
   );
 }
 

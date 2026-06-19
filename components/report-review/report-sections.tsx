@@ -3,7 +3,11 @@ import type {
   ReportSection,
 } from "@/data/report-review-sample";
 
-import { ReviewSectionHeading } from "./shared";
+import {
+  reviewAccordionCardClass,
+  reviewAccordionSummaryClass,
+  ReviewSectionHeading,
+} from "./shared";
 
 export function ReportSections({
   sections,
@@ -29,9 +33,9 @@ export function ReportSections({
         {sections.map((section) => (
           <details
             key={section.id}
-            className="group rounded-lg border border-stone-200 bg-white shadow-sm"
+            className={reviewAccordionCardClass()}
           >
-            <summary className="cursor-pointer list-none p-4 outline-none focus:ring-2 focus:ring-seed-500 [&::-webkit-details-marker]:hidden">
+            <summary className={reviewAccordionSummaryClass()}>
               <div className="flex gap-3">
                 <span
                   aria-hidden="true"

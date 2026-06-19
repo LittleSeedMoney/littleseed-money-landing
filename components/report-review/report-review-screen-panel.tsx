@@ -24,7 +24,7 @@ import {
 import { OverviewSection } from "./overview-section";
 import { ReportSections } from "./report-sections";
 import { SavingGoalDraftSection } from "./saving-goal-draft-section";
-import { ReviewSectionHeading } from "./shared";
+import { reviewPanelClass, ReviewSectionHeading } from "./shared";
 import { ValidationChecklistSection } from "./validation-checklist-section";
 
 export function ReportReviewScreenPanel({
@@ -156,7 +156,7 @@ function hasReportContent(report: ReportReviewSample) {
 
 function EmptyReportState() {
   return (
-    <section className="rounded-lg border border-stone-200 bg-white p-6 shadow-sm">
+    <section className={reviewPanelClass("p-6")}>
       <ReviewSectionHeading
         eyebrow="Review state"
         id="empty-report-state-heading"

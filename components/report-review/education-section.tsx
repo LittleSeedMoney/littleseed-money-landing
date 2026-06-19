@@ -8,7 +8,7 @@ import {
   uniqueTopicIds,
 } from "@/lib/report-review/education-topics";
 
-import { ReviewSectionHeading, StatusPill } from "./shared";
+import { reviewPanelClass, ReviewSectionHeading, StatusPill } from "./shared";
 
 type EducationTopicContext = {
   id: string;
@@ -47,7 +47,7 @@ export function EducationSection({
 
           return (
             <article
-              className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm"
+              className={reviewPanelClass("p-5")}
               id={educationTopicAnchor(topic.id)}
               key={topic.id}
             >

@@ -10,6 +10,9 @@ import {
   dataSourceStatusTone,
   MetaItem,
   ProvenanceTag,
+  reviewInlineDisclosureSummaryClass,
+  reviewPanelClass,
+  reviewSubtlePanelClass,
   StatusPill,
 } from "./shared";
 
@@ -24,7 +27,7 @@ export function OverviewSection({
     <section
       id="overview"
       aria-labelledby="overview-heading"
-      className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm"
+      className={reviewPanelClass("p-4")}
     >
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(240px,320px)] lg:items-start">
         <div className="min-w-0">
@@ -42,7 +45,11 @@ export function OverviewSection({
           </p>
         </div>
 
-        <dl className="grid min-w-0 gap-2 rounded-lg border border-stone-200 bg-stone-50 p-3 text-sm sm:grid-cols-3 lg:grid-cols-1">
+        <dl
+          className={reviewSubtlePanelClass(
+            "grid min-w-0 gap-2 p-3 text-sm sm:grid-cols-3 lg:grid-cols-1",
+          )}
+        >
           <MetaItem label="Status" value={report.reportStatus} />
           <MetaItem label="Generated" value={`${generatedAt} UTC`} />
           <MetaItem label="Schema" value={report.schemaVersion} />
@@ -77,7 +84,7 @@ function SourceSummaryStrip({ sources }: { sources: ReviewDataSource[] }) {
     >
       {sources.map((source) => (
         <div
-          className="rounded-lg border border-stone-200 bg-stone-50 p-3"
+          className={reviewSubtlePanelClass("p-3")}
           key={source.id}
         >
           <div className="flex items-start justify-between gap-3">
@@ -108,7 +115,7 @@ function noticeToneClass(tone: ReportReviewSample["connectionNotice"]["tone"]) {
 
 function MetricCard({ metric }: { metric: SummaryMetric }) {
   return (
-    <article className="rounded-lg border border-stone-200 bg-stone-50 p-3">
+    <article className={reviewSubtlePanelClass("p-3")}>
       <div className="flex items-start justify-between gap-3">
         <h3 className="text-sm font-semibold text-earth-800">
           {metric.label}
@@ -134,10 +141,18 @@ function MetricDisclosureDetails({
 }) {
   return (
     <details className="mt-2">
-      <summary className="inline-flex min-h-7 w-fit cursor-pointer items-center rounded-md text-sm font-semibold text-seed-700 outline-none underline-offset-4 hover:underline focus:ring-2 focus:ring-seed-500">
+      <summary
+        className={reviewInlineDisclosureSummaryClass(
+          "inline-flex min-h-7 w-fit items-center rounded-md",
+        )}
+      >
         Details
       </summary>
-      <dl className="mt-2 space-y-3 rounded-lg border border-stone-200 bg-white px-3 py-3 text-sm leading-6">
+      <dl
+        className={reviewPanelClass(
+          "mt-2 space-y-3 px-3 py-3 text-sm leading-6 shadow-none",
+        )}
+      >
         <DetailItem label="Measures" value={disclosure.measures} />
         <DetailItem label="Calculation" value={disclosure.calculation} />
         <DetailList label="Assumptions" values={disclosure.assumptions} />

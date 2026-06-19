@@ -13,7 +13,12 @@ import {
   type ManualProfileValues,
 } from "@/lib/report-review/manual-profile";
 
-import { ReviewSectionHeading, StatusPill } from "./shared";
+import {
+  reviewDashedPanelClass,
+  reviewPanelClass,
+  ReviewSectionHeading,
+  StatusPill,
+} from "./shared";
 
 export type ManualRequestState = "idle" | "submitting" | "error";
 
@@ -85,7 +90,7 @@ export function ManualInputSection({
       />
 
       <form
-        className="mt-3 rounded-lg border border-stone-200 bg-white p-5 shadow-sm"
+        className={reviewPanelClass("mt-3 p-5")}
         onSubmit={onSubmit}
       >
         <div className="border-b border-stone-200 pb-5">
@@ -346,7 +351,11 @@ export function ManualInputSection({
             </div>
           </div>
           {values.debts.length === 0 ? (
-            <p className="mt-4 rounded-lg border border-dashed border-stone-300 px-4 py-3 text-sm leading-6 text-earth-700">
+            <p
+              className={reviewDashedPanelClass(
+                "mt-4 px-4 py-3 text-sm leading-6 text-earth-700",
+              )}
+            >
               No liabilities entered.
             </p>
           ) : (

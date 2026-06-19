@@ -9,7 +9,12 @@ import type {
 import {
   EducationTopicLink,
   ProvenanceTag,
+  reviewDisclosureClass,
+  reviewDisclosureSummaryClass,
+  reviewInlineDisclosureSummaryClass,
+  reviewPanelClass,
   ReviewSectionHeading,
+  reviewSubtlePanelClass,
   StatusPill,
 } from "./shared";
 import { PortfolioSnapshotList } from "./portfolio-snapshot-list";
@@ -36,7 +41,7 @@ export function AssetPortfolioSection({
         id="portfolio-heading"
       />
 
-      <div className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm">
+      <div className={reviewPanelClass("p-4")}>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {portfolio.totals.map((metric) => (
             <PortfolioMetricCard key={metric.id} metric={metric} />
@@ -75,7 +80,7 @@ export function AssetPortfolioSection({
 
 function PortfolioMetricCard({ metric }: { metric: SummaryMetric }) {
   return (
-    <article className="rounded-lg border border-stone-200 bg-stone-50 p-3">
+    <article className={reviewSubtlePanelClass("p-3")}>
       <div className="flex items-start justify-between gap-3">
         <h3 className="text-sm font-medium text-earth-700">{metric.label}</h3>
         <ProvenanceTag provenance={metric.provenance} />
@@ -90,8 +95,8 @@ function PortfolioMetricCard({ metric }: { metric: SummaryMetric }) {
 
 function PortfolioNoteCard({ note }: { note: PortfolioNote }) {
   return (
-    <details className="rounded-lg border border-stone-200 bg-stone-50 p-3">
-      <summary className="cursor-pointer text-sm font-semibold text-seed-950 outline-none focus:ring-2 focus:ring-seed-500">
+    <details className={reviewSubtlePanelClass("p-3")}>
+      <summary className={reviewDisclosureSummaryClass()}>
         {note.title}
       </summary>
       <p className="mt-1 text-sm leading-6 text-earth-700">{note.body}</p>
@@ -107,7 +112,7 @@ function DecisionReadinessCard({
   sourceById: ReadonlyMap<string, EvidenceSource>;
 }) {
   return (
-    <article className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
+    <article className={reviewPanelClass("p-5")}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-sm font-medium uppercase tracking-[0.16em] text-seed-700">
@@ -143,7 +148,7 @@ function DecisionReadinessCard({
                   </span>
                   {metric.detail ? (
                     <details className="mt-2">
-                      <summary className="cursor-pointer text-sm font-semibold text-seed-700 outline-none underline-offset-4 hover:underline focus:ring-2 focus:ring-seed-500">
+                      <summary className={reviewInlineDisclosureSummaryClass()}>
                         Detail
                       </summary>
                       <p className="mt-2 text-sm leading-6 text-earth-700">
@@ -171,7 +176,7 @@ function DecisionReadinessCard({
             {decisionReadiness.availableInputs.map((input) => (
               <div
                 key={input.id}
-                className="rounded-lg border border-stone-200 bg-stone-50 p-3"
+                className={reviewSubtlePanelClass("p-3")}
               >
                 <dt className="text-sm font-medium text-earth-700">
                   {input.label}
@@ -187,15 +192,15 @@ function DecisionReadinessCard({
           </dl>
         </div>
 
-        <details className="rounded-md border border-stone-200 bg-stone-50 p-3">
-          <summary className="cursor-pointer text-sm font-semibold text-seed-950 outline-none focus:ring-2 focus:ring-seed-500">
+        <details className={reviewDisclosureClass("p-3")}>
+          <summary className={reviewDisclosureSummaryClass()}>
             Missing optional context
           </summary>
           <ul className="mt-3 space-y-3">
             {decisionReadiness.missingInputs.map((input) => (
               <li
                 key={input.id}
-                className="rounded-lg border border-stone-200 bg-white p-3"
+                className={reviewPanelClass("p-3 shadow-none")}
               >
                 <p className="text-sm font-medium text-seed-950">
                   {input.label}
@@ -226,7 +231,7 @@ function DecisionReadinessCard({
 
       {decisionReadiness.assumptions.length > 0 ? (
         <details className="mt-5 border-t border-stone-200 pt-4">
-          <summary className="cursor-pointer text-sm font-semibold text-seed-950 outline-none focus:ring-2 focus:ring-seed-500">
+          <summary className={reviewDisclosureSummaryClass()}>
             Assumptions
           </summary>
           <ul className="mt-2 space-y-2 text-sm leading-6 text-earth-700">
@@ -243,7 +248,7 @@ function DecisionReadinessCard({
       />
 
       <details className="mt-5 border-t border-stone-200 pt-4">
-        <summary className="cursor-pointer text-sm font-semibold text-seed-950 outline-none focus:ring-2 focus:ring-seed-500">
+        <summary className={reviewDisclosureSummaryClass()}>
           Limits
         </summary>
         <ul className="mt-2 space-y-2 text-sm leading-6 text-earth-700">
@@ -269,7 +274,7 @@ function UserSelectedTargetSummary({
             User-selected target comparison
           </h4>
           <details className="mt-2">
-            <summary className="cursor-pointer text-sm font-semibold text-seed-700 outline-none underline-offset-4 hover:underline focus:ring-2 focus:ring-seed-500">
+            <summary className={reviewInlineDisclosureSummaryClass()}>
               Alignment detail
             </summary>
             <p className="mt-2 text-sm leading-6 text-earth-700">
@@ -314,7 +319,7 @@ function DecisionTrace({
 }) {
   return (
     <details className="mt-5 border-t border-stone-200 pt-4">
-      <summary className="cursor-pointer text-sm font-semibold text-seed-950 outline-none focus:ring-2 focus:ring-seed-500">
+      <summary className={reviewDisclosureSummaryClass()}>
         Evidence and rule trace
       </summary>
       <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
@@ -341,7 +346,7 @@ function DecisionTrace({
             {decisionReadiness.guidanceRules.map((rule) => (
               <li
                 key={rule.id}
-                className="rounded-lg border border-stone-200 bg-stone-50 p-3 text-sm"
+                className={reviewSubtlePanelClass("p-3 text-sm")}
               >
                 <p className="font-medium leading-6 text-seed-950">
                   {rule.allowedPhrasing}

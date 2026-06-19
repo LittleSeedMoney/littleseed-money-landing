@@ -1,6 +1,6 @@
 import type { SnapshotItem } from "@/data/report-review-sample";
 
-import { ProvenanceTag, StatusPill } from "./shared";
+import { ProvenanceTag, reviewSubtlePanelClass, StatusPill } from "./shared";
 
 export function PortfolioSnapshotList({
   description,
@@ -16,7 +16,7 @@ export function PortfolioSnapshotList({
   return (
     <section
       aria-describedby={descriptionId}
-      className="min-w-0 rounded-lg border border-stone-200 bg-stone-50 p-3"
+      className={reviewSubtlePanelClass("min-w-0 p-3")}
     >
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">

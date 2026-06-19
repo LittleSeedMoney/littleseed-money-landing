@@ -2,7 +2,13 @@ import { MANUAL_PROFILE_PRESETS } from "@/lib/report-review/manual-profile";
 import type { ManualProfilePresetId } from "@/lib/report-review/manual-profile";
 import { REPORT_REVIEW_VALIDATION_CHECKLIST } from "@/lib/report-review/validation-checklist";
 
-import { ReviewSectionHeading, StatusPill } from "./shared";
+import {
+  joinClasses,
+  reviewPanelClass,
+  ReviewSectionHeading,
+  reviewSubtlePanelClass,
+  StatusPill,
+} from "./shared";
 
 const presetLabelById = new Map(
   MANUAL_PROFILE_PRESETS.map((preset) => [preset.id, preset.label]),
@@ -31,9 +37,9 @@ export function ValidationChecklistSection({
 
           return (
             <article
-              className={`rounded-lg border bg-white p-5 shadow-sm ${
-                isActive ? "border-seed-300" : "border-stone-200"
-              }`}
+              className={reviewPanelClass(
+                joinClasses("p-5", isActive && "border-seed-300"),
+              )}
               key={item.presetId}
             >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -63,7 +69,7 @@ export function ValidationChecklistSection({
                 />
               </div>
 
-              <div className="mt-4 rounded-lg border border-stone-200 bg-stone-50 px-4 py-3">
+              <div className={reviewSubtlePanelClass("mt-4 px-4 py-3")}>
                 <h4 className="text-sm font-semibold text-seed-950">
                   Boundary
                 </h4>

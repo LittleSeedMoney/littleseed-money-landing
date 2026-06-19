@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import type {
   Provenance,
   ReviewDataSourceStatus,
@@ -6,6 +8,10 @@ import {
   educationTopicAnchor,
   resolveEducationTopic,
 } from "@/lib/report-review/education-topics";
+
+import { joinClasses } from "./class-names";
+
+export { joinClasses } from "./class-names";
 
 export const provenanceLabels: Record<Provenance, string> = {
   sample: "Sample",
@@ -38,6 +44,62 @@ export function dataSourceStatusTone(status: ReviewDataSourceStatus) {
   return "stone";
 }
 
+export function reviewPanelClass(className?: string) {
+  return joinClasses(
+    "rounded-lg border border-stone-200 bg-white shadow-sm",
+    className,
+  );
+}
+
+export function reviewSubtlePanelClass(className?: string) {
+  return joinClasses(
+    "rounded-lg border border-stone-200 bg-stone-50",
+    className,
+  );
+}
+
+export function reviewDashedPanelClass(className?: string) {
+  return joinClasses(
+    "rounded-lg border border-dashed border-stone-300 bg-white",
+    className,
+  );
+}
+
+export function reviewDisclosureClass(className?: string) {
+  return joinClasses(
+    "rounded-md border border-stone-200 bg-stone-50",
+    className,
+  );
+}
+
+export function reviewDisclosureSummaryClass(className?: string) {
+  return joinClasses(
+    "cursor-pointer text-sm font-semibold text-seed-950 outline-none focus:ring-2 focus:ring-seed-500",
+    className,
+  );
+}
+
+export function reviewInlineDisclosureSummaryClass(className?: string) {
+  return joinClasses(
+    "cursor-pointer text-sm font-semibold text-seed-700 outline-none underline-offset-4 hover:underline focus:ring-2 focus:ring-seed-500",
+    className,
+  );
+}
+
+export function reviewAccordionCardClass(className?: string) {
+  return joinClasses(
+    "group rounded-lg border border-stone-200 bg-white shadow-sm",
+    className,
+  );
+}
+
+export function reviewAccordionSummaryClass(className?: string) {
+  return joinClasses(
+    "cursor-pointer list-none p-4 outline-none focus:ring-2 focus:ring-seed-500 [&::-webkit-details-marker]:hidden",
+    className,
+  );
+}
+
 export function StatusPill({
   label,
   tone,
@@ -57,6 +119,98 @@ export function StatusPill({
     >
       {label}
     </span>
+  );
+}
+
+export function ReviewDisclosure({
+  children,
+  className,
+  summary,
+  summaryClassName,
+}: {
+  children: ReactNode;
+  className?: string;
+  summary: ReactNode;
+  summaryClassName?: string;
+}) {
+  return (
+    <details className={reviewDisclosureClass(className)}>
+      <summary className={reviewDisclosureSummaryClass(summaryClassName)}>
+        {summary}
+      </summary>
+      {children}
+    </details>
+  );
+}
+
+export function ReviewEmptyState({
+  action,
+  children,
+  footer,
+  label,
+  testId,
+  title,
+}: {
+  action?: ReactNode;
+  children: ReactNode;
+  footer?: ReactNode;
+  label?: string;
+  testId?: string;
+  title: string;
+}) {
+  return (
+    <div className={reviewDashedPanelClass("p-5")} data-testid={testId}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          {label ? <StatusPill label={label} tone="stone" /> : null}
+          <h3
+            className={joinClasses(
+              "text-lg font-semibold text-seed-950",
+              label && "mt-3",
+            )}
+          >
+            {title}
+          </h3>
+          <div className="mt-2 max-w-3xl text-sm leading-6 text-earth-700">
+            {children}
+          </div>
+        </div>
+        {action}
+      </div>
+      {footer}
+    </div>
+  );
+}
+
+export type ReviewEvidenceRow = {
+  amount: string;
+  detail: string;
+  id: string;
+  label: string;
+  postedDate: string;
+};
+
+export function ReviewEvidenceRowList({ rows }: { rows: ReviewEvidenceRow[] }) {
+  return (
+    <ul className="mt-2 divide-y divide-stone-200 overflow-hidden rounded-md border border-stone-200 bg-white">
+      {rows.map((row) => (
+        <li
+          className="grid gap-2 p-2.5 text-sm sm:grid-cols-[112px_minmax(0,1fr)_96px] sm:items-start"
+          key={row.id}
+        >
+          <span className="font-medium tabular-nums text-earth-800">
+            {row.postedDate}
+          </span>
+          <span className="min-w-0 break-words text-earth-800">
+            {row.label}
+            <span className="block text-earth-600">{row.detail}</span>
+          </span>
+          <span className="font-semibold tabular-nums text-seed-950 sm:text-right">
+            {row.amount}
+          </span>
+        </li>
+      ))}
+    </ul>
   );
 }
 
