@@ -28,7 +28,6 @@ export function ChargeInspectorSection({
     () => visibleChargeInspectorFindings(review, dismissedFindingIds),
     [dismissedFindingIds, review],
   );
-  const otherSignalCount = summary.bankFeeCount + summary.priceIncreaseCount;
   const hiddenCount = review.findings.length - visibleFindings.length;
   const showEmptyState =
     isChargeInspectorEmpty(review) || visibleFindings.length === 0;
@@ -47,65 +46,22 @@ export function ChargeInspectorSection({
     <section
       id="charge-inspector"
       aria-labelledby="charge-inspector-heading"
-      className="space-y-3"
+      className="scroll-mt-6 space-y-3"
       data-testid="charge-inspector-section"
     >
       <ReviewSectionHeading
-        eyebrow="CSV-only inspection"
+        eyebrow="Charge review"
         id="charge-inspector-heading"
-        title="Charge Inspector findings"
-        description="Review deterministic Charge Inspector findings for the current in-session CSV review."
+        title="Charge Inspector"
+        description="Deterministic CSV review prompts for recurring charges, possible duplicates, fee-like rows, and price changes."
       />
 
-      <div className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <h3 className="text-sm font-semibold text-seed-950">
-              {review.sourceLabel}
-            </h3>
-            <p className="mt-1 text-sm leading-6 text-earth-700">
-              Findings explain why a transaction pattern is visible and preserve
-              the limits of deterministic detection.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <StatusPill label={sourcePillLabel(review)} tone="stone" />
-            <StatusPill label="Review only" tone="seed" />
-          </div>
-        </div>
-
-        <dl className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          <InspectorMetric
-            detail="Rows checked in the current review."
-            label="Rows reviewed"
-            value={summary.reviewedTransactionCount.toLocaleString("en-US")}
-          />
-          <InspectorMetric
-            detail="Before local hiding."
-            label="Findings"
-            value={summary.totalFindings.toLocaleString("en-US")}
-          />
-          <InspectorMetric
-            detail="Merchant and amount patterns."
-            label="Recurring"
-            value={summary.recurringCount.toLocaleString("en-US")}
-          />
-          <InspectorMetric
-            detail="Same-day merchant matches."
-            label="Duplicates"
-            value={summary.duplicateCount.toLocaleString("en-US")}
-          />
-          <InspectorMetric
-            detail="Fees and amount changes."
-            label="Other signals"
-            value={otherSignalCount.toLocaleString("en-US")}
-          />
-        </dl>
-
-        <div className="mt-5 border-t border-stone-200 pt-5">
-          <BoundaryList title="Boundaries" items={review.limitations} />
-        </div>
-      </div>
+      <ChargeInspectorDashboard
+        hiddenCount={hiddenCount}
+        review={review}
+        summary={summary}
+        visibleCount={visibleFindings.length}
+      />
 
       {hiddenCount > 0 && !showEmptyState ? (
         <div className="flex flex-col gap-3 rounded-lg border border-stone-200 bg-stone-50 p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -146,22 +102,96 @@ export function ChargeInspectorSection({
   );
 }
 
+function ChargeInspectorDashboard({
+  hiddenCount,
+  review,
+  summary,
+  visibleCount,
+}: {
+  hiddenCount: number;
+  review: ChargeInspectorReview;
+  summary: ChargeInspectorSummary;
+  visibleCount: number;
+}) {
+  const otherSignalCount = summary.bankFeeCount + summary.priceIncreaseCount;
+
+  return (
+    <div className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm sm:p-5">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-start">
+        <div>
+          <h3 className="text-base font-semibold text-seed-950">
+            {review.sourceLabel}
+          </h3>
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-earth-700">
+            Current-session review prompts only. Local hide actions are
+            temporary, and no transaction history is stored.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2 xl:justify-end">
+          <StatusPill label={sourcePillLabel(review)} tone="stone" />
+          <StatusPill label="In-session" tone="earth" />
+          <StatusPill label="No storage" tone="stone" />
+        </div>
+      </div>
+
+      <dl className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <InspectorMetric
+          label="Rows"
+          value={summary.reviewedTransactionCount.toLocaleString("en-US")}
+        />
+        <InspectorMetric
+          label="Findings"
+          value={summary.totalFindings.toLocaleString("en-US")}
+        />
+        <InspectorMetric
+          label="Visible"
+          value={visibleCount.toLocaleString("en-US")}
+        />
+        <InspectorMetric
+          label="Hidden"
+          value={hiddenCount.toLocaleString("en-US")}
+        />
+      </dl>
+
+      <p className="mt-3 text-sm leading-6 text-earth-700">
+        Signal mix:{" "}
+        <span className="font-semibold text-seed-950">
+          {summary.recurringCount.toLocaleString("en-US")} recurring
+        </span>
+        ,{" "}
+        <span className="font-semibold text-seed-950">
+          {summary.duplicateCount.toLocaleString("en-US")} duplicate
+        </span>
+        ,{" "}
+        <span className="font-semibold text-seed-950">
+          {otherSignalCount.toLocaleString("en-US")} other
+        </span>
+        .
+      </p>
+
+      <details className="mt-4 rounded-md border border-stone-200 bg-stone-50 p-3">
+        <summary className="cursor-pointer text-sm font-semibold text-seed-950 focus:outline-none focus:ring-2 focus:ring-seed-500">
+          Detection boundaries
+        </summary>
+        <BoundaryList items={review.limitations} />
+      </details>
+    </div>
+  );
+}
+
 function InspectorMetric({
-  detail,
   label,
   value,
 }: {
-  detail: string;
   label: string;
   value: string;
 }) {
   return (
-    <div className="rounded-lg border border-stone-200 bg-stone-50 p-4">
-      <dt className="text-sm font-medium text-earth-700">{label}</dt>
-      <dd className="mt-2 text-2xl font-semibold tabular-nums text-seed-950">
+    <div className="rounded-md border border-stone-200 bg-stone-50 px-3 py-2">
+      <dt className="text-xs font-medium text-earth-600">{label}</dt>
+      <dd className="mt-1 text-xl font-semibold tabular-nums text-seed-950">
         {value}
       </dd>
-      <dd className="mt-2 text-sm leading-6 text-earth-700">{detail}</dd>
     </div>
   );
 }
@@ -177,10 +207,10 @@ function ChargeInspectorFindingCard({
 }) {
   return (
     <article
-      className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm"
+      className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm sm:p-5"
       data-finding-id={finding.id}
     >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto]">
         <div>
           <div className="flex flex-wrap gap-2">
             <StatusPill
@@ -194,12 +224,12 @@ function ChargeInspectorFindingCard({
           <h3 className="mt-3 text-lg font-semibold text-seed-950">
             {finding.title}
           </h3>
-          <p className="mt-2 text-sm leading-6 text-earth-700">
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-earth-700">
             {finding.summary}
           </p>
         </div>
         <button
-          className="min-h-10 rounded-lg border border-stone-300 bg-white px-4 text-sm font-semibold text-earth-800 shadow-sm hover:border-seed-300 hover:text-seed-900 focus:outline-none focus:ring-2 focus:ring-seed-500"
+          className="min-h-10 rounded-lg border border-stone-300 bg-white px-4 text-sm font-semibold text-earth-800 shadow-sm hover:border-seed-300 hover:text-seed-900 focus:outline-none focus:ring-2 focus:ring-seed-500 sm:self-start"
           data-testid={`charge-inspector-hide-${finding.id}`}
           onClick={() => onHide(finding.id)}
           type="button"
@@ -208,7 +238,7 @@ function ChargeInspectorFindingCard({
         </button>
       </div>
 
-      <dl className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <dl className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         <FindingFact label="Amount" value={finding.amountLabel} />
         <FindingFact
           label="Evidence rows"
@@ -218,22 +248,24 @@ function ChargeInspectorFindingCard({
           label="Reviewed rows"
           value={summary.reviewedTransactionCount.toLocaleString("en-US")}
         />
-        <FindingFact label="Status" value="Needs review" />
+        <FindingFact label="Prompt" value="Needs review" />
       </dl>
 
-      <div className="mt-5 rounded-lg border border-stone-200 bg-stone-50 p-4">
-        <h4 className="text-sm font-semibold text-seed-950">Why it appears</h4>
-        <p className="mt-2 text-sm leading-6 text-earth-700">
+      <details className="mt-4 rounded-md border border-stone-200 bg-stone-50 p-3">
+        <summary className="cursor-pointer text-sm font-semibold text-seed-950 focus:outline-none focus:ring-2 focus:ring-seed-500">
+          Why it appears
+        </summary>
+        <p className="mt-3 text-sm leading-6 text-earth-700">
           {finding.explanation}
         </p>
-      </div>
+      </details>
 
-      <div className="mt-5">
+      <div className="mt-4">
         <h4 className="text-sm font-semibold text-seed-950">Evidence rows</h4>
         <div className="mt-3 space-y-2">
           {finding.evidenceRows.map((row) => (
             <div
-              className="grid gap-2 rounded-lg border border-stone-200 bg-white p-3 text-sm sm:grid-cols-[120px_minmax(0,1fr)_110px] sm:items-start"
+              className="grid gap-2 rounded-md border border-stone-200 bg-white p-3 text-sm sm:grid-cols-[112px_minmax(0,1fr)_96px] sm:items-start"
               key={row.id}
             >
               <span className="font-medium tabular-nums text-earth-800">
@@ -251,7 +283,7 @@ function ChargeInspectorFindingCard({
         </div>
       </div>
 
-      <div className="mt-5 grid gap-4 border-t border-stone-200 pt-5 md:grid-cols-2">
+      <div className="mt-4 grid gap-3 border-t border-stone-200 pt-4 md:grid-cols-2">
         <DetailsList title="Review steps" items={finding.suggestedReviewSteps} />
         <DetailsList title="Limitations" items={finding.limitations} />
       </div>
@@ -261,10 +293,8 @@ function ChargeInspectorFindingCard({
 
 function FindingFact({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-lg border border-stone-200 bg-stone-50 p-3">
-      <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-earth-500">
-        {label}
-      </dt>
+    <div className="rounded-md border border-stone-200 bg-stone-50 p-3">
+      <dt className="text-xs font-medium text-earth-600">{label}</dt>
       <dd className="mt-1 break-words text-sm font-semibold text-seed-950">
         {value}
       </dd>
@@ -272,34 +302,25 @@ function FindingFact({ label, value }: { label: string; value: string }) {
   );
 }
 
-function BoundaryList({ title, items }: { title: string; items: string[] }) {
+function BoundaryList({ items }: { items: string[] }) {
   return (
-    <div>
-      <h4 className="text-sm font-semibold text-seed-950">{title}</h4>
-      <ul className="mt-2 space-y-2 text-sm leading-6 text-earth-700">
-        {items.map((item) => (
-          <li className="ml-4 list-disc" key={item}>
-            {item}
-          </li>
-        ))}
-      </ul>
-    </div>
+    <ul className="mt-3 space-y-2 text-sm leading-6 text-earth-700">
+      {items.map((item) => (
+        <li className="ml-4 list-disc" key={item}>
+          {item}
+        </li>
+      ))}
+    </ul>
   );
 }
 
 function DetailsList({ title, items }: { title: string; items: string[] }) {
   return (
-    <details className="rounded-lg border border-stone-200 bg-stone-50 p-3">
+    <details className="rounded-md border border-stone-200 bg-stone-50 p-3">
       <summary className="cursor-pointer text-sm font-semibold text-seed-950 focus:outline-none focus:ring-2 focus:ring-seed-500">
         {title}
       </summary>
-      <ul className="mt-3 space-y-2 text-sm leading-6 text-earth-700">
-        {items.map((item) => (
-          <li className="ml-4 list-disc" key={item}>
-            {item}
-          </li>
-        ))}
-      </ul>
+      <BoundaryList items={items} />
     </details>
   );
 }
@@ -320,11 +341,11 @@ function ChargeInspectorEmptyState({
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <StatusPill label="Safe empty state" tone="stone" />
+          <StatusPill label={emptyStatePillLabel(review)} tone="stone" />
           <h3 className="mt-3 text-lg font-semibold text-seed-950">
             {review.emptyState.title}
           </h3>
-          <p className="mt-2 text-sm leading-6 text-earth-700">
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-earth-700">
             {review.emptyState.body}
           </p>
         </div>
@@ -339,7 +360,10 @@ function ChargeInspectorEmptyState({
           </button>
         ) : null}
       </div>
-      <BoundaryList title="Checks" items={review.emptyState.checks} />
+      <div className="mt-5">
+        <h4 className="text-sm font-semibold text-seed-950">Checks</h4>
+        <BoundaryList items={review.emptyState.checks} />
+      </div>
     </div>
   );
 }
@@ -356,6 +380,13 @@ function findingTone(type: ChargeInspectorFinding["type"]) {
   return "seed";
 }
 
+function emptyStatePillLabel(review: ChargeInspectorReview) {
+  if (review.dataMode === "fallback") {
+    return "Safe fallback";
+  }
+  return "Safe empty state";
+}
+
 function sourcePillLabel(review: ChargeInspectorReview) {
   if (review.dataMode === "platform-sample") {
     return "Platform sample";
@@ -365,6 +396,9 @@ function sourcePillLabel(review: ChargeInspectorReview) {
   }
   if (review.dataMode === "empty") {
     return "No CSV loaded";
+  }
+  if (review.dataMode === "fallback") {
+    return "API fallback";
   }
   return "Sample fixture";
 }

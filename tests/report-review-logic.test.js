@@ -23,6 +23,7 @@ const {
 } = require("../lib/report-review/validation-checklist.ts");
 const {
   chargeInspectorEmptyReview,
+  chargeInspectorFallbackReview,
   chargeInspectorFindingTypeLabels,
   chargeInspectorSampleReview,
   isChargeInspectorEmpty,
@@ -293,6 +294,33 @@ test("charge inspector empty review keeps a safe no-finding state", () => {
   );
 });
 
+test("charge inspector fallback review is distinct from a no-finding review", () => {
+  const summary = summarizeChargeInspectorReview(chargeInspectorFallbackReview);
+
+  assert.equal(isChargeInspectorEmpty(chargeInspectorFallbackReview), true);
+  assert.equal(chargeInspectorFallbackReview.dataMode, "fallback");
+  assert.equal(
+    chargeInspectorFallbackReview.sourceLabel,
+    "Charge Inspector temporarily unavailable",
+  );
+  assert.deepEqual(summary, {
+    totalFindings: 0,
+    reviewedTransactionCount: 0,
+    recurringCount: 0,
+    duplicateCount: 0,
+    bankFeeCount: 0,
+    priceIncreaseCount: 0,
+  });
+  assert.match(
+    chargeInspectorFallbackReview.emptyState.body,
+    /unavailable for this session/,
+  );
+  assert.match(
+    chargeInspectorFallbackReview.emptyState.checks.join(" "),
+    /does not mean a transaction review found no issues/,
+  );
+});
+
 test("charge inspector copy stays inside review-only boundaries", () => {
   const copy = [
     chargeInspectorSampleReview.sourceLabel,
@@ -300,6 +328,11 @@ test("charge inspector copy stays inside review-only boundaries", () => {
     chargeInspectorSampleReview.emptyState.title,
     chargeInspectorSampleReview.emptyState.body,
     ...chargeInspectorSampleReview.emptyState.checks,
+    chargeInspectorFallbackReview.sourceLabel,
+    ...chargeInspectorFallbackReview.limitations,
+    chargeInspectorFallbackReview.emptyState.title,
+    chargeInspectorFallbackReview.emptyState.body,
+    ...chargeInspectorFallbackReview.emptyState.checks,
     ...chargeInspectorSampleReview.findings.flatMap((finding) => [
       finding.title,
       finding.summary,
@@ -1117,9 +1150,10 @@ test("report review data preserves the workspace report when charge inspector fa
 
     assert.equal(report.profileName, "Platform sample profile");
     assert.equal(report.dataMode, "Platform API");
+    assert.equal(report.chargeInspector.dataMode, "fallback");
     assert.equal(
       report.chargeInspector.sourceLabel,
-      "No Charge Inspector CSV review",
+      "Charge Inspector temporarily unavailable",
     );
     assert.deepEqual(report.chargeInspector.findings, []);
     assert.equal(calls.length, 2);

@@ -17,6 +17,9 @@ export function ReportReviewNav({
 }) {
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const controlsPanel = typeof onScreenSelect === "function";
+  const activeScreenDetails =
+    reportReviewScreens.find((screen) => screen.id === activeScreen) ??
+    reportReviewScreens[0];
 
   function selectAndFocusScreen(screen: ReportReviewScreenId) {
     const screenIndex = reportReviewScreens.findIndex(
@@ -49,7 +52,7 @@ export function ReportReviewNav({
       className="rounded-lg border border-stone-200 bg-white p-2 shadow-sm"
     >
       <div
-        className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5"
+        className="report-review-tablist flex gap-2 overflow-x-auto"
         role="tablist"
         aria-orientation="horizontal"
       >
@@ -76,23 +79,26 @@ export function ReportReviewNav({
               tabIndex={isActive ? 0 : -1}
               type="button"
             >
-              <span className="block text-sm font-semibold">{screen.label}</span>
-              <span className="mt-1 block text-xs leading-5">
-                {screen.description}
-              </span>
+              {screen.label}
             </button>
           );
         })}
       </div>
+      <p className="mt-3 hidden border-t border-stone-100 px-2 pt-3 text-sm leading-6 text-earth-700 sm:block">
+        <span className="font-semibold text-seed-950">
+          {activeScreenDetails.label}.
+        </span>{" "}
+        {activeScreenDetails.description}
+      </p>
     </nav>
   );
 }
 
 function screenTabClass(isActive: boolean) {
   const base =
-    "min-h-20 rounded-lg border px-3 py-2 text-left transition focus:outline-none focus:ring-2 focus:ring-seed-500";
+    "min-h-10 shrink-0 rounded-md border px-3 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-seed-500";
   if (isActive) {
-    return `${base} border-seed-300 bg-seed-50 text-seed-950 shadow-sm`;
+    return `${base} border-seed-700 bg-seed-700 text-white shadow-sm`;
   }
   return `${base} border-transparent bg-white text-earth-700 hover:border-stone-200 hover:bg-stone-50 hover:text-seed-950`;
 }
