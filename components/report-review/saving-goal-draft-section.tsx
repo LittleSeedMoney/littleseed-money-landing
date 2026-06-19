@@ -36,9 +36,9 @@ export function SavingGoalDraftSection() {
         description="Draft a single savings goal with manual, in-session inputs. The check shows simple math only; it does not rank goals or recommend financial products."
       />
 
-      <div className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
+      <div className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm sm:p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
+          <div className="min-w-0">
             <h3 className="text-sm font-semibold text-seed-950">
               {summary.goalName}
             </h3>
@@ -53,7 +53,7 @@ export function SavingGoalDraftSection() {
           />
         </div>
 
-        <div className="mt-5 grid gap-4 lg:grid-cols-5">
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
           <GoalTextField
             label="Goal name"
             onChange={(event) => updateValue("goalName", event)}
@@ -116,7 +116,7 @@ export function SavingGoalDraftSection() {
           />
         </dl>
 
-        <div className="mt-5 grid gap-4 border-t border-stone-200 pt-5 md:grid-cols-2">
+        <div className="mt-5 grid gap-3 border-t border-stone-200 pt-4 md:grid-cols-2">
           <BoundaryList title="Assumptions" items={summary.assumptions} />
           <BoundaryList title="Limits" items={summary.limitations} />
         </div>
@@ -136,7 +136,7 @@ function GoalTextField({
 }) {
   return (
     <label className="block min-w-0">
-      <GoalFieldLabel label={label} requirement="Optional" />
+      <GoalFieldLabel label={label} />
       <input
         className="mt-2 min-h-11 w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-seed-950 shadow-sm outline-none focus:border-seed-500 focus:ring-2 focus:ring-seed-200"
         onChange={onChange}
@@ -160,7 +160,7 @@ function GoalNumberField({
 }) {
   return (
     <label className="block min-w-0">
-      <GoalFieldLabel label={label} requirement={required ? "Required" : "Optional"} />
+      <GoalFieldLabel label={label} required={required} />
       <input
         className="mt-2 min-h-11 w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-seed-950 shadow-sm outline-none focus:border-seed-500 focus:ring-2 focus:ring-seed-200"
         inputMode="decimal"
@@ -177,21 +177,15 @@ function GoalNumberField({
 
 function GoalFieldLabel({
   label,
-  requirement,
+  required = false,
 }: {
   label: string;
-  requirement: "Required" | "Optional";
+  required?: boolean;
 }) {
   return (
-    <span className="flex min-h-5 flex-wrap items-center gap-x-2 gap-y-1">
+    <span className="block min-h-5">
       <span className="text-sm font-medium text-earth-800">{label}</span>
-      <span
-        className={`text-xs font-semibold uppercase tracking-[0.12em] ${
-          requirement === "Required" ? "text-seed-700" : "text-earth-500"
-        }`}
-      >
-        {requirement}
-      </span>
+      {required ? <span className="sr-only"> required</span> : null}
     </span>
   );
 }
@@ -206,20 +200,29 @@ function GoalMetric({
   value: string;
 }) {
   return (
-    <div className="rounded-lg border border-stone-200 bg-stone-50 p-4">
+    <div className="rounded-lg border border-stone-200 bg-stone-50 p-3">
       <dt className="text-sm font-medium text-earth-700">{label}</dt>
-      <dd className="mt-2 text-xl font-semibold tabular-nums text-seed-950">
+      <dd className="mt-1 text-xl font-semibold tabular-nums text-seed-950">
         {value}
       </dd>
-      <dd className="mt-2 text-sm leading-6 text-earth-700">{detail}</dd>
+      <dd>
+        <details className="mt-2">
+          <summary className="cursor-pointer text-sm font-semibold text-seed-700 outline-none underline-offset-4 hover:underline focus:ring-2 focus:ring-seed-500">
+            Detail
+          </summary>
+          <p className="mt-2 text-sm leading-6 text-earth-700">{detail}</p>
+        </details>
+      </dd>
     </div>
   );
 }
 
 function BoundaryList({ title, items }: { title: string; items: string[] }) {
   return (
-    <div>
-      <h4 className="text-sm font-semibold text-seed-950">{title}</h4>
+    <details className="rounded-md border border-stone-200 bg-stone-50 p-3">
+      <summary className="cursor-pointer text-sm font-semibold text-seed-950 outline-none focus:ring-2 focus:ring-seed-500">
+        {title}
+      </summary>
       <ul className="mt-2 space-y-2 text-sm leading-6 text-earth-700">
         {items.map((item) => (
           <li className="ml-4 list-disc" key={item}>
@@ -227,7 +230,7 @@ function BoundaryList({ title, items }: { title: string; items: string[] }) {
           </li>
         ))}
       </ul>
-    </div>
+    </details>
   );
 }
 

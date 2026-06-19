@@ -3,15 +3,14 @@
 import { useMemo, useState } from "react";
 
 import {
-  chargeInspectorFindingTypeLabels,
   isChargeInspectorEmpty,
   summarizeChargeInspectorReview,
   visibleChargeInspectorFindings,
-  type ChargeInspectorFinding,
   type ChargeInspectorReview,
   type ChargeInspectorSummary,
 } from "@/lib/report-review/charge-inspector";
 
+import { ChargeInspectorFindingList } from "./charge-inspector-finding-list";
 import { ReviewSectionHeading, StatusPill } from "./shared";
 
 export function ChargeInspectorSection({
@@ -87,16 +86,11 @@ export function ChargeInspectorSection({
           onRestore={restoreFindings}
         />
       ) : (
-        <div className="space-y-3">
-          {visibleFindings.map((finding) => (
-            <ChargeInspectorFindingCard
-              finding={finding}
-              key={finding.id}
-              onHide={hideFinding}
-              summary={summary}
-            />
-          ))}
-        </div>
+        <ChargeInspectorFindingList
+          findings={visibleFindings}
+          onHide={hideFinding}
+          summary={summary}
+        />
       )}
     </section>
   );
@@ -201,112 +195,6 @@ function InspectorMetric({
   );
 }
 
-function ChargeInspectorFindingCard({
-  finding,
-  onHide,
-  summary,
-}: {
-  finding: ChargeInspectorFinding;
-  onHide: (findingId: string) => void;
-  summary: ChargeInspectorSummary;
-}) {
-  return (
-    <article
-      className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm sm:p-5"
-      data-finding-id={finding.id}
-    >
-      <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto]">
-        <div>
-          <div className="flex flex-wrap gap-2">
-            <StatusPill
-              label={chargeInspectorFindingTypeLabels[finding.type]}
-              tone={findingTone(finding.type)}
-            />
-            {finding.cadenceLabel ? (
-              <StatusPill label={finding.cadenceLabel} tone="stone" />
-            ) : null}
-          </div>
-          <h3 className="mt-3 text-lg font-semibold text-seed-950">
-            {finding.title}
-          </h3>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-earth-700">
-            {finding.summary}
-          </p>
-        </div>
-        <button
-          className="min-h-10 rounded-lg border border-stone-300 bg-white px-4 text-sm font-semibold text-earth-800 shadow-sm hover:border-seed-300 hover:text-seed-900 focus:outline-none focus:ring-2 focus:ring-seed-500 sm:self-start"
-          data-testid={`charge-inspector-hide-${finding.id}`}
-          onClick={() => onHide(finding.id)}
-          type="button"
-        >
-          Hide
-        </button>
-      </div>
-
-      <dl className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-        <FindingFact label="Amount" value={finding.amountLabel} />
-        <FindingFact
-          label="Evidence rows"
-          value={finding.evidenceRows.length.toLocaleString("en-US")}
-        />
-        <FindingFact
-          label="Reviewed rows"
-          value={summary.reviewedTransactionCount.toLocaleString("en-US")}
-        />
-        <FindingFact label="Prompt" value="Needs review" />
-      </dl>
-
-      <details className="mt-4 rounded-md border border-stone-200 bg-stone-50 p-3">
-        <summary className="cursor-pointer text-sm font-semibold text-seed-950 focus:outline-none focus:ring-2 focus:ring-seed-500">
-          Why it appears
-        </summary>
-        <p className="mt-3 text-sm leading-6 text-earth-700">
-          {finding.explanation}
-        </p>
-      </details>
-
-      <div className="mt-4">
-        <h4 className="text-sm font-semibold text-seed-950">Evidence rows</h4>
-        <div className="mt-3 space-y-2">
-          {finding.evidenceRows.map((row) => (
-            <div
-              className="grid gap-2 rounded-md border border-stone-200 bg-white p-3 text-sm sm:grid-cols-[112px_minmax(0,1fr)_96px] sm:items-start"
-              key={row.id}
-            >
-              <span className="font-medium tabular-nums text-earth-800">
-                {row.postedDate}
-              </span>
-              <span className="min-w-0 break-words text-earth-800">
-                {row.merchantName}
-                <span className="block text-earth-600">{row.detail}</span>
-              </span>
-              <span className="font-semibold tabular-nums text-seed-950 sm:text-right">
-                {row.amount}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="mt-4 grid gap-3 border-t border-stone-200 pt-4 md:grid-cols-2">
-        <DetailsList title="Review steps" items={finding.suggestedReviewSteps} />
-        <DetailsList title="Limitations" items={finding.limitations} />
-      </div>
-    </article>
-  );
-}
-
-function FindingFact({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-md border border-stone-200 bg-stone-50 p-3">
-      <dt className="text-xs font-medium text-earth-600">{label}</dt>
-      <dd className="mt-1 break-words text-sm font-semibold text-seed-950">
-        {value}
-      </dd>
-    </div>
-  );
-}
-
 function BoundaryList({ items }: { items: string[] }) {
   return (
     <ul className="mt-3 space-y-2 text-sm leading-6 text-earth-700">
@@ -316,17 +204,6 @@ function BoundaryList({ items }: { items: string[] }) {
         </li>
       ))}
     </ul>
-  );
-}
-
-function DetailsList({ title, items }: { title: string; items: string[] }) {
-  return (
-    <details className="rounded-md border border-stone-200 bg-stone-50 p-3">
-      <summary className="cursor-pointer text-sm font-semibold text-seed-950 focus:outline-none focus:ring-2 focus:ring-seed-500">
-        {title}
-      </summary>
-      <BoundaryList items={items} />
-    </details>
   );
 }
 
@@ -371,18 +248,6 @@ function ChargeInspectorEmptyState({
       </div>
     </div>
   );
-}
-
-function findingTone(type: ChargeInspectorFinding["type"]) {
-  if (type === "duplicate_charge" || type === "price_increase") {
-    return "earth";
-  }
-
-  if (type === "bank_fee") {
-    return "stone";
-  }
-
-  return "seed";
 }
 
 function emptyStatePillLabel(review: ChargeInspectorReview) {

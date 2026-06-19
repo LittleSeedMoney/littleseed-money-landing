@@ -33,7 +33,7 @@ export function InputsSection({
           <StatusPill label={dataCompleteness.status} tone="stone" />
         </div>
 
-        <div className="mt-5 grid gap-4 lg:grid-cols-3">
+        <div className="mt-5 grid gap-3 lg:grid-cols-3">
           <InputStateList
             emptyText="No explicit missing user fields were recorded for this sample."
             items={dataCompleteness.missingContext}
@@ -65,8 +65,10 @@ function InputStateList({
   title: string;
 }) {
   return (
-    <div className="rounded-lg border border-stone-200 bg-stone-50 p-4">
-      <h3 className="text-sm font-semibold text-seed-950">{title}</h3>
+    <details className="rounded-lg border border-stone-200 bg-stone-50 p-3">
+      <summary className="cursor-pointer text-sm font-semibold text-seed-950 outline-none focus:ring-2 focus:ring-seed-500">
+        {title}
+      </summary>
       {items.length > 0 ? (
         <ul className="mt-3 space-y-2 text-sm leading-6 text-earth-700">
           {items.map((item, index) => (
@@ -76,6 +78,6 @@ function InputStateList({
       ) : (
         <p className="mt-3 text-sm leading-6 text-earth-700">{emptyText}</p>
       )}
-    </div>
+    </details>
   );
 }
