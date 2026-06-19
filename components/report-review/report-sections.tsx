@@ -28,33 +28,33 @@ export function ReportSections({
       {sections.map((section) => (
         <article
           key={section.id}
-          className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm"
+          className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm"
         >
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <p className="text-sm font-medium uppercase tracking-[0.16em] text-seed-700">
+              <p className="text-xs font-semibold text-seed-700">
                 {section.evidenceLevel}
               </p>
               <h3 className="mt-1 text-lg font-semibold text-seed-950">
                 {section.question}
               </h3>
             </div>
-            <span className="rounded-lg border border-stone-200 px-3 py-1 text-xs font-medium text-earth-700">
+            <span className="rounded-md border border-stone-200 bg-stone-50 px-2.5 py-1 text-xs font-medium text-earth-700">
               {section.id.replaceAll("_", " ")}
             </span>
           </div>
 
-          <p className="mt-4 text-sm leading-6 text-earth-800">
+          <p className="mt-3 text-sm leading-6 text-earth-800">
             {section.answer}
           </p>
 
-          <div className="mt-4 grid gap-4 border-t border-stone-200 pt-4 md:grid-cols-2">
+          <div className="mt-3 grid gap-3 border-t border-stone-200 pt-3 md:grid-cols-2">
             <SourceFooting section={section} sourceById={sourceById} />
             <div>
               <h4 className="text-sm font-semibold text-seed-950">
                 Limitations
               </h4>
-              <ul className="mt-2 space-y-2 text-sm leading-6 text-earth-700">
+              <ul className="mt-2 space-y-1 text-sm leading-6 text-earth-700">
                 {section.limitations.map((limitation, index) => (
                   <li key={`${limitation}-${index}`}>{limitation}</li>
                 ))}
@@ -78,7 +78,7 @@ function SourceFooting({
     <div>
       <h4 className="text-sm font-semibold text-seed-950">Source footing</h4>
       {section.evidenceSourceIds.length > 0 ? (
-        <ul className="mt-2 space-y-2 text-sm leading-6 text-earth-700">
+        <ul className="mt-2 space-y-1 text-sm leading-6 text-earth-700">
           {section.evidenceSourceIds.map((sourceId) => {
             const source = sourceById.get(sourceId);
 
