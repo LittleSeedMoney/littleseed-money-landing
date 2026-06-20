@@ -1,4 +1,11 @@
-import type { ChangeEvent, FormEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 
 import type { ReportReviewSample } from "@/data/report-review-sample";
 import type {
@@ -13,7 +20,9 @@ import { AssetPortfolioSection } from "./asset-portfolio-section";
 import { DataSourcesSection } from "./data-sources-section";
 import { InputsSection } from "./inputs-section";
 import {
-  ManualInputSection,
+  PortfolioSnapshotGroupEditForm,
+  type PortfolioEditGroup,
+  type PortfolioEditTarget,
   type ManualRequestState,
 } from "./manual-input-section";
 import { SavingGoalDraftSection } from "./saving-goal-draft-section";
@@ -30,11 +39,11 @@ export function SnapshotScreen({
   onAddDebt,
   onAssetUpdate,
   onDebtUpdate,
-  onPresetSelect,
   onRemoveAsset,
   onRemoveDebt,
   onSubmit,
   onUpdate,
+  onValuesReset,
   report,
   requestState,
   selectedPreset,
@@ -43,8 +52,8 @@ export function SnapshotScreen({
 }: {
   errorMessage: string;
   hasReportContent: boolean;
-  onAddAsset: () => void;
-  onAddDebt: () => void;
+  onAddAsset: () => string;
+  onAddDebt: () => string;
   onAssetUpdate: <T extends keyof ManualAssetValue>(
     id: string,
     field: T,
@@ -55,7 +64,6 @@ export function SnapshotScreen({
     field: T,
     value: ManualDebtValue[T],
   ) => void;
-  onPresetSelect: (presetId: ManualProfilePresetId) => void;
   onRemoveAsset: (id: string) => void;
   onRemoveDebt: (id: string) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
@@ -63,51 +71,170 @@ export function SnapshotScreen({
     field: ManualProfileScalarField,
     event: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => void;
+  onValuesReset: (
+    nextValues: ManualProfileValues,
+    nextPreset: ManualProfilePresetId | "custom",
+  ) => void;
   report: ReportReviewSample;
   requestState: ManualRequestState;
   selectedPreset: ManualProfilePresetId | "custom";
   sourceById: Map<string, ReportReviewSample["evidenceSources"][number]>;
   values: ManualProfileValues;
 }) {
+  const [activePortfolioEdit, setActivePortfolioEdit] =
+    useState<PortfolioEditTarget | null>(null);
+  const [activeProfileField, setActiveProfileField] =
+    useState<ManualProfileScalarField | null>(null);
+  const [editBaseline, setEditBaseline] =
+    useState<SnapshotEditBaseline | null>(null);
+  const wasSubmittingRef = useRef(false);
+
+  useEffect(() => {
+    if (
+      wasSubmittingRef.current &&
+      requestState === "idle" &&
+      !errorMessage
+    ) {
+      setEditBaseline(null);
+      setActivePortfolioEdit(null);
+      setActiveProfileField(null);
+    }
+
+    wasSubmittingRef.current = requestState === "submitting";
+  }, [errorMessage, requestState]);
+
+  const editForms: Record<PortfolioEditGroup, ReactNode> = {
+    assets: editFormFor("assets", "assets-edit-heading"),
+    liabilities: editFormFor("liabilities", "liabilities-edit-heading"),
+  };
+
   return (
     <>
+      {hasReportContent ? (
+        <>
+          <AssetPortfolioSection
+            activePortfolioEdit={activePortfolioEdit}
+            activeProfileField={activeProfileField}
+            decisionReadiness={report.decisionReadiness}
+            errorMessage={errorMessage}
+            onAddAsset={addAssetAndEdit}
+            onAddDebt={addDebtAndEdit}
+            onAssetEdit={startAssetEditing}
+            onAssetUpdate={onAssetUpdate}
+            onCancelEdit={cancelEditing}
+            onDebtEdit={startDebtEditing}
+            onDebtUpdate={onDebtUpdate}
+            onProfileFieldEdit={startProfileFieldEditing}
+            onProfileSubmit={onSubmit}
+            onProfileUpdate={onUpdate}
+            onPortfolioSubmit={onSubmit}
+            portfolio={report.assetPortfolio}
+            requestState={requestState}
+            sourceById={sourceById}
+            statusLabel={
+              selectedPreset === "custom" ? "Custom snapshot" : "Preset snapshot"
+            }
+            values={values}
+          />
+          <SavingGoalDraftSection />
+          <InputsSection dataCompleteness={report.dataCompleteness} />
+        </>
+      ) : (
+        <>
+          <section className={reviewPanelClass("space-y-5 p-4")}>
+            <h3
+              className="text-sm font-semibold text-seed-950"
+              id="assets-edit-heading"
+            >
+              Assets
+            </h3>
+            {editForms.assets}
+            <h3
+              className="text-sm font-semibold text-seed-950"
+              id="liabilities-edit-heading"
+            >
+              Liabilities
+            </h3>
+            {editForms.liabilities}
+          </section>
+          <EmptySnapshotState />
+        </>
+      )}
+      <ValidationChecklistSection selectedPreset={selectedPreset} />
       <DataSourcesSection
         dataMode={report.dataMode}
         reconciliation={report.sourceReconciliation}
         sources={report.dataSources}
       />
-      <ManualInputSection
+    </>
+  );
+
+  function editFormFor(group: PortfolioEditGroup, headingId: string) {
+    return (
+      <PortfolioSnapshotGroupEditForm
         errorMessage={errorMessage}
+        group={group}
+        headingId={headingId}
         onAddAsset={onAddAsset}
         onAddDebt={onAddDebt}
         onAssetUpdate={onAssetUpdate}
         onDebtUpdate={onDebtUpdate}
         onRemoveAsset={onRemoveAsset}
         onRemoveDebt={onRemoveDebt}
-        onPresetSelect={onPresetSelect}
         onSubmit={onSubmit}
-        onUpdate={onUpdate}
         requestState={requestState}
-        selectedPreset={selectedPreset}
         values={values}
       />
-      {hasReportContent ? (
-        <>
-          <AssetPortfolioSection
-            decisionReadiness={report.decisionReadiness}
-            portfolio={report.assetPortfolio}
-            sourceById={sourceById}
-          />
-          <SavingGoalDraftSection />
-          <InputsSection dataCompleteness={report.dataCompleteness} />
-        </>
-      ) : (
-        <EmptySnapshotState />
-      )}
-      <ValidationChecklistSection selectedPreset={selectedPreset} />
-    </>
-  );
+    );
+  }
+
+  function startAssetEditing(id: string) {
+    setEditBaseline((current) => current ?? { selectedPreset, values });
+    setActivePortfolioEdit({ group: "assets", id });
+    setActiveProfileField(null);
+  }
+
+  function startDebtEditing(id: string) {
+    setEditBaseline((current) => current ?? { selectedPreset, values });
+    setActivePortfolioEdit({ group: "liabilities", id });
+    setActiveProfileField(null);
+  }
+
+  function addAssetAndEdit() {
+    setEditBaseline((current) => current ?? { selectedPreset, values });
+    const id = onAddAsset();
+    setActivePortfolioEdit({ group: "assets", id });
+    setActiveProfileField(null);
+  }
+
+  function addDebtAndEdit() {
+    setEditBaseline((current) => current ?? { selectedPreset, values });
+    const id = onAddDebt();
+    setActivePortfolioEdit({ group: "liabilities", id });
+    setActiveProfileField(null);
+  }
+
+  function startProfileFieldEditing(field: ManualProfileScalarField) {
+    setEditBaseline((current) => current ?? { selectedPreset, values });
+    setActivePortfolioEdit(null);
+    setActiveProfileField(field);
+  }
+
+  function cancelEditing() {
+    if (editBaseline) {
+      onValuesReset(editBaseline.values, editBaseline.selectedPreset);
+    }
+
+    setEditBaseline(null);
+    setActivePortfolioEdit(null);
+    setActiveProfileField(null);
+  }
 }
+
+type SnapshotEditBaseline = {
+  selectedPreset: ManualProfilePresetId | "custom";
+  values: ManualProfileValues;
+};
 
 function EmptySnapshotState() {
   return (
@@ -116,7 +243,7 @@ function EmptySnapshotState() {
         eyebrow="Snapshot state"
         id="empty-snapshot-state-heading"
         title="No snapshot output returned"
-        description="The manual input surface is still available, but the platform response did not include renderable snapshot or report output for this session."
+        description="The editable snapshot values are still available, but the platform response did not include renderable snapshot or report output for this session."
       />
     </section>
   );

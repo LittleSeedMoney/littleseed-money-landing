@@ -11,11 +11,11 @@ import {
 import type { ReportReviewSample } from "@/data/report-review-sample";
 import {
   defaultManualProfileValues,
-  manualProfilePresetValues,
   type ManualAssetValue,
   type ManualDebtValue,
   type ManualProfilePresetId,
   type ManualProfileScalarField,
+  type ManualProfileValues,
 } from "@/lib/report-review/manual-profile";
 import {
   reportReviewScreenFromHash,
@@ -138,19 +138,22 @@ export function ReportReviewWorkspace({
   }
 
   function addAssetRow() {
+    const id = createManualRowId("asset");
+
     setSelectedPreset("custom");
     setValues((current) => ({
       ...current,
       assets: [
         ...current.assets,
         {
-          id: createManualRowId("asset"),
+          id,
           name: "New asset",
           category: "other",
           balance: "0.00",
         },
       ],
     }));
+    return id;
   }
 
   function removeAssetRow(id: string) {
@@ -168,13 +171,15 @@ export function ReportReviewWorkspace({
   }
 
   function addDebtRow() {
+    const id = createManualRowId("debt");
+
     setSelectedPreset("custom");
     setValues((current) => ({
       ...current,
       debts: [
         ...current.debts,
         {
-          id: createManualRowId("debt"),
+          id,
           name: "New liability",
           debtType: "other",
           balance: "0.00",
@@ -184,6 +189,7 @@ export function ReportReviewWorkspace({
         },
       ],
     }));
+    return id;
   }
 
   function removeDebtRow(id: string) {
@@ -194,9 +200,12 @@ export function ReportReviewWorkspace({
     }));
   }
 
-  function applyPreset(presetId: ManualProfilePresetId) {
-    setValues(manualProfilePresetValues(presetId));
-    setSelectedPreset(presetId);
+  function resetValues(
+    nextValues: ManualProfileValues,
+    nextPreset: ManualProfilePresetId | "custom",
+  ) {
+    setValues(nextValues);
+    setSelectedPreset(nextPreset);
     setErrorMessage("");
     setRequestState("idle");
   }
@@ -221,11 +230,11 @@ export function ReportReviewWorkspace({
         onAddDebt={addDebtRow}
         onAssetUpdate={updateAssetValue}
         onDebtUpdate={updateDebtValue}
-        onPresetSelect={applyPreset}
         onRemoveAsset={removeAssetRow}
         onRemoveDebt={removeDebtRow}
         onSubmit={submitManualProfile}
         onUpdate={updateValue}
+        onValuesReset={resetValues}
         report={report}
         requestState={requestState}
         selectedPreset={selectedPreset}

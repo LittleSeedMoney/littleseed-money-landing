@@ -38,8 +38,8 @@ export function DataSourcesSection({
       <ReviewSectionHeading
         eyebrow="Data sources"
         id="data-sources-heading"
-        title="Review data sources"
-        description="Manual entries, temporary CSV transaction reviews, and future linked-account data stay visible as separate sources."
+        title="Source details"
+        description="Detailed source coverage and mixed-source handling for manual, CSV, and future linked-account inputs."
       />
 
       <div className={reviewPanelClass("p-5")}>

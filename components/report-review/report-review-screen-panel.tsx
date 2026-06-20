@@ -28,11 +28,11 @@ export function ReportReviewScreenPanel({
   onAddDebt,
   onAssetUpdate,
   onDebtUpdate,
-  onPresetSelect,
   onRemoveAsset,
   onRemoveDebt,
   onSubmit,
   onUpdate,
+  onValuesReset,
   report,
   requestState,
   selectedPreset,
@@ -42,8 +42,8 @@ export function ReportReviewScreenPanel({
   activeScreen: ReportReviewScreenId;
   errorMessage: string;
   generatedAt: string;
-  onAddAsset: () => void;
-  onAddDebt: () => void;
+  onAddAsset: () => string;
+  onAddDebt: () => string;
   onAssetUpdate: <T extends keyof ManualAssetValue>(
     id: string,
     field: T,
@@ -54,13 +54,16 @@ export function ReportReviewScreenPanel({
     field: T,
     value: ManualDebtValue[T],
   ) => void;
-  onPresetSelect: (presetId: ManualProfilePresetId) => void;
   onRemoveAsset: (id: string) => void;
   onRemoveDebt: (id: string) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onUpdate: (
     field: ManualProfileScalarField,
     event: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => void;
+  onValuesReset: (
+    nextValues: ManualProfileValues,
+    nextPreset: ManualProfilePresetId | "custom",
   ) => void;
   report: ReportReviewSample;
   requestState: ManualRequestState;
@@ -79,9 +82,9 @@ export function ReportReviewScreenPanel({
         onDebtUpdate={onDebtUpdate}
         onRemoveAsset={onRemoveAsset}
         onRemoveDebt={onRemoveDebt}
-        onPresetSelect={onPresetSelect}
         onSubmit={onSubmit}
         onUpdate={onUpdate}
+        onValuesReset={onValuesReset}
         report={report}
         requestState={requestState}
         selectedPreset={selectedPreset}
