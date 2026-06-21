@@ -1,4 +1,7 @@
-import type { Finding } from "@/data/report-review-sample";
+import type {
+  EvidenceSource,
+  Finding,
+} from "@/data/report-review-sample";
 
 import {
   EducationTopicLink,
@@ -7,8 +10,17 @@ import {
   ReviewSectionHeading,
   StatusPill,
 } from "./shared";
+import { AiFindingExplanationPanel } from "./ai-finding-explanation-panel";
 
-export function FindingsSection({ findings }: { findings: Finding[] }) {
+export function FindingsSection({
+  aiEnabled,
+  findings,
+  sourceById,
+}: {
+  aiEnabled: boolean;
+  findings: Finding[];
+  sourceById: Map<string, EvidenceSource>;
+}) {
   return (
     <section
       id="findings"
@@ -25,6 +37,7 @@ export function FindingsSection({ findings }: { findings: Finding[] }) {
       <div className="space-y-3">
         {findings.map((finding) => (
           <details
+            data-testid="report-finding-card"
             key={finding.id}
             className={reviewAccordionCardClass()}
           >
@@ -56,6 +69,16 @@ export function FindingsSection({ findings }: { findings: Finding[] }) {
               <FindingInfoList title="Review options" items={finding.options} />
               <FindingInfoList title="Limitations" items={finding.limitations} />
               <EducationTopicList topicIds={finding.educationTopics} />
+            </div>
+
+            <div className="border-t border-stone-200 px-4 py-4 sm:px-5">
+              <AiFindingExplanationPanel
+                enabled={aiEnabled}
+                evidenceSources={finding.evidenceSourceIds
+                  .map((id) => sourceById.get(id))
+                  .filter((source): source is EvidenceSource => Boolean(source))}
+                finding={finding}
+              />
             </div>
           </details>
         ))}
