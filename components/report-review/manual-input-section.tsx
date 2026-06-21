@@ -1,4 +1,10 @@
-import type { ChangeEvent, FormEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  type ChangeEvent,
+  type FormEvent,
+  type Ref,
+} from "react";
 
 import {
   type ManualAssetCategory,
@@ -84,7 +90,7 @@ export function PortfolioSnapshotGroupEditForm({
     <form
       aria-labelledby={headingId}
       className="space-y-5"
-      id="manual-input"
+      id={group === "assets" ? "manual-input" : "manual-input-liabilities"}
       onSubmit={onSubmit}
     >
       <p className="text-sm leading-6 text-earth-700">
@@ -338,6 +344,11 @@ export function PortfolioSnapshotAssetEditForm({
   requestState: ManualRequestState;
 }) {
   const isSubmitting = requestState === "submitting";
+  const firstFieldRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    firstFieldRef.current?.focus();
+  }, [asset.id]);
 
   return (
     <form
@@ -347,6 +358,7 @@ export function PortfolioSnapshotAssetEditForm({
     >
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <TextValueField
+          inputRef={firstFieldRef}
           label="Asset name"
           onChange={(event) =>
             onAssetUpdate(asset.id, "name", event.target.value)
@@ -421,6 +433,11 @@ export function PortfolioSnapshotDebtEditForm({
 }) {
   const isSubmitting = requestState === "submitting";
   const requiresName = isPositiveDecimal(debt.balance);
+  const firstFieldRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    firstFieldRef.current?.focus();
+  }, [debt.id]);
 
   return (
     <form
@@ -430,6 +447,7 @@ export function PortfolioSnapshotDebtEditForm({
     >
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <TextValueField
+          inputRef={firstFieldRef}
           requirement={requiresName ? "required" : "conditional"}
           label="Liability name"
           onChange={(event) =>
@@ -528,12 +546,14 @@ function PortfolioEditError({ errorMessage }: { errorMessage: string }) {
 }
 
 function TextValueField({
+  inputRef,
   label,
   onChange,
   requirement,
   required = false,
   value,
 }: {
+  inputRef?: Ref<HTMLInputElement>;
   label: string;
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
   requirement?: ManualProfileFieldRequirement | "conditional";
@@ -549,6 +569,7 @@ function TextValueField({
       <input
         className="mt-2 min-h-11 w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-seed-950 shadow-sm outline-none focus:border-seed-500 focus:ring-2 focus:ring-seed-200"
         onChange={onChange}
+        ref={inputRef}
         required={required}
         type="text"
         value={value}

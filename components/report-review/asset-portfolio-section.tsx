@@ -1,4 +1,10 @@
-import type { ChangeEvent, FormEvent, ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  type ChangeEvent,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 
 import type {
   DecisionReadiness,
@@ -92,6 +98,8 @@ export function AssetPortfolioSection({
     values.debts,
     portfolio.liabilities,
   );
+  const manualAssetIds = new Set(values.assets.map((asset) => asset.id));
+  const manualDebtIds = new Set(values.debts.map((debt) => debt.id));
 
   return (
     <section
@@ -157,12 +165,14 @@ export function AssetPortfolioSection({
             description="Current asset balances grouped by liquidity."
             descriptionId="assets-snapshot-description"
             items={assetItems}
-            renderItemAction={(item) => (
-              <EditIconButton
-                label={`Edit ${item.name}`}
-                onClick={() => onAssetEdit(item.id)}
-              />
-            )}
+            renderItemAction={(item) =>
+              manualAssetIds.has(item.id) ? (
+                <EditIconButton
+                  label={`Edit ${item.name}`}
+                  onClick={() => onAssetEdit(item.id)}
+                />
+              ) : null
+            }
             renderItemEditor={(item) => {
               const asset = values.assets.find(
                 (candidate) => candidate.id === item.id,
@@ -204,12 +214,14 @@ export function AssetPortfolioSection({
             description="Current debt balances grouped by obligation type."
             descriptionId="liabilities-snapshot-description"
             items={liabilityItems}
-            renderItemAction={(item) => (
-              <EditIconButton
-                label={`Edit ${item.name}`}
-                onClick={() => onDebtEdit(item.id)}
-              />
-            )}
+            renderItemAction={(item) =>
+              manualDebtIds.has(item.id) ? (
+                <EditIconButton
+                  label={`Edit ${item.name}`}
+                  onClick={() => onDebtEdit(item.id)}
+                />
+              ) : null
+            }
             renderItemEditor={(item) => {
               const debt = values.debts.find(
                 (candidate) => candidate.id === item.id,
@@ -404,44 +416,82 @@ function manualAssetSnapshotItems(
   assets: ManualAssetValue[],
   reportAssets: SnapshotItem[],
 ): SnapshotItem[] {
-  const reportById = new Map(reportAssets.map((asset) => [asset.id, asset]));
+  const manualById = new Map(assets.map((asset) => [asset.id, asset]));
+  const seenIds = new Set<string>();
+  const mergedItems = reportAssets.map((reportItem) => {
+    const asset = manualById.get(reportItem.id);
+    seenIds.add(reportItem.id);
 
-  return assets.map((asset) => {
-    const reportItem = reportById.get(asset.id);
+    if (!asset) {
+      return reportItem;
+    }
 
-    return {
-      category: assetCategoryLabel(asset.category),
-      emergencyEligible: reportItem?.emergencyEligible ?? asset.category === "cash",
-      id: asset.id,
-      liquidity: reportItem?.liquidity ?? assetLiquidityLabel(asset.category),
-      name: asset.name || "Unnamed asset",
-      provenance: reportItem?.provenance ?? "user-entered",
-      value: displayMoneyValue(asset.balance),
-    };
+    return manualAssetSnapshotItem(asset, reportItem);
   });
+
+  for (const asset of assets) {
+    if (!seenIds.has(asset.id)) {
+      mergedItems.push(manualAssetSnapshotItem(asset));
+    }
+  }
+
+  return mergedItems;
 }
 
 function manualDebtSnapshotItems(
   debts: ManualDebtValue[],
   reportLiabilities: SnapshotItem[],
 ): SnapshotItem[] {
-  const reportById = new Map(
-    reportLiabilities.map((liability) => [liability.id, liability]),
-  );
+  const manualById = new Map(debts.map((debt) => [debt.id, debt]));
+  const seenIds = new Set<string>();
+  const mergedItems = reportLiabilities.map((reportItem) => {
+    const debt = manualById.get(reportItem.id);
+    seenIds.add(reportItem.id);
 
-  return debts.map((debt) => {
-    const reportItem = reportById.get(debt.id);
+    if (!debt) {
+      return reportItem;
+    }
 
-    return {
-      category: debtTypeLabel(debt.debtType),
-      emergencyEligible: false,
-      id: debt.id,
-      liquidity: reportItem?.liquidity ?? "debt",
-      name: debt.name || "Unnamed liability",
-      provenance: reportItem?.provenance ?? "user-entered",
-      value: displayMoneyValue(debt.balance),
-    };
+    return manualDebtSnapshotItem(debt, reportItem);
   });
+
+  for (const debt of debts) {
+    if (!seenIds.has(debt.id)) {
+      mergedItems.push(manualDebtSnapshotItem(debt));
+    }
+  }
+
+  return mergedItems;
+}
+
+function manualAssetSnapshotItem(
+  asset: ManualAssetValue,
+  reportItem?: SnapshotItem,
+): SnapshotItem {
+  return {
+    category: assetCategoryLabel(asset.category),
+    emergencyEligible: reportItem?.emergencyEligible ?? asset.category === "cash",
+    id: asset.id,
+    liquidity: reportItem?.liquidity ?? assetLiquidityLabel(asset.category),
+    name: asset.name || "Unnamed asset",
+    provenance: reportItem?.provenance ?? "user-entered",
+    value: displayMoneyValue(asset.balance),
+  };
+}
+
+function manualDebtSnapshotItem(
+  debt: ManualDebtValue,
+  reportItem?: SnapshotItem,
+): SnapshotItem {
+  return {
+    category: debtTypeLabel(debt.debtType),
+    emergencyEligible: false,
+    id: debt.id,
+    liquidity: reportItem?.liquidity ?? "debt",
+    name: debt.name || "Unnamed liability",
+    provenance: reportItem?.provenance ?? "user-entered",
+    value: displayMoneyValue(debt.balance),
+  };
 }
 
 function assetCategoryLabel(category: ManualAssetValue["category"]) {
@@ -638,12 +688,25 @@ function ProfileFieldControl({
   ) => void;
   values: ManualProfileValues;
 }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const selectRef = useRef<HTMLSelectElement>(null);
+
+  useEffect(() => {
+    if (item.type === "select") {
+      selectRef.current?.focus();
+      return;
+    }
+
+    inputRef.current?.focus();
+  }, [item.field, item.type]);
+
   if (item.type === "select") {
     return (
       <select
         aria-label={item.label}
         className="min-h-9 w-full rounded-md border border-stone-300 bg-white px-2 py-1 text-sm font-semibold text-seed-950 shadow-sm outline-none focus:border-seed-500 focus:ring-2 focus:ring-seed-200"
         onChange={(event) => onUpdate(item.field, event)}
+        ref={selectRef}
         required={item.required}
         value={values[item.field]}
       >
@@ -674,6 +737,7 @@ function ProfileFieldControl({
         inputMode="decimal"
         min="0"
         onChange={(event) => onUpdate(item.field, event)}
+        ref={inputRef}
         required={item.required}
         step={item.step ?? "0.01"}
         type="number"

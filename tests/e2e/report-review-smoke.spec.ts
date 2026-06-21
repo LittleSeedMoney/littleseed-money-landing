@@ -90,10 +90,41 @@ test.describe("private report review smoke", () => {
   test("portfolio groups edit independently and save back to read mode", async ({
     page,
   }) => {
+    const reportWithLinkedAccounts = {
+      ...reportReviewSample,
+      assetPortfolio: {
+        ...reportReviewSample.assetPortfolio,
+        assets: [
+          ...reportReviewSample.assetPortfolio.assets,
+          {
+            category: "Cash",
+            emergencyEligible: true,
+            id: "linked-savings",
+            liquidity: "Cash",
+            name: "Linked savings account",
+            provenance: "linked-account",
+            value: "$2,400",
+          },
+        ],
+        liabilities: [
+          ...reportReviewSample.assetPortfolio.liabilities,
+          {
+            category: "Auto loan",
+            emergencyEligible: false,
+            id: "linked-auto-loan",
+            liquidity: "Debt",
+            name: "Linked auto loan",
+            provenance: "linked-account",
+            value: "$8,400",
+          },
+        ],
+      },
+    };
+
     await page.route("**/private/report-review/workspace-report", async (route) => {
       await route.fulfill({
         contentType: "application/json",
-        json: { report: reportReviewSample },
+        json: { report: reportWithLinkedAccounts },
         status: 200,
       });
     });
@@ -124,25 +155,18 @@ test.describe("private report review smoke", () => {
     await expect(profileCard.getByRole("button", { name: "Save profile" }))
       .toBeVisible();
     await expect(profileCard.locator("input, select")).toHaveCount(1);
-    await expect(
-      profileCard.getByRole("spinbutton", {
-        name: "Monthly take-home income",
-      }),
-    )
-      .toBeVisible();
-    await expect(
-      profileCard.getByRole("spinbutton", {
-        name: "Monthly take-home income",
-      }),
-    ).toHaveAttribute("required", "");
+    const takeHomeIncomeInput = profileCard.getByRole("spinbutton", {
+      name: "Monthly take-home income",
+    });
+    await expect(takeHomeIncomeInput).toBeVisible();
+    await expect(takeHomeIncomeInput).toBeFocused();
+    await expect(takeHomeIncomeInput).toHaveAttribute("required", "");
     await expect(page.getByText("Fields marked * build the request"))
       .toHaveCount(0);
     await expect(profileCard.getByText("Gross annual income")).toHaveCount(0);
     await expect(profileCard.getByText("Dependents")).toHaveCount(0);
 
-    await profileCard
-      .getByRole("spinbutton", { name: "Monthly take-home income" })
-      .fill("5300");
+    await takeHomeIncomeInput.fill("5300");
     await profileCard.getByRole("button", { name: "Save profile" }).click();
 
     await expect(
@@ -158,6 +182,16 @@ test.describe("private report review smoke", () => {
       'section[aria-describedby="liabilities-snapshot-description"]',
     );
 
+    await expect(assetsSection.getByText("Linked savings account"))
+      .toBeVisible();
+    await expect(
+      assetsSection.getByRole("button", { name: "Edit Linked savings account" }),
+    ).toHaveCount(0);
+    await expect(liabilitiesSection.getByText("Linked auto loan")).toBeVisible();
+    await expect(
+      liabilitiesSection.getByRole("button", { name: "Edit Linked auto loan" }),
+    ).toHaveCount(0);
+
     await expect(page.getByRole("button", { name: "Edit assets" }))
       .toHaveCount(0);
     await expect(assetsSection.getByRole("button", { name: "Add asset" }))
@@ -167,8 +201,9 @@ test.describe("private report review smoke", () => {
       .click();
     await expect(assetsSection.getByRole("button", { name: "Save asset" }))
       .toBeVisible();
-    await expect(assetsSection.getByLabel("Asset name"))
-      .toHaveValue("Cash and cash equivalents");
+    const assetNameInput = assetsSection.getByLabel("Asset name");
+    await expect(assetNameInput).toBeFocused();
+    await expect(assetNameInput).toHaveValue("Cash and cash equivalents");
     await expect(assetsSection.locator("form")).toHaveCount(1);
     await expect(liabilitiesSection.locator("form")).toHaveCount(0);
     await assetsSection.getByLabel("Balance").fill("13000");
@@ -180,8 +215,8 @@ test.describe("private report review smoke", () => {
     await assetsSection.getByRole("button", { name: "Add asset" }).click();
     await expect(assetsSection.getByRole("button", { name: "Save asset" }))
       .toBeVisible();
-    await expect(assetsSection.getByLabel("Asset name"))
-      .toHaveValue("New asset");
+    await expect(assetsSection.getByLabel("Asset name")).toBeFocused();
+    await expect(assetsSection.getByLabel("Asset name")).toHaveValue("New asset");
     await assetsSection.getByRole("button", { name: "Cancel" }).click();
     await expect(assetsSection.getByText("New asset")).toHaveCount(0);
 
@@ -196,8 +231,9 @@ test.describe("private report review smoke", () => {
     await expect(
       liabilitiesSection.getByRole("button", { name: "Save liability" }),
     ).toBeVisible();
-    await expect(liabilitiesSection.getByLabel("Liability name"))
-      .toHaveValue("Student loan");
+    const liabilityNameInput = liabilitiesSection.getByLabel("Liability name");
+    await expect(liabilityNameInput).toBeFocused();
+    await expect(liabilityNameInput).toHaveValue("Student loan");
     await expect(assetsSection.locator("form")).toHaveCount(0);
 
     await liabilitiesSection.getByRole("button", { name: "Cancel" }).click();
@@ -208,6 +244,7 @@ test.describe("private report review smoke", () => {
     await expect(
       liabilitiesSection.getByRole("button", { name: "Save liability" }),
     ).toBeVisible();
+    await expect(liabilitiesSection.getByLabel("Liability name")).toBeFocused();
     await expect(liabilitiesSection.getByLabel("Liability name"))
       .toHaveValue("New liability");
 
