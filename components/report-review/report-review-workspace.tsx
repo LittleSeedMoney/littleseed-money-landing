@@ -8,14 +8,17 @@ import {
   type FormEvent,
 } from "react";
 
-import type { ReportReviewSample } from "@/data/report-review-sample";
+import type {
+  ReportReviewSample,
+  SnapshotItem,
+} from "@/data/report-review-sample";
 import {
   defaultManualProfileValues,
-  manualProfilePresetValues,
   type ManualAssetValue,
   type ManualDebtValue,
   type ManualProfilePresetId,
   type ManualProfileScalarField,
+  type ManualProfileValues,
 } from "@/lib/report-review/manual-profile";
 import {
   reportReviewScreenFromHash,
@@ -88,7 +91,10 @@ export function ReportReviewWorkspace({
         throw new Error(payload.error ?? `Report request failed.`);
       }
 
-      setReport(payload.report);
+      const nextReport = payload.report;
+      setReport((currentReport) =>
+        preserveExternalPortfolioItems(nextReport, currentReport),
+      );
       setRequestState("idle");
     } catch (error) {
       setRequestState("error");
@@ -138,19 +144,22 @@ export function ReportReviewWorkspace({
   }
 
   function addAssetRow() {
+    const id = createManualRowId("asset");
+
     setSelectedPreset("custom");
     setValues((current) => ({
       ...current,
       assets: [
         ...current.assets,
         {
-          id: createManualRowId("asset"),
+          id,
           name: "New asset",
           category: "other",
           balance: "0.00",
         },
       ],
     }));
+    return id;
   }
 
   function removeAssetRow(id: string) {
@@ -168,13 +177,15 @@ export function ReportReviewWorkspace({
   }
 
   function addDebtRow() {
+    const id = createManualRowId("debt");
+
     setSelectedPreset("custom");
     setValues((current) => ({
       ...current,
       debts: [
         ...current.debts,
         {
-          id: createManualRowId("debt"),
+          id,
           name: "New liability",
           debtType: "other",
           balance: "0.00",
@@ -184,6 +195,7 @@ export function ReportReviewWorkspace({
         },
       ],
     }));
+    return id;
   }
 
   function removeDebtRow(id: string) {
@@ -194,9 +206,12 @@ export function ReportReviewWorkspace({
     }));
   }
 
-  function applyPreset(presetId: ManualProfilePresetId) {
-    setValues(manualProfilePresetValues(presetId));
-    setSelectedPreset(presetId);
+  function resetValues(
+    nextValues: ManualProfileValues,
+    nextPreset: ManualProfilePresetId | "custom",
+  ) {
+    setValues(nextValues);
+    setSelectedPreset(nextPreset);
     setErrorMessage("");
     setRequestState("idle");
   }
@@ -221,11 +236,11 @@ export function ReportReviewWorkspace({
         onAddDebt={addDebtRow}
         onAssetUpdate={updateAssetValue}
         onDebtUpdate={updateDebtValue}
-        onPresetSelect={applyPreset}
         onRemoveAsset={removeAssetRow}
         onRemoveDebt={removeDebtRow}
         onSubmit={submitManualProfile}
         onUpdate={updateValue}
+        onValuesReset={resetValues}
         report={report}
         requestState={requestState}
         selectedPreset={selectedPreset}
@@ -254,4 +269,57 @@ function dataLabel(report: ReportReviewSample) {
     return "Sample via API";
   }
   return "Sample data";
+}
+
+function preserveExternalPortfolioItems(
+  nextReport: ReportReviewSample,
+  currentReport: ReportReviewSample,
+): ReportReviewSample {
+  const assets = preserveExternalSnapshotItems(
+    nextReport.assetPortfolio.assets,
+    currentReport.assetPortfolio.assets,
+  );
+  const liabilities = preserveExternalSnapshotItems(
+    nextReport.assetPortfolio.liabilities,
+    currentReport.assetPortfolio.liabilities,
+  );
+
+  if (
+    assets === nextReport.assetPortfolio.assets &&
+    liabilities === nextReport.assetPortfolio.liabilities
+  ) {
+    return nextReport;
+  }
+
+  return {
+    ...nextReport,
+    assetPortfolio: {
+      ...nextReport.assetPortfolio,
+      assets,
+      liabilities,
+    },
+  };
+}
+
+function preserveExternalSnapshotItems(
+  nextItems: SnapshotItem[],
+  currentItems: SnapshotItem[],
+) {
+  const nextIds = new Set(nextItems.map((item) => item.id));
+  const preservedItems = currentItems.filter(
+    (item) => isExternalSnapshotItem(item) && !nextIds.has(item.id),
+  );
+
+  if (preservedItems.length === 0) {
+    return nextItems;
+  }
+
+  return [...nextItems, ...preservedItems];
+}
+
+function isExternalSnapshotItem(item: SnapshotItem) {
+  return (
+    item.provenance === "csv-imported" ||
+    item.provenance === "linked-account"
+  );
 }

@@ -1,16 +1,26 @@
+import type { ReactNode } from "react";
+
 import type { SnapshotItem } from "@/data/report-review-sample";
 
 import { ProvenanceTag, reviewSubtlePanelClass, StatusPill } from "./shared";
 
 export function PortfolioSnapshotList({
+  action,
+  activeItemId,
   description,
   descriptionId,
   items,
+  renderItemAction,
+  renderItemEditor,
   title,
 }: {
+  action?: ReactNode;
+  activeItemId?: string | null;
   description: string;
   descriptionId: string;
   items: SnapshotItem[];
+  renderItemAction?: (item: SnapshotItem) => ReactNode;
+  renderItemEditor?: (item: SnapshotItem) => ReactNode;
   title: string;
 }) {
   return (
@@ -28,37 +38,62 @@ export function PortfolioSnapshotList({
             {description}
           </p>
         </div>
-        <StatusPill
-          label={`${items.length.toLocaleString("en-US")} ${
-            items.length === 1 ? "item" : "items"
-          }`}
-          tone="stone"
-        />
+        <div className="flex min-h-10 items-center gap-2">
+          <StatusPill
+            label={`${items.length.toLocaleString("en-US")} ${
+              items.length === 1 ? "item" : "items"
+            }`}
+            tone="stone"
+          />
+          {action}
+        </div>
       </div>
 
       <div
         aria-hidden="true"
-        className="mt-3 hidden rounded-t-md border border-b-0 border-stone-200 bg-white px-3 py-2 text-xs font-semibold text-earth-500 md:grid md:grid-cols-[minmax(0,1.4fr)_112px_96px_136px_128px] md:gap-3"
+        className="mt-3 hidden rounded-t-md border border-b-0 border-stone-200 bg-white px-3 py-2 text-xs font-semibold text-earth-500 md:grid md:grid-cols-[minmax(0,1.4fr)_112px_96px_136px_128px_40px] md:gap-3"
       >
         <span>Name</span>
         <span className="text-right">Value</span>
         <span>Liquidity</span>
         <span>Emergency reserve</span>
         <span>Source</span>
+        <span />
       </div>
       <ul className="divide-y divide-stone-200 overflow-hidden rounded-md border border-stone-200 bg-white md:rounded-t-none">
         {items.map((item) => (
-          <PortfolioSnapshotItem item={item} key={item.id} />
+          <PortfolioSnapshotItem
+            action={renderItemAction?.(item)}
+            isEditing={activeItemId === item.id && Boolean(renderItemEditor)}
+            item={item}
+            key={item.id}
+          >
+            {activeItemId === item.id ? renderItemEditor?.(item) : null}
+          </PortfolioSnapshotItem>
         ))}
       </ul>
     </section>
   );
 }
 
-function PortfolioSnapshotItem({ item }: { item: SnapshotItem }) {
+function PortfolioSnapshotItem({
+  action,
+  children,
+  isEditing = false,
+  item,
+}: {
+  action?: ReactNode;
+  children?: ReactNode;
+  isEditing?: boolean;
+  item: SnapshotItem;
+}) {
+  if (isEditing) {
+    return <li className="bg-stone-50 p-3">{children}</li>;
+  }
+
   return (
     <li className="p-3">
-      <div className="grid gap-3 md:grid-cols-[minmax(0,1.4fr)_112px_96px_136px_128px] md:items-start">
+      <div className="grid gap-3 md:grid-cols-[minmax(0,1.4fr)_112px_96px_136px_128px_40px] md:items-start">
         <div className="min-w-0">
           <p className="break-words text-sm font-semibold text-seed-950">
             {item.name}
@@ -88,6 +123,7 @@ function PortfolioSnapshotItem({ item }: { item: SnapshotItem }) {
             <ProvenanceTag provenance={item.provenance} />
           </dd>
         </dl>
+        <div className="flex justify-start md:justify-end">{action}</div>
       </div>
     </li>
   );

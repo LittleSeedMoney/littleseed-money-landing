@@ -1,10 +1,25 @@
+import {
+  useEffect,
+  useRef,
+  type ChangeEvent,
+  type FormEvent,
+  type ReactNode,
+} from "react";
+
 import type {
   DecisionReadiness,
   EvidenceSource,
   PortfolioNote,
   ReportReviewSample,
+  SnapshotItem,
   SummaryMetric,
 } from "@/data/report-review-sample";
+import type {
+  ManualAssetValue,
+  ManualDebtValue,
+  ManualProfileScalarField,
+  ManualProfileValues,
+} from "@/lib/report-review/manual-profile";
 
 import {
   EducationTopicLink,
@@ -13,33 +28,105 @@ import {
   reviewDisclosureSummaryClass,
   reviewInlineDisclosureSummaryClass,
   reviewPanelClass,
-  ReviewSectionHeading,
   reviewSubtlePanelClass,
   StatusPill,
 } from "./shared";
+import {
+  PortfolioSnapshotAssetEditForm,
+  PortfolioSnapshotDebtEditForm,
+  type ManualRequestState,
+  type PortfolioEditTarget,
+} from "./manual-input-section";
 import { PortfolioSnapshotList } from "./portfolio-snapshot-list";
 
 export function AssetPortfolioSection({
+  activePortfolioEdit,
+  activeProfileField,
   decisionReadiness,
+  errorMessage,
+  onAddAsset,
+  onAddDebt,
+  onAssetEdit,
+  onAssetUpdate,
+  onCancelEdit,
+  onDebtEdit,
+  onDebtUpdate,
+  onProfileFieldEdit,
+  onProfileSubmit,
+  onProfileUpdate,
+  onPortfolioSubmit,
   portfolio,
+  requestState,
   sourceById,
+  statusLabel,
+  values,
 }: {
+  activePortfolioEdit: PortfolioEditTarget | null;
+  activeProfileField: ManualProfileScalarField | null;
   decisionReadiness: DecisionReadiness;
+  errorMessage: string;
+  onAddAsset: () => void;
+  onAddDebt: () => void;
+  onAssetEdit: (id: string) => void;
+  onAssetUpdate: <T extends keyof ManualAssetValue>(
+    id: string,
+    field: T,
+    value: ManualAssetValue[T],
+  ) => void;
+  onCancelEdit: () => void;
+  onDebtEdit: (id: string) => void;
+  onDebtUpdate: <T extends keyof ManualDebtValue>(
+    id: string,
+    field: T,
+    value: ManualDebtValue[T],
+  ) => void;
+  onProfileFieldEdit: (field: ManualProfileScalarField) => void;
+  onProfileSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onProfileUpdate: (
+    field: ManualProfileScalarField,
+    event: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => void;
+  onPortfolioSubmit: (event: FormEvent<HTMLFormElement>) => void;
   portfolio: ReportReviewSample["assetPortfolio"];
+  requestState: ManualRequestState;
   sourceById: ReadonlyMap<string, EvidenceSource>;
+  statusLabel: string;
+  values: ManualProfileValues;
 }) {
+  const assetItems = manualAssetSnapshotItems(values.assets, portfolio.assets);
+  const liabilityItems = manualDebtSnapshotItems(
+    values.debts,
+    portfolio.liabilities,
+  );
+  const manualAssetIds = new Set(values.assets.map((asset) => asset.id));
+  const manualDebtIds = new Set(values.debts.map((debt) => debt.id));
+
   return (
     <section
       id="portfolio"
       aria-labelledby="portfolio-heading"
       className="scroll-mt-28 space-y-3"
     >
-      <ReviewSectionHeading
-        eyebrow="Workspace snapshot"
-        title="Current portfolio snapshot"
-        description="The report interprets the current assets, liabilities, liquidity, and decision-slice readiness from the snapshot values above."
-        id="portfolio-heading"
-      />
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-sm font-medium uppercase tracking-[0.16em] text-seed-700">
+            Workspace snapshot
+          </p>
+          <h2
+            className="mt-1 text-2xl font-semibold tracking-normal text-seed-950"
+            id="portfolio-heading"
+          >
+            Current portfolio snapshot
+          </h2>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-earth-700">
+            The report interprets the current assets, liabilities, liquidity,
+            and decision-slice readiness from this in-session snapshot.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <StatusPill label={statusLabel} tone="stone" />
+        </div>
+      </div>
 
       <div className={reviewPanelClass("p-4")}>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -49,16 +136,112 @@ export function AssetPortfolioSection({
         </div>
 
         <div className="mt-4 space-y-4">
+          <ProfileSnapshotCard
+            activeField={activeProfileField}
+            errorMessage={errorMessage}
+            onCancelEdit={onCancelEdit}
+            onFieldEdit={onProfileFieldEdit}
+            onSubmit={onProfileSubmit}
+            onUpdate={onProfileUpdate}
+            requestState={requestState}
+            values={values}
+          />
+
           <PortfolioSnapshotList
+            action={
+              <button
+                className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm font-semibold text-earth-800 shadow-sm hover:bg-stone-50 focus:outline-none focus:ring-2 focus:ring-seed-500"
+                onClick={onAddAsset}
+                type="button"
+              >
+                Add asset
+              </button>
+            }
+            activeItemId={
+              activePortfolioEdit?.group === "assets"
+                ? activePortfolioEdit.id
+                : null
+            }
             description="Current asset balances grouped by liquidity."
             descriptionId="assets-snapshot-description"
-            items={portfolio.assets}
+            items={assetItems}
+            renderItemAction={(item) =>
+              manualAssetIds.has(item.id) ? (
+                <EditIconButton
+                  label={`Edit ${item.name}`}
+                  onClick={() => onAssetEdit(item.id)}
+                />
+              ) : null
+            }
+            renderItemEditor={(item) => {
+              const asset = values.assets.find(
+                (candidate) => candidate.id === item.id,
+              );
+
+              if (!asset) {
+                return null;
+              }
+
+              return (
+                <PortfolioSnapshotAssetEditForm
+                  asset={asset}
+                  errorMessage={errorMessage}
+                  onAssetUpdate={onAssetUpdate}
+                  onCancelEdit={onCancelEdit}
+                  onSubmit={onPortfolioSubmit}
+                  requestState={requestState}
+                />
+              );
+            }}
             title="Assets"
           />
+
           <PortfolioSnapshotList
+            action={
+              <button
+                className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm font-semibold text-earth-800 shadow-sm hover:bg-stone-50 focus:outline-none focus:ring-2 focus:ring-seed-500"
+                onClick={onAddDebt}
+                type="button"
+              >
+                Add liability
+              </button>
+            }
+            activeItemId={
+              activePortfolioEdit?.group === "liabilities"
+                ? activePortfolioEdit.id
+                : null
+            }
             description="Current debt balances grouped by obligation type."
             descriptionId="liabilities-snapshot-description"
-            items={portfolio.liabilities}
+            items={liabilityItems}
+            renderItemAction={(item) =>
+              manualDebtIds.has(item.id) ? (
+                <EditIconButton
+                  label={`Edit ${item.name}`}
+                  onClick={() => onDebtEdit(item.id)}
+                />
+              ) : null
+            }
+            renderItemEditor={(item) => {
+              const debt = values.debts.find(
+                (candidate) => candidate.id === item.id,
+              );
+
+              if (!debt) {
+                return null;
+              }
+
+              return (
+                <PortfolioSnapshotDebtEditForm
+                  debt={debt}
+                  errorMessage={errorMessage}
+                  onCancelEdit={onCancelEdit}
+                  onDebtUpdate={onDebtUpdate}
+                  onSubmit={onPortfolioSubmit}
+                  requestState={requestState}
+                />
+              );
+            }}
             title="Liabilities"
           />
         </div>
@@ -75,6 +258,603 @@ export function AssetPortfolioSection({
         sourceById={sourceById}
       />
     </section>
+  );
+}
+
+function ProfileSnapshotCard({
+  activeField,
+  errorMessage,
+  onCancelEdit,
+  onFieldEdit,
+  onSubmit,
+  onUpdate,
+  requestState,
+  values,
+}: {
+  activeField: ManualProfileScalarField | null;
+  errorMessage: string;
+  onCancelEdit: () => void;
+  onFieldEdit: (field: ManualProfileScalarField) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onUpdate: (
+    field: ManualProfileScalarField,
+    event: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => void;
+  requestState: "error" | "idle" | "submitting";
+  values: ManualProfileValues;
+}) {
+  const isEditing = activeField !== null;
+  const isSubmitting = requestState === "submitting";
+
+  return (
+    <form
+      aria-labelledby="profile-values-heading"
+      className={reviewSubtlePanelClass("min-w-0 p-3")}
+      onSubmit={onSubmit}
+    >
+      <GroupHeader
+        action={
+          isEditing ? (
+            <>
+              <button
+                className="min-h-10 rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm font-semibold text-earth-800 shadow-sm hover:bg-stone-50 focus:outline-none focus:ring-2 focus:ring-seed-500"
+                onClick={onCancelEdit}
+                type="button"
+              >
+                Cancel
+              </button>
+              <button
+                className="min-h-10 rounded-lg border border-seed-700 bg-seed-700 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-seed-800 focus:outline-none focus:ring-2 focus:ring-seed-500 disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={isSubmitting}
+                type="submit"
+              >
+                {isSubmitting ? "Saving profile" : "Save profile"}
+              </button>
+            </>
+          ) : null
+        }
+        description="Age, income, expenses, job stability, and target context."
+        headingId="profile-values-heading"
+        statusLabel={isEditing ? "Editing" : "Profile"}
+        title="Profile values"
+      />
+      <dl className="mt-3 grid gap-x-6 gap-y-4 rounded-md border border-stone-200 bg-white p-3 sm:grid-cols-2 xl:grid-cols-4">
+        {profileSummaryItems(values).map((item) => (
+          <div className="min-h-16 min-w-0" key={item.field}>
+            <dt className="flex min-h-6 items-center gap-1.5 text-xs font-medium text-earth-600">
+              <span>{item.label}</span>
+              <EditIconButton
+                isCompact
+                label={`Edit ${item.label}`}
+                onClick={() => onFieldEdit(item.field)}
+              />
+            </dt>
+            <dd className="mt-1 break-words text-sm font-semibold tabular-nums text-seed-950">
+              {activeField === item.field ? (
+                <ProfileFieldControl
+                  item={item}
+                  onUpdate={onUpdate}
+                  values={values}
+                />
+              ) : (
+                <ProfileDisplayValue item={item} />
+              )}
+            </dd>
+          </div>
+        ))}
+      </dl>
+      {isEditing && errorMessage ? (
+        <div
+          className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm leading-6 text-red-950"
+          role="alert"
+        >
+          {errorMessage}
+        </div>
+      ) : null}
+    </form>
+  );
+}
+
+function GroupHeader({
+  action,
+  description,
+  headingId,
+  statusLabel,
+  title,
+}: {
+  action: ReactNode;
+  description: string;
+  headingId: string;
+  statusLabel: string;
+  title: string;
+}) {
+  return (
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+      <div className="min-w-0">
+        <h3 className="text-sm font-semibold text-seed-950" id={headingId}>
+          {title}
+        </h3>
+        <p className="mt-0.5 text-sm leading-6 text-earth-700">
+          {description}
+        </p>
+      </div>
+      <div className="flex min-h-10 items-center gap-2">
+        <StatusPill label={statusLabel} tone="stone" />
+        {action}
+      </div>
+    </div>
+  );
+}
+
+function EditIconButton({
+  isCompact = false,
+  label,
+  onClick,
+}: {
+  isCompact?: boolean;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      aria-label={label}
+      className={
+        isCompact
+          ? "inline-flex h-5 w-5 items-center justify-center rounded-sm text-earth-500 hover:bg-stone-100 hover:text-seed-800 focus:outline-none focus:ring-2 focus:ring-seed-500"
+          : "inline-flex h-8 w-8 items-center justify-center rounded-md text-earth-700 hover:bg-stone-100 hover:text-seed-800 focus:outline-none focus:ring-2 focus:ring-seed-500"
+      }
+      onClick={onClick}
+      title={label}
+      type="button"
+    >
+      <PencilIcon className={isCompact ? "h-3.5 w-3.5" : "h-4 w-4"} />
+    </button>
+  );
+}
+
+function manualAssetSnapshotItems(
+  assets: ManualAssetValue[],
+  reportAssets: SnapshotItem[],
+): SnapshotItem[] {
+  const seenIds = new Set<string>();
+
+  const manualItems = assets.map((asset) => {
+    const reportItem = reportAssetForManualAsset(asset, reportAssets, seenIds);
+
+    if (reportItem) {
+      seenIds.add(reportItem.id);
+    }
+
+    return manualAssetSnapshotItem(asset, reportItem);
+  });
+
+  return [
+    ...manualItems,
+    ...reportAssets.filter((item) =>
+      shouldKeepUnmatchedReportItem(item, seenIds, assets.length),
+    ),
+  ];
+}
+
+function manualDebtSnapshotItems(
+  debts: ManualDebtValue[],
+  reportLiabilities: SnapshotItem[],
+): SnapshotItem[] {
+  const seenIds = new Set<string>();
+
+  const manualItems = debts.map((debt) => {
+    const reportItem = reportLiabilityForManualDebt(
+      debt,
+      reportLiabilities,
+      seenIds,
+    );
+
+    if (reportItem) {
+      seenIds.add(reportItem.id);
+    }
+
+    return manualDebtSnapshotItem(debt, reportItem);
+  });
+
+  return [
+    ...manualItems,
+    ...reportLiabilities.filter((item) =>
+      shouldKeepUnmatchedReportItem(item, seenIds, debts.length),
+    ),
+  ];
+}
+
+function reportAssetForManualAsset(
+  asset: ManualAssetValue,
+  reportAssets: SnapshotItem[],
+  seenIds: ReadonlySet<string>,
+) {
+  return (
+    reportAssets.find(
+      (item) => !seenIds.has(item.id) && item.id === asset.id,
+    ) ??
+    reportAssets.find(
+      (item) =>
+        !seenIds.has(item.id) &&
+        isManualLikeReportItem(item) &&
+        normalizeSnapshotText(item.category) ===
+          normalizeSnapshotText(assetCategoryLabel(asset.category)),
+    )
+  );
+}
+
+function reportLiabilityForManualDebt(
+  debt: ManualDebtValue,
+  reportLiabilities: SnapshotItem[],
+  seenIds: ReadonlySet<string>,
+) {
+  return (
+    reportLiabilities.find(
+      (item) => !seenIds.has(item.id) && item.id === debt.id,
+    ) ??
+    reportLiabilities.find(
+      (item) =>
+        !seenIds.has(item.id) &&
+        isManualLikeReportItem(item) &&
+        normalizeSnapshotText(item.name) === normalizeSnapshotText(debt.name),
+    )
+  );
+}
+
+function shouldKeepUnmatchedReportItem(
+  item: SnapshotItem,
+  seenIds: ReadonlySet<string>,
+  manualItemCount: number,
+) {
+  if (seenIds.has(item.id)) {
+    return false;
+  }
+
+  return manualItemCount === 0 || isExternalReportItem(item);
+}
+
+function isManualLikeReportItem(item: SnapshotItem) {
+  return !isExternalReportItem(item);
+}
+
+function isExternalReportItem(item: SnapshotItem) {
+  return (
+    item.provenance === "csv-imported" ||
+    item.provenance === "linked-account"
+  );
+}
+
+function normalizeSnapshotText(value: string) {
+  return value.trim().toLowerCase().replace(/[_\s-]+/g, " ");
+}
+
+function manualAssetSnapshotItem(
+  asset: ManualAssetValue,
+  reportItem?: SnapshotItem,
+): SnapshotItem {
+  return {
+    category: assetCategoryLabel(asset.category),
+    emergencyEligible: reportItem?.emergencyEligible ?? asset.category === "cash",
+    id: asset.id,
+    liquidity: reportItem?.liquidity ?? assetLiquidityLabel(asset.category),
+    name: asset.name || "Unnamed asset",
+    provenance: reportItem?.provenance ?? "user-entered",
+    value: displayMoneyValue(asset.balance),
+  };
+}
+
+function manualDebtSnapshotItem(
+  debt: ManualDebtValue,
+  reportItem?: SnapshotItem,
+): SnapshotItem {
+  return {
+    category: debtTypeLabel(debt.debtType),
+    emergencyEligible: false,
+    id: debt.id,
+    liquidity: reportItem?.liquidity ?? "debt",
+    name: debt.name || "Unnamed liability",
+    provenance: reportItem?.provenance ?? "user-entered",
+    value: displayMoneyValue(debt.balance),
+  };
+}
+
+function assetCategoryLabel(category: ManualAssetValue["category"]) {
+  const labels: Record<ManualAssetValue["category"], string> = {
+    brokerage: "Brokerage",
+    cash: "Cash",
+    other: "Other",
+    retirement: "Retirement",
+  };
+
+  return labels[category];
+}
+
+function assetLiquidityLabel(category: ManualAssetValue["category"]) {
+  if (category === "cash") {
+    return "cash";
+  }
+
+  if (category === "retirement") {
+    return "restricted";
+  }
+
+  return "invested";
+}
+
+function debtTypeLabel(debtType: ManualDebtValue["debtType"]) {
+  const labels: Record<ManualDebtValue["debtType"], string> = {
+    auto_loan: "Auto loan",
+    credit_card: "Credit card",
+    medical_debt: "Medical debt",
+    other: "Other",
+    personal_loan: "Personal loan",
+    student_loan: "Student loan",
+  };
+
+  return labels[debtType];
+}
+
+function profileSummaryItems(values: ManualProfileValues) {
+  return [
+    {
+      field: "age",
+      label: "Age",
+      required: true,
+      step: "1",
+      type: "number",
+      value: displayValue(values.age),
+    },
+    {
+      field: "monthlyTakeHomeIncome",
+      label: "Monthly take-home income",
+      prefix: "$",
+      required: true,
+      type: "number",
+      value: displayMoneyValue(values.monthlyTakeHomeIncome),
+    },
+    {
+      field: "monthlyHousingCost",
+      label: "Monthly housing cost",
+      prefix: "$",
+      required: true,
+      type: "number",
+      value: displayMoneyValue(values.monthlyHousingCost),
+    },
+    {
+      field: "monthlyNonHousingEssentialExpenses",
+      label: "Other monthly essentials",
+      prefix: "$",
+      required: true,
+      type: "number",
+      value: displayMoneyValue(values.monthlyNonHousingEssentialExpenses),
+    },
+    {
+      field: "monthlyDiscretionaryExpenses",
+      label: "Monthly discretionary expenses",
+      prefix: "$",
+      required: true,
+      type: "number",
+      value: displayMoneyValue(values.monthlyDiscretionaryExpenses),
+    },
+    {
+      field: "monthlyInvestmentContribution",
+      label: "Monthly investing contribution",
+      prefix: "$",
+      required: true,
+      type: "number",
+      value: displayMoneyValue(values.monthlyInvestmentContribution),
+    },
+    {
+      field: "incomePattern",
+      label: "Income pattern",
+      options: [
+        ["mostly_stable", "Mostly stable"],
+        ["variable", "Variable"],
+        ["seasonal", "Seasonal"],
+        ["irregular", "Irregular"],
+      ],
+      required: true,
+      type: "select",
+      value: displayMappedValue(values.incomePattern, {
+        irregular: "Irregular",
+        mostly_stable: "Mostly stable",
+        seasonal: "Seasonal",
+        variable: "Variable",
+      }),
+    },
+    {
+      field: "jobStability",
+      label: "Job stability",
+      options: [
+        ["high", "High"],
+        ["medium", "Medium"],
+        ["low", "Low"],
+      ],
+      required: true,
+      type: "select",
+      value: displayMappedValue(values.jobStability, {
+        high: "High",
+        low: "Low",
+        medium: "Medium",
+      }),
+    },
+    {
+      field: "riskTolerance",
+      label: "Risk tolerance",
+      options: [
+        ["medium", "Medium"],
+        ["low", "Low"],
+        ["high", "High"],
+      ],
+      required: true,
+      type: "select",
+      value: displayMappedValue(values.riskTolerance, {
+        high: "High",
+        low: "Low",
+        medium: "Medium",
+      }),
+    },
+    {
+      field: "expectedYearsInCurrentLocation",
+      label: "Expected years in current location",
+      required: true,
+      step: "1",
+      type: "number",
+      value: values.expectedYearsInCurrentLocation
+        ? `${values.expectedYearsInCurrentLocation} years`
+        : "Missing",
+    },
+    {
+      field: "userTargetMonths",
+      label: "Emergency target",
+      step: "0.01",
+      type: "number",
+      value: values.userTargetMonths
+        ? `${values.userTargetMonths} months`
+        : "Missing",
+    },
+  ] satisfies ProfileSummaryItem[];
+}
+
+type ProfileSummaryItem = {
+  field: ManualProfileScalarField;
+  label: string;
+  options?: ReadonlyArray<readonly [string, string]>;
+  prefix?: string;
+  required?: boolean;
+  step?: string;
+  type: "number" | "select";
+  value: string;
+};
+
+function ProfileDisplayValue({ item }: { item: ProfileSummaryItem }) {
+  if (!item.prefix || !item.value.startsWith(item.prefix)) {
+    return item.value;
+  }
+
+  return (
+    <>
+      <span className="text-seed-950">{item.prefix}</span>
+      {item.value.slice(item.prefix.length)}
+    </>
+  );
+}
+
+function ProfileFieldControl({
+  item,
+  onUpdate,
+  values,
+}: {
+  item: ProfileSummaryItem;
+  onUpdate: (
+    field: ManualProfileScalarField,
+    event: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => void;
+  values: ManualProfileValues;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const selectRef = useRef<HTMLSelectElement>(null);
+
+  useEffect(() => {
+    if (item.type === "select") {
+      selectRef.current?.focus();
+      return;
+    }
+
+    inputRef.current?.focus();
+  }, [item.field, item.type]);
+
+  if (item.type === "select") {
+    return (
+      <select
+        aria-label={item.label}
+        className="min-h-9 w-full rounded-md border border-stone-300 bg-white px-2 py-1 text-sm font-semibold text-seed-950 shadow-sm outline-none focus:border-seed-500 focus:ring-2 focus:ring-seed-200"
+        onChange={(event) => onUpdate(item.field, event)}
+        ref={selectRef}
+        required={item.required}
+        value={values[item.field]}
+      >
+        {(item.options ?? []).map(([optionValue, optionLabel]) => (
+          <option key={optionValue} value={optionValue}>
+            {optionLabel}
+          </option>
+        ))}
+      </select>
+    );
+  }
+
+  return (
+    <span className="relative block">
+      {item.prefix ? (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-sm font-semibold text-seed-950"
+        >
+          {item.prefix}
+        </span>
+      ) : null}
+      <input
+        aria-label={item.label}
+        className={`min-h-9 w-full rounded-md border border-stone-300 bg-white py-1 pr-2 text-sm font-semibold tabular-nums text-seed-950 shadow-sm outline-none focus:border-seed-500 focus:ring-2 focus:ring-seed-200 ${
+          item.prefix ? "pl-6" : "pl-2"
+        }`}
+        inputMode="decimal"
+        min="0"
+        onChange={(event) => onUpdate(item.field, event)}
+        ref={inputRef}
+        required={item.required}
+        step={item.step ?? "0.01"}
+        type="number"
+        value={values[item.field]}
+      />
+    </span>
+  );
+}
+
+function displayMappedValue(value: string, labels: Record<string, string>) {
+  if (!value) {
+    return "Missing";
+  }
+
+  return labels[value] ?? value;
+}
+
+function displayMoneyValue(value: string) {
+  if (!value) {
+    return "Missing";
+  }
+
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return value;
+  }
+
+  return new Intl.NumberFormat("en-US", {
+    currency: "USD",
+    maximumFractionDigits: parsed % 1 === 0 ? 0 : 2,
+    style: "currency",
+  }).format(parsed);
+}
+
+function displayValue(value: string) {
+  return value || "Missing";
+}
+
+function PencilIcon({ className }: { className: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+    >
+      <path d="M12 20h9" />
+      <path d="m16.5 3.5 4 4L7 21H3v-4L16.5 3.5Z" />
+    </svg>
   );
 }
 

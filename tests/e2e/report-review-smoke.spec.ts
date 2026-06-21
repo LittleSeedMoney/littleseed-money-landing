@@ -1,11 +1,13 @@
 import { expect, type Page, test } from "@playwright/test";
 
+import { reportReviewSample } from "../../data/report-review-sample";
+
 const reportReviewPath = "/private/report-review";
 
 const smokeScreens = [
   {
     hash: "snapshot",
-    heading: "Edit snapshot values",
+    heading: "Current portfolio snapshot",
     tab: "Snapshot",
   },
   {
@@ -25,17 +27,18 @@ const smokeScreens = [
   },
 ] as const;
 
-const requiredManualFields = [
-  { control: "input", label: "Age" },
-  { control: "input", label: "Monthly take-home income" },
-  { control: "select", label: "Income pattern" },
-  { control: "input", label: "Monthly housing cost" },
-  { control: "input", label: "Other monthly essentials" },
-  { control: "input", label: "Monthly discretionary expenses" },
-  { control: "input", label: "Monthly investing contribution" },
-  { control: "select", label: "Job stability" },
-  { control: "select", label: "Risk tolerance" },
-  { control: "input", label: "Expected years in current location" },
+const editableProfileFields = [
+  "Age",
+  "Monthly take-home income",
+  "Monthly housing cost",
+  "Other monthly essentials",
+  "Monthly discretionary expenses",
+  "Monthly investing contribution",
+  "Income pattern",
+  "Job stability",
+  "Risk tolerance",
+  "Expected years in current location",
+  "Emergency target",
 ] as const;
 
 test.describe("private report review smoke", () => {
@@ -73,7 +76,7 @@ test.describe("private report review smoke", () => {
       await expect(
         panel.getByRole("heading", {
           exact: true,
-          name: "Edit snapshot values",
+          name: "Current portfolio snapshot",
         }),
       ).toBeVisible();
       await expect(page.getByRole("tab", { name: "Snapshot" })).toHaveAttribute(
@@ -84,32 +87,178 @@ test.describe("private report review smoke", () => {
     }
   });
 
-  test("manual inputs expose visible required markers and native required controls", async ({
+  test("portfolio groups edit independently and save back to read mode", async ({
     page,
   }) => {
+    const reportWithLinkedAccounts = {
+      ...reportReviewSample,
+      assetPortfolio: {
+        ...reportReviewSample.assetPortfolio,
+        assets: [
+          ...reportReviewSample.assetPortfolio.assets,
+          {
+            category: "Cash",
+            emergencyEligible: true,
+            id: "linked-savings",
+            liquidity: "Cash",
+            name: "Linked savings account",
+            provenance: "linked-account",
+            value: "$2,400",
+          },
+        ],
+        liabilities: [
+          ...reportReviewSample.assetPortfolio.liabilities,
+          {
+            category: "Auto loan",
+            emergencyEligible: false,
+            id: "linked-auto-loan",
+            liquidity: "Debt",
+            name: "Linked auto loan",
+            provenance: "linked-account",
+            value: "$8,400",
+          },
+        ],
+      },
+    };
+    let reportRequestCount = 0;
+
+    await page.route("**/private/report-review/workspace-report", async (route) => {
+      reportRequestCount += 1;
+      const responseReport =
+        reportRequestCount === 1 ? reportWithLinkedAccounts : reportReviewSample;
+
+      await route.fulfill({
+        contentType: "application/json",
+        json: { report: responseReport },
+        status: 200,
+      });
+    });
+
     await page.goto(`${reportReviewPath}#snapshot`);
 
-    await expect(
-      page.getByText("In-session snapshot values"),
-    ).toBeVisible();
-
-    for (const field of requiredManualFields) {
-      const label = labelFor(page, field.label);
-
-      await expect(label).toContainText("*");
-      await expect(label.locator(field.control)).toHaveAttribute("required", "");
-    }
-
-    const optionalIncome = labelFor(page, "Gross annual income");
-    await expect(optionalIncome).not.toContainText("*");
-    await expect(optionalIncome.locator("input")).not.toHaveAttribute(
-      "required",
-      "",
+    const profileCard = page.locator(
+      'form[aria-labelledby="profile-values-heading"]',
     );
 
-    await page.getByRole("button", { name: "Add liability" }).click();
+    await expect(profileCard).toBeVisible();
+    await expect(
+      profileCard.getByRole("button", { name: "Save profile" }),
+    ).toHaveCount(0);
+    await expect(profileCard.locator("input, select")).toHaveCount(0);
+    await expect(page.getByText("Scenario presets")).toHaveCount(0);
 
-    const conditionalLiability = page
+    for (const label of editableProfileFields) {
+      await expect(
+        profileCard.getByRole("button", { name: `Edit ${label}` }),
+      ).toBeVisible();
+    }
+
+    await profileCard
+      .getByRole("button", { name: "Edit Monthly take-home income" })
+      .click();
+
+    await expect(profileCard.getByRole("button", { name: "Save profile" }))
+      .toBeVisible();
+    await expect(profileCard.locator("input, select")).toHaveCount(1);
+    const takeHomeIncomeInput = profileCard.getByRole("spinbutton", {
+      name: "Monthly take-home income",
+    });
+    await expect(takeHomeIncomeInput).toBeVisible();
+    await expect(takeHomeIncomeInput).toBeFocused();
+    await expect(takeHomeIncomeInput).toHaveAttribute("required", "");
+    await expect(page.getByText("Fields marked * build the request"))
+      .toHaveCount(0);
+    await expect(profileCard.getByText("Gross annual income")).toHaveCount(0);
+    await expect(profileCard.getByText("Dependents")).toHaveCount(0);
+
+    await takeHomeIncomeInput.fill("5300");
+    await profileCard.getByRole("button", { name: "Save profile" }).click();
+
+    await expect(
+      profileCard.getByRole("button", { name: "Save profile" }),
+    ).toHaveCount(0);
+    await expect(profileCard.locator("input, select")).toHaveCount(0);
+    await expect(profileCard.getByText("$5,300")).toBeVisible();
+
+    const assetsSection = page.locator(
+      'section[aria-describedby="assets-snapshot-description"]',
+    );
+    const liabilitiesSection = page.locator(
+      'section[aria-describedby="liabilities-snapshot-description"]',
+    );
+
+    await expect(assetsSection.getByText("Linked savings account"))
+      .toBeVisible();
+    await expect(assetsSection.locator("ul > li")).toHaveCount(5);
+    await expect(
+      assetsSection.getByRole("button", { name: "Edit Linked savings account" }),
+    ).toHaveCount(0);
+    await expect(liabilitiesSection.getByText("Linked auto loan")).toBeVisible();
+    await expect(liabilitiesSection.locator("ul > li")).toHaveCount(4);
+    await expect(
+      liabilitiesSection.getByRole("button", { name: "Edit Linked auto loan" }),
+    ).toHaveCount(0);
+
+    await expect(page.getByRole("button", { name: "Edit assets" }))
+      .toHaveCount(0);
+    await expect(assetsSection.getByRole("button", { name: "Add asset" }))
+      .toBeVisible();
+    await assetsSection
+      .getByRole("button", { name: "Edit Cash and cash equivalents" })
+      .click();
+    await expect(assetsSection.getByRole("button", { name: "Save asset" }))
+      .toBeVisible();
+    const assetNameInput = assetsSection.getByLabel("Asset name");
+    await expect(assetNameInput).toBeFocused();
+    await expect(assetNameInput).toHaveValue("Cash and cash equivalents");
+    await expect(assetsSection.locator("form")).toHaveCount(1);
+    await expect(liabilitiesSection.locator("form")).toHaveCount(0);
+    await assetsSection.getByLabel("Balance").fill("13000");
+    await assetsSection.getByRole("button", { name: "Save asset" }).click();
+    await expect(assetsSection.getByRole("button", { name: "Save asset" }))
+      .toHaveCount(0);
+    await expect(assetsSection.getByText("$13,000")).toBeVisible();
+    await expect(assetsSection.getByText("Linked savings account"))
+      .toBeVisible();
+    await expect(liabilitiesSection.getByText("Linked auto loan")).toBeVisible();
+
+    await assetsSection.getByRole("button", { name: "Add asset" }).click();
+    await expect(assetsSection.getByRole("button", { name: "Save asset" }))
+      .toBeVisible();
+    await expect(assetsSection.getByLabel("Asset name")).toBeFocused();
+    await expect(assetsSection.getByLabel("Asset name")).toHaveValue("New asset");
+    await assetsSection.getByRole("button", { name: "Cancel" }).click();
+    await expect(assetsSection.getByText("New asset")).toHaveCount(0);
+
+    await expect(page.getByRole("button", { name: "Edit liabilities" }))
+      .toHaveCount(0);
+    await expect(
+      liabilitiesSection.getByRole("button", { name: "Add liability" }),
+    ).toBeVisible();
+    await liabilitiesSection
+      .getByRole("button", { name: "Edit Student loan" })
+      .click();
+    await expect(
+      liabilitiesSection.getByRole("button", { name: "Save liability" }),
+    ).toBeVisible();
+    const liabilityNameInput = liabilitiesSection.getByLabel("Liability name");
+    await expect(liabilityNameInput).toBeFocused();
+    await expect(liabilityNameInput).toHaveValue("Student loan");
+    await expect(assetsSection.locator("form")).toHaveCount(0);
+
+    await liabilitiesSection.getByRole("button", { name: "Cancel" }).click();
+
+    await liabilitiesSection
+      .getByRole("button", { name: "Add liability" })
+      .click();
+    await expect(
+      liabilitiesSection.getByRole("button", { name: "Save liability" }),
+    ).toBeVisible();
+    await expect(liabilitiesSection.getByLabel("Liability name")).toBeFocused();
+    await expect(liabilitiesSection.getByLabel("Liability name"))
+      .toHaveValue("New liability");
+
+    const conditionalLiability = liabilitiesSection
       .locator("form label")
       .filter({ hasText: /^Liability name\b/ })
       .last();
@@ -118,6 +267,17 @@ test.describe("private report review smoke", () => {
       "required",
       "",
     );
+
+    await liabilitiesSection
+      .getByRole("button", { name: "Save liability" })
+      .click();
+
+    await expect(
+      liabilitiesSection.getByRole("button", { name: "Edit Student loan" }),
+    ).toBeVisible();
+    await expect(
+      liabilitiesSection.getByRole("button", { name: "Save liability" }),
+    ).toHaveCount(0);
   });
 
   test("screen tabs support click, keyboard movement, and hash updates", async ({
@@ -126,8 +286,9 @@ test.describe("private report review smoke", () => {
     await page.goto(`${reportReviewPath}#report`);
 
     await clickTab(page, "Snapshot");
-    await expect(page.getByRole("heading", { name: "Edit snapshot values" }))
-      .toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Current portfolio snapshot" }),
+    ).toBeVisible();
     await expect(page).toHaveURL(/#snapshot$/);
 
     await clickTab(page, "Report");
@@ -255,6 +416,16 @@ async function clickTab(page: Page, name: string) {
   const tab = page.getByRole("tab", { name });
   await tab.scrollIntoViewIfNeeded();
   await tab.click();
+
+  try {
+    await expect(tab).toHaveAttribute("aria-selected", "true", {
+      timeout: 1_000,
+    });
+  } catch {
+    await tab.focus();
+    await page.keyboard.press("Enter");
+    await expect(tab).toHaveAttribute("aria-selected", "true");
+  }
 }
 
 function escapeRegExp(value: string) {
