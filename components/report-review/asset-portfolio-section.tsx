@@ -416,52 +416,116 @@ function manualAssetSnapshotItems(
   assets: ManualAssetValue[],
   reportAssets: SnapshotItem[],
 ): SnapshotItem[] {
-  const manualById = new Map(assets.map((asset) => [asset.id, asset]));
   const seenIds = new Set<string>();
-  const mergedItems = reportAssets.map((reportItem) => {
-    const asset = manualById.get(reportItem.id);
-    seenIds.add(reportItem.id);
 
-    if (!asset) {
-      return reportItem;
+  const manualItems = assets.map((asset) => {
+    const reportItem = reportAssetForManualAsset(asset, reportAssets, seenIds);
+
+    if (reportItem) {
+      seenIds.add(reportItem.id);
     }
 
     return manualAssetSnapshotItem(asset, reportItem);
   });
 
-  for (const asset of assets) {
-    if (!seenIds.has(asset.id)) {
-      mergedItems.push(manualAssetSnapshotItem(asset));
-    }
-  }
-
-  return mergedItems;
+  return [
+    ...manualItems,
+    ...reportAssets.filter((item) =>
+      shouldKeepUnmatchedReportItem(item, seenIds, assets.length),
+    ),
+  ];
 }
 
 function manualDebtSnapshotItems(
   debts: ManualDebtValue[],
   reportLiabilities: SnapshotItem[],
 ): SnapshotItem[] {
-  const manualById = new Map(debts.map((debt) => [debt.id, debt]));
   const seenIds = new Set<string>();
-  const mergedItems = reportLiabilities.map((reportItem) => {
-    const debt = manualById.get(reportItem.id);
-    seenIds.add(reportItem.id);
 
-    if (!debt) {
-      return reportItem;
+  const manualItems = debts.map((debt) => {
+    const reportItem = reportLiabilityForManualDebt(
+      debt,
+      reportLiabilities,
+      seenIds,
+    );
+
+    if (reportItem) {
+      seenIds.add(reportItem.id);
     }
 
     return manualDebtSnapshotItem(debt, reportItem);
   });
 
-  for (const debt of debts) {
-    if (!seenIds.has(debt.id)) {
-      mergedItems.push(manualDebtSnapshotItem(debt));
-    }
+  return [
+    ...manualItems,
+    ...reportLiabilities.filter((item) =>
+      shouldKeepUnmatchedReportItem(item, seenIds, debts.length),
+    ),
+  ];
+}
+
+function reportAssetForManualAsset(
+  asset: ManualAssetValue,
+  reportAssets: SnapshotItem[],
+  seenIds: ReadonlySet<string>,
+) {
+  return (
+    reportAssets.find(
+      (item) => !seenIds.has(item.id) && item.id === asset.id,
+    ) ??
+    reportAssets.find(
+      (item) =>
+        !seenIds.has(item.id) &&
+        isManualLikeReportItem(item) &&
+        normalizeSnapshotText(item.category) ===
+          normalizeSnapshotText(assetCategoryLabel(asset.category)),
+    )
+  );
+}
+
+function reportLiabilityForManualDebt(
+  debt: ManualDebtValue,
+  reportLiabilities: SnapshotItem[],
+  seenIds: ReadonlySet<string>,
+) {
+  return (
+    reportLiabilities.find(
+      (item) => !seenIds.has(item.id) && item.id === debt.id,
+    ) ??
+    reportLiabilities.find(
+      (item) =>
+        !seenIds.has(item.id) &&
+        isManualLikeReportItem(item) &&
+        normalizeSnapshotText(item.name) === normalizeSnapshotText(debt.name),
+    )
+  );
+}
+
+function shouldKeepUnmatchedReportItem(
+  item: SnapshotItem,
+  seenIds: ReadonlySet<string>,
+  manualItemCount: number,
+) {
+  if (seenIds.has(item.id)) {
+    return false;
   }
 
-  return mergedItems;
+  return manualItemCount === 0 || isExternalReportItem(item);
+}
+
+function isManualLikeReportItem(item: SnapshotItem) {
+  return !isExternalReportItem(item);
+}
+
+function isExternalReportItem(item: SnapshotItem) {
+  return (
+    item.provenance === "csv-imported" ||
+    item.provenance === "linked-account"
+  );
+}
+
+function normalizeSnapshotText(value: string) {
+  return value.trim().toLowerCase().replace(/[_\s-]+/g, " ");
 }
 
 function manualAssetSnapshotItem(

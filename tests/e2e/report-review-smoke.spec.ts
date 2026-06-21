@@ -120,11 +120,16 @@ test.describe("private report review smoke", () => {
         ],
       },
     };
+    let reportRequestCount = 0;
 
     await page.route("**/private/report-review/workspace-report", async (route) => {
+      reportRequestCount += 1;
+      const responseReport =
+        reportRequestCount === 1 ? reportWithLinkedAccounts : reportReviewSample;
+
       await route.fulfill({
         contentType: "application/json",
-        json: { report: reportWithLinkedAccounts },
+        json: { report: responseReport },
         status: 200,
       });
     });
@@ -184,10 +189,12 @@ test.describe("private report review smoke", () => {
 
     await expect(assetsSection.getByText("Linked savings account"))
       .toBeVisible();
+    await expect(assetsSection.locator("ul > li")).toHaveCount(5);
     await expect(
       assetsSection.getByRole("button", { name: "Edit Linked savings account" }),
     ).toHaveCount(0);
     await expect(liabilitiesSection.getByText("Linked auto loan")).toBeVisible();
+    await expect(liabilitiesSection.locator("ul > li")).toHaveCount(4);
     await expect(
       liabilitiesSection.getByRole("button", { name: "Edit Linked auto loan" }),
     ).toHaveCount(0);
@@ -211,6 +218,9 @@ test.describe("private report review smoke", () => {
     await expect(assetsSection.getByRole("button", { name: "Save asset" }))
       .toHaveCount(0);
     await expect(assetsSection.getByText("$13,000")).toBeVisible();
+    await expect(assetsSection.getByText("Linked savings account"))
+      .toBeVisible();
+    await expect(liabilitiesSection.getByText("Linked auto loan")).toBeVisible();
 
     await assetsSection.getByRole("button", { name: "Add asset" }).click();
     await expect(assetsSection.getByRole("button", { name: "Save asset" }))

@@ -8,7 +8,10 @@ import {
   type FormEvent,
 } from "react";
 
-import type { ReportReviewSample } from "@/data/report-review-sample";
+import type {
+  ReportReviewSample,
+  SnapshotItem,
+} from "@/data/report-review-sample";
 import {
   defaultManualProfileValues,
   type ManualAssetValue,
@@ -88,7 +91,10 @@ export function ReportReviewWorkspace({
         throw new Error(payload.error ?? `Report request failed.`);
       }
 
-      setReport(payload.report);
+      const nextReport = payload.report;
+      setReport((currentReport) =>
+        preserveExternalPortfolioItems(nextReport, currentReport),
+      );
       setRequestState("idle");
     } catch (error) {
       setRequestState("error");
@@ -263,4 +269,57 @@ function dataLabel(report: ReportReviewSample) {
     return "Sample via API";
   }
   return "Sample data";
+}
+
+function preserveExternalPortfolioItems(
+  nextReport: ReportReviewSample,
+  currentReport: ReportReviewSample,
+): ReportReviewSample {
+  const assets = preserveExternalSnapshotItems(
+    nextReport.assetPortfolio.assets,
+    currentReport.assetPortfolio.assets,
+  );
+  const liabilities = preserveExternalSnapshotItems(
+    nextReport.assetPortfolio.liabilities,
+    currentReport.assetPortfolio.liabilities,
+  );
+
+  if (
+    assets === nextReport.assetPortfolio.assets &&
+    liabilities === nextReport.assetPortfolio.liabilities
+  ) {
+    return nextReport;
+  }
+
+  return {
+    ...nextReport,
+    assetPortfolio: {
+      ...nextReport.assetPortfolio,
+      assets,
+      liabilities,
+    },
+  };
+}
+
+function preserveExternalSnapshotItems(
+  nextItems: SnapshotItem[],
+  currentItems: SnapshotItem[],
+) {
+  const nextIds = new Set(nextItems.map((item) => item.id));
+  const preservedItems = currentItems.filter(
+    (item) => isExternalSnapshotItem(item) && !nextIds.has(item.id),
+  );
+
+  if (preservedItems.length === 0) {
+    return nextItems;
+  }
+
+  return [...nextItems, ...preservedItems];
+}
+
+function isExternalSnapshotItem(item: SnapshotItem) {
+  return (
+    item.provenance === "csv-imported" ||
+    item.provenance === "linked-account"
+  );
 }
