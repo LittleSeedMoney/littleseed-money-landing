@@ -54,6 +54,17 @@ const {
   formatSavingGoalDraftMoney,
 } = require("../lib/report-review/saving-goal-draft.ts");
 const {
+  buildFindingContextPack,
+} = require("../lib/report-review/ai/context-pack.ts");
+const {
+  parseReportReviewAiDraft,
+} = require("../lib/report-review/ai/provider.ts");
+const {
+  explainReportReviewFinding,
+  parseReportReviewAiRequest,
+  ReportReviewAiRequestError,
+} = require("../lib/report-review/ai/report-review-ai.ts");
+const {
   reportReviewScreenFromKeyboard,
   reportReviewScreenFromHash,
   reportReviewScreens,
@@ -87,6 +98,125 @@ test("report review class names resolve Tailwind utility conflicts", () => {
   assert.equal(classListIncludes(className, "border-seed-300"), true);
   assert.equal(classListIncludes(className, "shadow-sm"), false);
   assert.equal(classListIncludes(className, "shadow-none"), true);
+});
+
+test("report-review AI context pack stays bounded to the selected finding", () => {
+  const finding = reportReviewSample.findings[0];
+  const contextPack = buildFindingContextPack({
+    evidenceSources: reportReviewSample.evidenceSources,
+    finding,
+  });
+
+  assert.equal(contextPack.version, "coach_context_pack.v0");
+  assert.equal(contextPack.target.id, finding.id);
+  assert.deepEqual(contextPack.finding.evidenceSourceIds, finding.evidenceSourceIds);
+  assert.ok(contextPack.knowledgeArtifacts.length > 0);
+  assert.ok(contextPack.excludedData.includes("raw transaction rows"));
+  assert.ok(contextPack.excludedData.includes("saved AI conversation history"));
+});
+
+test("report-review AI request parser rejects target drift", () => {
+  const finding = reportReviewSample.findings[0];
+
+  assert.throws(
+    () =>
+      parseReportReviewAiRequest({
+        evidenceSources: reportReviewSample.evidenceSources,
+        finding,
+        questionType: "explain_finding",
+        surface: "report_review",
+        targetId: "different-finding",
+        targetType: "finding",
+        userMessage: null,
+      }),
+    ReportReviewAiRequestError,
+  );
+});
+
+test("report-review AI explanation returns validated fixture answer", async () => {
+  const finding = reportReviewSample.findings[0];
+  const answer = await explainReportReviewFinding({
+    evidenceSources: reportReviewSample.evidenceSources,
+    finding,
+    questionType: "explain_finding",
+    surface: "report_review",
+    targetId: finding.id,
+    targetType: "finding",
+    userMessage: null,
+  });
+
+  assert.equal(answer.validation.status, "passed");
+  assert.equal(answer.validation.fallbackUsed, false);
+  assert.equal(answer.versions.contextPack, "coach_context_pack.v0");
+  assert.equal(answer.versions.prompt, "report_review_explain.v0");
+  assert.equal(answer.sources.some((source) => source.id === finding.id), true);
+  assert.doesNotMatch(answer.answer, /you should/i);
+});
+
+test("report-review AI missing-context answers validate across findings", async () => {
+  for (const finding of reportReviewSample.findings) {
+    const answer = await explainReportReviewFinding({
+      evidenceSources: reportReviewSample.evidenceSources,
+      finding,
+      questionType: "missing_context",
+      surface: "report_review",
+      targetId: finding.id,
+      targetType: "finding",
+      userMessage: null,
+    });
+
+    assert.equal(answer.validation.status, "passed", finding.id);
+    assert.equal(answer.validation.fallbackUsed, false, finding.id);
+    assert.doesNotMatch(answer.answer, /tax treatment/i);
+  }
+});
+
+test("report-review AI follow-up allows non-advisory hold phrasing", async () => {
+  const finding = reportReviewSample.findings[0];
+  const answer = await explainReportReviewFinding({
+    evidenceSources: reportReviewSample.evidenceSources,
+    finding,
+    questionType: "follow_up",
+    surface: "report_review",
+    targetId: finding.id,
+    targetType: "finding",
+    userMessage: "Does this still hold if income changes?",
+  });
+
+  assert.equal(answer.validation.status, "passed");
+  assert.equal(answer.validation.fallbackUsed, false);
+  assert.doesNotMatch(answer.answer, /income changes/i);
+});
+
+test("report-review AI follow-up refuses action ranking requests", async () => {
+  const finding = reportReviewSample.findings[0];
+  const answer = await explainReportReviewFinding({
+    evidenceSources: reportReviewSample.evidenceSources,
+    finding,
+    questionType: "follow_up",
+    surface: "report_review",
+    targetId: finding.id,
+    targetType: "finding",
+    userMessage: "What should I do first and can you rank the actions?",
+  });
+
+  assert.equal(answer.validation.status, "fallback");
+  assert.equal(answer.validation.fallbackUsed, true);
+  assert.match(answer.answer, /cannot answer/i);
+  assert.match(answer.limitations.join(" "), /not investment, tax, legal/i);
+});
+
+test("report-review AI provider draft parser rejects malformed output", () => {
+  assert.throws(
+    () =>
+      parseReportReviewAiDraft({
+        answer: "Missing structured arrays.",
+        evidence: [],
+        limitations: [],
+        sources: [{ id: "bad", title: "Bad", type: "unsupported" }],
+      }),
+    /supported source type/,
+  );
 });
 
 test("saving goal draft calculates the baseline arithmetic", () => {

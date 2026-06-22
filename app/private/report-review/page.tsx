@@ -13,5 +13,17 @@ export const dynamic = "force-dynamic";
 
 export default async function ReportReviewPage() {
   const report = await getReportReviewData();
-  return <ReportReviewWorkspace initialReport={report} />;
+  return (
+    <ReportReviewWorkspace
+      aiEnabled={isReportReviewAiEnabled()}
+      initialReport={report}
+    />
+  );
+}
+
+function isReportReviewAiEnabled() {
+  return (
+    process.env.LITTLESEED_REPORT_REVIEW_AI_ENABLED === "true" ||
+    process.env.NEXT_PUBLIC_LITTLESEED_REPORT_REVIEW_AI_ENABLED === "true"
+  );
 }

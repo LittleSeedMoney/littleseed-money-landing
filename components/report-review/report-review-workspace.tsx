@@ -33,8 +33,10 @@ import { ReportReviewScreenPanel } from "./report-review-screen-panel";
 import { ReportReviewShell } from "./report-review-shell";
 
 export function ReportReviewWorkspace({
+  aiEnabled,
   initialReport,
 }: {
+  aiEnabled: boolean;
   initialReport: ReportReviewSample;
 }) {
   const [report, setReport] = useState(initialReport);
@@ -230,6 +232,7 @@ export function ReportReviewWorkspace({
     >
       <ReportReviewScreenPanel
         activeScreen={activeScreen}
+        aiEnabled={aiEnabled}
         errorMessage={errorMessage}
         generatedAt={generatedAt}
         onAddAsset={addAssetRow}

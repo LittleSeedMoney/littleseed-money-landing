@@ -87,6 +87,22 @@ test.describe("private report review smoke", () => {
     }
   });
 
+  test("report findings show the AI explanation disabled state by default", async ({
+    page,
+  }) => {
+    await page.goto(`${reportReviewPath}#report`);
+
+    const firstFinding = page.getByTestId("report-finding-card").first();
+    await firstFinding.locator("summary").click();
+
+    await expect(
+      firstFinding.getByText("AI explanation unavailable"),
+    ).toBeVisible();
+    await expect(
+      firstFinding.getByRole("button", { name: "Explain" }),
+    ).toBeDisabled();
+  });
+
   test("portfolio groups edit independently and save back to read mode", async ({
     page,
   }) => {

@@ -22,6 +22,7 @@ import { reviewPanelClass, ReviewSectionHeading } from "./shared";
 
 export function ReportReviewScreenPanel({
   activeScreen,
+  aiEnabled,
   errorMessage,
   generatedAt,
   onAddAsset,
@@ -40,6 +41,7 @@ export function ReportReviewScreenPanel({
   values,
 }: {
   activeScreen: ReportReviewScreenId;
+  aiEnabled: boolean;
   errorMessage: string;
   generatedAt: string;
   onAddAsset: () => string;
@@ -118,7 +120,11 @@ export function ReportReviewScreenPanel({
     <>
       <OverviewSection generatedAt={generatedAt} report={report} />
       <ReportSections sections={report.sections} sourceById={sourceById} />
-      <FindingsSection findings={report.findings} />
+      <FindingsSection
+        aiEnabled={aiEnabled}
+        findings={report.findings}
+        sourceById={sourceById}
+      />
     </>
   );
 }
