@@ -43,7 +43,7 @@ export function createFixtureReportReviewAiProvider(): ReportReviewAiProvider {
       mode: "deterministic-fixture",
     },
     model: "fixture.report-review-ai.v0",
-    async generateAnswer({ contextPack, questionType, userMessage }) {
+    async generateAnswer({ contextPack, questionType }) {
       const artifact = contextPack.knowledgeArtifacts[0];
       const sourceTitle = artifact?.title ?? "Selected finding context";
       const baseEvidence = [
@@ -71,7 +71,8 @@ export function createFixtureReportReviewAiProvider(): ReportReviewAiProvider {
 
       if (questionType === "missing_context") {
         return {
-          answer: `This finding is limited by context that is not fully visible in the current report. The most important missing or limiting information is: ${contextPack.finding.limitations.join(" ")}`,
+          answer:
+            "This finding is limited by context that is not fully visible in the current report. See the Limitations list for the specific factors that could change the interpretation.",
           evidence: baseEvidence,
           limitations: defaultLimitations(contextPack),
           sources: baseSources,
@@ -98,7 +99,8 @@ export function createFixtureReportReviewAiProvider(): ReportReviewAiProvider {
 
       if (questionType === "follow_up") {
         return {
-          answer: `For this selected finding, your follow-up is scoped to: "${userMessage}". Based on the available context, the answer can only use the finding summary, why-it-matters text, limitations, and approved knowledge fixture. It cannot choose an action, calculate a new amount, or use account history.`,
+          answer:
+            "For this selected finding, the follow-up can only use the finding summary, why-it-matters text, limitations, and approved knowledge fixture. It cannot choose an action, calculate a new amount, or use account history.",
           evidence: baseEvidence,
           limitations: defaultLimitations(contextPack),
           sources: baseSources,
@@ -181,10 +183,41 @@ function createOpenAiReportReviewProvider({
 
       const payload = await response.json();
       const text = extractResponseText(payload);
-      const parsed = JSON.parse(text) as ReportReviewAiDraft;
+      const parsed = parseReportReviewAiDraft(JSON.parse(text));
 
       return parsed;
     },
+  };
+}
+
+export function parseReportReviewAiDraft(value: unknown): ReportReviewAiDraft {
+  const record = expectRecord(value, "AI provider answer");
+
+  return {
+    answer: readString(record, "answer", "AI provider answer"),
+    evidence: readObjectArray(record.evidence, "AI provider answer.evidence")
+      .map((item, index) => ({
+        id: readString(item, "id", `AI provider answer.evidence[${index}]`),
+        text: readString(
+          item,
+          "text",
+          `AI provider answer.evidence[${index}]`,
+        ),
+      })),
+    limitations: readStringArray(
+      record.limitations,
+      "AI provider answer.limitations",
+    ),
+    sources: readObjectArray(record.sources, "AI provider answer.sources")
+      .map((item, index) => ({
+        id: readString(item, "id", `AI provider answer.sources[${index}]`),
+        title: readString(
+          item,
+          "title",
+          `AI provider answer.sources[${index}]`,
+        ),
+        type: readSourceType(item.type, `AI provider answer.sources[${index}]`),
+      })),
   };
 }
 
@@ -234,6 +267,56 @@ function extractResponseText(payload: unknown): string {
   }
 
   throw new Error("OpenAI provider response did not include output text.");
+}
+
+function expectRecord(value: unknown, label: string): Record<string, unknown> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    throw new Error(`${label} must be an object.`);
+  }
+
+  return value as Record<string, unknown>;
+}
+
+function readString(
+  record: Record<string, unknown>,
+  field: string,
+  label: string,
+) {
+  const value = record[field];
+
+  if (typeof value !== "string") {
+    throw new Error(`${label}.${field} must be text.`);
+  }
+
+  return value;
+}
+
+function readStringArray(value: unknown, label: string) {
+  if (!Array.isArray(value) || value.some((item) => typeof item !== "string")) {
+    throw new Error(`${label} must be an array of text.`);
+  }
+
+  return value as string[];
+}
+
+function readObjectArray(value: unknown, label: string) {
+  if (!Array.isArray(value)) {
+    throw new Error(`${label} must be an array.`);
+  }
+
+  return value.map((item, index) => expectRecord(item, `${label}[${index}]`));
+}
+
+function readSourceType(value: unknown, label: string) {
+  if (
+    value === "context_pack" ||
+    value === "knowledge_artifact" ||
+    value === "report_finding"
+  ) {
+    return value;
+  }
+
+  throw new Error(`${label}.type must be a supported source type.`);
 }
 
 const responseSchema = {

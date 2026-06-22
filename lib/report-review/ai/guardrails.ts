@@ -9,11 +9,11 @@ import type {
 const MAX_FOLLOW_UP_LENGTH = 280;
 
 const blockedQuestionPatterns = [
-  /\b(buy|sell|hold)\b/i,
-  /\b(stock|security|securities|crypto|bitcoin|etf|option|bond)\b/i,
-  /\b(tax|deduction|irs|filing|refund|write[- ]?off)\b/i,
-  /\b(lawyer|legal|lawsuit|sue|bankruptcy|insolvency)\b/i,
-  /\b(credit card|card recommendation|best card|which card)\b/i,
+  /\b(buy|sell|hold)\s+(a\s+|the\s+|this\s+|that\s+)?(stock|security|securities|crypto|bitcoin|etf|option|bond|shares?)\b/i,
+  /\b(which|what|best)\b.*\b(stock|security|securities|crypto|bitcoin|etf|option|bond|shares?)\b/i,
+  /\b(tax deduction|irs|filing|refund|write[- ]?off|for tax purposes)\b/i,
+  /\b(legal advice|lawyer|attorney|lawsuit|sue|bankruptcy|insolvency)\b/i,
+  /\b(credit card recommendation|best card|which card)\b/i,
   /\b(refinance|consolidate|balance transfer)\b/i,
   /\b(cancel|dispute|chargeback|call the merchant|contact the merchant)\b/i,
   /\b(rank|priority|prioritize|what should i do first)\b/i,
@@ -21,19 +21,17 @@ const blockedQuestionPatterns = [
 ];
 
 const blockedAnswerPatterns = [
-  /\byou should\b/i,
-  /\bi recommend\b/i,
+  /\byou should\s+(buy|sell|hold|pay|refinance|consolidate|cancel|dispute|apply|open)\b/i,
+  /\bi recommend\s+(buying|selling|holding|paying|refinancing|consolidating|canceling|disputing|applying|opening)\b/i,
   /\bpay .* first\b/i,
-  /\bbuy\b/i,
-  /\bsell\b/i,
-  /\bhold\b/i,
+  /\b(buy|sell|hold)\s+(a\s+|the\s+|this\s+|that\s+)?(stock|security|securities|crypto|bitcoin|etf|option|bond|shares?)\b/i,
   /\brefinance\b/i,
   /\bconsolidate\b/i,
   /\bbalance transfer\b/i,
-  /\bcredit card\b/i,
-  /\btax\b/i,
-  /\blegal\b/i,
-  /\bguarantee\b/i,
+  /\b(apply for|open|get)\b.*\bcredit card\b/i,
+  /\bfor tax purposes\b/i,
+  /\blegally required\b/i,
+  /\bguarantee[sd]?\b/i,
 ];
 
 export function validateQuestionBoundary({

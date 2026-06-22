@@ -57,6 +57,9 @@ const {
   buildFindingContextPack,
 } = require("../lib/report-review/ai/context-pack.ts");
 const {
+  parseReportReviewAiDraft,
+} = require("../lib/report-review/ai/provider.ts");
+const {
   explainReportReviewFinding,
   parseReportReviewAiRequest,
   ReportReviewAiRequestError,
@@ -150,6 +153,41 @@ test("report-review AI explanation returns validated fixture answer", async () =
   assert.doesNotMatch(answer.answer, /you should/i);
 });
 
+test("report-review AI missing-context answers validate across findings", async () => {
+  for (const finding of reportReviewSample.findings) {
+    const answer = await explainReportReviewFinding({
+      evidenceSources: reportReviewSample.evidenceSources,
+      finding,
+      questionType: "missing_context",
+      surface: "report_review",
+      targetId: finding.id,
+      targetType: "finding",
+      userMessage: null,
+    });
+
+    assert.equal(answer.validation.status, "passed", finding.id);
+    assert.equal(answer.validation.fallbackUsed, false, finding.id);
+    assert.doesNotMatch(answer.answer, /tax treatment/i);
+  }
+});
+
+test("report-review AI follow-up allows non-advisory hold phrasing", async () => {
+  const finding = reportReviewSample.findings[0];
+  const answer = await explainReportReviewFinding({
+    evidenceSources: reportReviewSample.evidenceSources,
+    finding,
+    questionType: "follow_up",
+    surface: "report_review",
+    targetId: finding.id,
+    targetType: "finding",
+    userMessage: "Does this still hold if income changes?",
+  });
+
+  assert.equal(answer.validation.status, "passed");
+  assert.equal(answer.validation.fallbackUsed, false);
+  assert.doesNotMatch(answer.answer, /income changes/i);
+});
+
 test("report-review AI follow-up refuses action ranking requests", async () => {
   const finding = reportReviewSample.findings[0];
   const answer = await explainReportReviewFinding({
@@ -166,6 +204,19 @@ test("report-review AI follow-up refuses action ranking requests", async () => {
   assert.equal(answer.validation.fallbackUsed, true);
   assert.match(answer.answer, /cannot answer/i);
   assert.match(answer.limitations.join(" "), /not investment, tax, legal/i);
+});
+
+test("report-review AI provider draft parser rejects malformed output", () => {
+  assert.throws(
+    () =>
+      parseReportReviewAiDraft({
+        answer: "Missing structured arrays.",
+        evidence: [],
+        limitations: [],
+        sources: [{ id: "bad", title: "Bad", type: "unsupported" }],
+      }),
+    /supported source type/,
+  );
 });
 
 test("saving goal draft calculates the baseline arithmetic", () => {
