@@ -10,6 +10,7 @@
     "lint": "tsc --noEmit",
     "test": "node --require ./tests/register.js --test",
     "test:e2e": "playwright test",
+    "test:e2e:report-review-ai": "LITTLESEED_REPORT_REVIEW_AI_ENABLED=true playwright test tests/e2e/report-review-ai-panel.spec.ts",
     "test:e2e:report-review": "playwright test tests/e2e/report-review-smoke.spec.ts"
   },
   "dependencies": {

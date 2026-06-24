@@ -251,6 +251,7 @@ test("report-review AI explanation returns validated fixture answer", async () =
     userMessage: null,
   });
 
+  assert.equal(answer.answerKind, "validated_answer");
   assert.equal(answer.validation.status, "passed");
   assert.equal(answer.validation.fallbackUsed, false);
   assert.equal(answer.versions.contextPack, "coach_context_pack.v0");
@@ -300,10 +301,83 @@ test("report-review AI follow-up refuses action ranking requests", async () => {
     userMessage: "What should I do first and can you rank the actions?",
   });
 
+  assert.equal(answer.answerKind, "boundary_refusal");
   assert.equal(answer.validation.status, "fallback");
   assert.equal(answer.validation.fallbackUsed, true);
   assert.match(answer.answer, /cannot answer/i);
   assert.match(answer.limitations.join(" "), /not investment, tax, legal/i);
+});
+
+test("report-review AI marks provider validation fallback answers", async () => {
+  const finding = reportReviewSample.findings[0];
+  const answer = await explainReportReviewFinding(
+    {
+      questionType: "explain_finding",
+      surface: "report_review",
+      targetId: finding.id,
+      targetType: "finding",
+      userMessage: null,
+    },
+    {
+      provider: {
+        info: {
+          id: "fixture",
+          label: "Invalid fixture provider",
+          mode: "deterministic-fixture",
+        },
+        model: "fixture.invalid-answer.v0",
+        generateAnswer: async ({ contextPack }) => ({
+          answer:
+            "This intentionally invalid provider draft omits evidence for testing.",
+          evidence: [],
+          limitations: ["Invalid provider draft for testing."],
+          sources: [
+            {
+              id: contextPack.id,
+              title: contextPack.target.title,
+              type: "context_pack",
+            },
+          ],
+        }),
+      },
+    },
+  );
+
+  assert.equal(answer.answerKind, "validation_fallback");
+  assert.equal(answer.validation.status, "fallback");
+  assert.equal(answer.validation.fallbackUsed, true);
+  assert.match(answer.validation.reasons.join(" "), /missing evidence/i);
+});
+
+test("report-review AI marks provider error fallback answers", async () => {
+  const finding = reportReviewSample.findings[0];
+  const answer = await explainReportReviewFinding(
+    {
+      questionType: "explain_finding",
+      surface: "report_review",
+      targetId: finding.id,
+      targetType: "finding",
+      userMessage: null,
+    },
+    {
+      provider: {
+        info: {
+          id: "fixture",
+          label: "Throwing fixture provider",
+          mode: "deterministic-fixture",
+        },
+        model: "fixture.provider-error.v0",
+        generateAnswer: async () => {
+          throw new Error("Provider unavailable for test.");
+        },
+      },
+    },
+  );
+
+  assert.equal(answer.answerKind, "provider_error_fallback");
+  assert.equal(answer.validation.status, "fallback");
+  assert.equal(answer.validation.fallbackUsed, true);
+  assert.match(answer.validation.reasons.join(" "), /could not return/i);
 });
 
 test("report-review AI provider draft parser rejects malformed output", () => {

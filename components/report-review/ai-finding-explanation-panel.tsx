@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 
 import type { Finding } from "@/data/report-review-sample";
 import type {
+  ReportReviewAiAnswerKind,
   ReportReviewAiQuestionType,
   ReportReviewAiResponse,
 } from "@/lib/report-review/ai/types";
@@ -14,7 +15,46 @@ import {
   StatusPill,
 } from "./shared";
 
-type AiRequestState = "idle" | "loading" | "ready" | "error";
+type AiRequestState = "idle" | "loading" | "ready" | "request_error";
+
+const answerKindDetails: Record<
+  ReportReviewAiAnswerKind,
+  {
+    description: string;
+    label: string;
+    title: string;
+    tone: "earth" | "seed" | "stone";
+  }
+> = {
+  boundary_refusal: {
+    description:
+      "The selected question is outside the current report-review AI boundary. The unsafe request was replaced with a deterministic fallback.",
+    label: "Boundary refusal",
+    title: "Boundary refusal shown",
+    tone: "stone",
+  },
+  provider_error_fallback: {
+    description:
+      "The provider did not return a usable answer. The panel is showing a deterministic fallback instead.",
+    label: "Provider fallback",
+    title: "Provider fallback shown",
+    tone: "stone",
+  },
+  validated_answer: {
+    description:
+      "The answer passed the source, evidence, limitation, and boundary checks for this selected finding.",
+    label: "Validated answer",
+    title: "Validated explanation",
+    tone: "seed",
+  },
+  validation_fallback: {
+    description:
+      "The provider returned an answer that failed validation. The unsafe draft was not displayed.",
+    label: "Validation fallback",
+    title: "Validation fallback shown",
+    tone: "earth",
+  },
+};
 
 const fixedActions: {
   label: string;
@@ -69,7 +109,7 @@ export function AiFindingExplanationPanel({
       setAnswer(payload as ReportReviewAiResponse);
       setRequestState("ready");
     } catch (error) {
-      setRequestState("error");
+      setRequestState("request_error");
       setErrorMessage(
         error instanceof Error ? error.message : "AI explanation failed.",
       );
@@ -178,10 +218,19 @@ export function AiFindingExplanationPanel({
         </div>
       </form>
 
-      {requestState === "error" ? (
-        <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm leading-6 text-amber-900">
-          {errorMessage}
-        </p>
+      {requestState === "request_error" ? (
+        <div
+          className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3"
+          data-testid={`ai-request-error-${finding.id}`}
+        >
+          <StatusPill label="Request error" tone="stone" />
+          <h5 className="mt-2 text-sm font-semibold text-amber-950">
+            AI request was rejected
+          </h5>
+          <p className="mt-1 text-sm leading-6 text-amber-900">
+            {errorMessage}
+          </p>
+        </div>
       ) : null}
 
       {answer ? <AiAnswerResult answer={answer} /> : null}
@@ -190,18 +239,27 @@ export function AiFindingExplanationPanel({
 }
 
 function AiAnswerResult({ answer }: { answer: ReportReviewAiResponse }) {
+  const details =
+    answerKindDetails[answer.answerKind] ??
+    answerKindDetails.provider_error_fallback;
+
   return (
-    <div className="mt-4 space-y-3 rounded-md border border-stone-200 bg-white p-4">
+    <div
+      className="mt-4 space-y-3 rounded-md border border-stone-200 bg-white p-4"
+      data-testid={`ai-answer-${answer.answerKind}`}
+    >
       <div className="flex flex-wrap gap-2">
-        <StatusPill
-          label={
-            answer.validation.status === "passed"
-              ? "Validated answer"
-              : "Fallback answer"
-          }
-          tone={answer.validation.status === "passed" ? "seed" : "stone"}
-        />
+        <StatusPill label={details.label} tone={details.tone} />
         <StatusPill label={answer.provider.label} tone="stone" />
+      </div>
+
+      <div>
+        <h5 className="text-sm font-semibold text-seed-950">
+          {details.title}
+        </h5>
+        <p className="mt-1 text-sm leading-6 text-earth-700">
+          {details.description}
+        </p>
       </div>
 
       <p className="text-sm leading-6 text-earth-800">{answer.answer}</p>
