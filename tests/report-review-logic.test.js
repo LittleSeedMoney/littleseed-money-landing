@@ -321,6 +321,25 @@ test("report-review AI explains monthly spending aggregate without raw rows", as
   assert.doesNotMatch(answer.answer, /you should/i);
 });
 
+test("report-review AI monthly spending copy avoids finding-only wording", async () => {
+  for (const questionType of ["missing_context", "next_questions"]) {
+    const answer = await explainReportReviewFinding({
+      questionType,
+      surface: "report_review",
+      targetId: "charge_inspector_monthly_spending_summary",
+      targetType: "monthly_spending_summary",
+      userMessage: null,
+    });
+
+    assert.equal(answer.answerKind, "validated_answer", questionType);
+    assert.equal(answer.validation.status, "passed", questionType);
+    assert.match(answer.answer, /monthly spending summary|month/i);
+    assert.doesNotMatch(answer.answer, /This finding/i);
+    assert.doesNotMatch(answer.answer, /obligations temporary or recurring/i);
+    assert.doesNotMatch(answer.answer, /you should/i);
+  }
+});
+
 test("report-review AI explanation returns validated fixture answer", async () => {
   const finding = reportReviewSample.findings[0];
   const answer = await explainReportReviewFinding({
@@ -501,6 +520,8 @@ test("report-review AI eval cases cover required boundary categories", () => {
   assert.ok(caseIds.has("refuses_tax_legal_product_follow_up"));
   assert.ok(caseIds.has("rejects_raw_transaction_context"));
   assert.ok(caseIds.has("allowed_monthly_spending_summary_explain"));
+  assert.ok(caseIds.has("allowed_monthly_spending_summary_missing_context"));
+  assert.ok(caseIds.has("allowed_monthly_spending_summary_next_questions"));
   assert.ok(caseIds.has("rejects_client_supplied_monthly_spending_context"));
   assert.ok(caseIds.has("validator_rejects_missing_evidence"));
 });
