@@ -369,6 +369,50 @@ test.describe("private report review smoke", () => {
     await expect(metricValue(page, "hidden")).toHaveText("0");
   });
 
+  test("charge inspector reviews a user CSV in the current browser session", async ({
+    page,
+  }) => {
+    let submittedCsv = "";
+    await page.route(
+      "**/private/report-review/charge-inspector-review",
+      async (route) => {
+        const body = route.request().postDataJSON() as { csvText: string };
+        submittedCsv = body.csvText;
+
+        await route.fulfill({
+          contentType: "application/json",
+          json: { review: uploadedChargeInspectorReview() },
+          status: 200,
+        });
+      },
+    );
+
+    await page.goto(`${reportReviewPath}#charge-inspector`);
+
+    await page.getByTestId("charge-inspector-csv-file").setInputFiles({
+      buffer: Buffer.from(
+        [
+          "Details,Posting Date,Description,Amount,Type,Balance,Check or Slip #",
+          "DEBIT,06/01/2026,Uploaded Coffee,-12.50,DEBIT_CARD,100.00,",
+          "DEBIT,06/02/2026,Uploaded Grocer,-30.00,DEBIT_CARD,70.00,",
+        ].join("\n"),
+      ),
+      mimeType: "text/csv",
+      name: "checking.csv",
+    });
+
+    await page.getByRole("button", { name: "Review CSV" }).click();
+
+    await expect(page.getByTestId("charge-inspector-csv-success"))
+      .toBeVisible();
+    await expect(page.getByText("Platform CSV review")).toBeVisible();
+    await expect(metricValue(page, "rows")).toHaveText("2");
+    await expect(page.getByTestId("charge-inspector-monthly-row"))
+      .toHaveCount(1);
+    await expect(page.getByText("$42.50 outflow")).toBeVisible();
+    expect(submittedCsv).toContain("Uploaded Coffee");
+  });
+
   test("charge inspector restores after all visible findings are hidden", async ({
     page,
   }) => {
@@ -408,10 +452,44 @@ function chargeInspectorFindings(page: Page) {
   return page.getByTestId("charge-inspector-finding");
 }
 
-function metricValue(page: Page, metric: "hidden" | "visible") {
+function metricValue(page: Page, metric: "hidden" | "rows" | "visible") {
   return page
     .getByTestId(`charge-inspector-metric-${metric}`)
     .locator("dd");
+}
+
+function uploadedChargeInspectorReview() {
+  return {
+    dataMode: "user-csv",
+    emptyState: {
+      body:
+        "The uploaded CSV review has no findings to display. The browser session remains temporary.",
+      checks: [
+        "A no-finding state does not prove every transaction is correct.",
+        "The view only shows the current in-session review state.",
+      ],
+      title: "No visible Charge Inspector findings",
+    },
+    findings: [],
+    limitations: [
+      "This review uses only the uploaded CSV rows for the current request.",
+      "No account connection, continuous monitoring, or stored transaction history is introduced.",
+    ],
+    monthlySpendingSummary: [
+      {
+        creditTotalLabel: "$0.00",
+        creditTransactionCount: 0,
+        debitTotalLabel: "$42.50",
+        debitTransactionCount: 2,
+        month: "2026-06",
+        netCashFlowLabel: "$42.50 outflow",
+        transactionCount: 2,
+      },
+    ],
+    reviewedTransactionCount: 2,
+    sourceLabel: "Platform CSV review",
+    spendingSummaryVersion: "monthly_spending_summary_v0",
+  };
 }
 
 async function expectNoPageHorizontalOverflow(page: Page, screen: string) {
