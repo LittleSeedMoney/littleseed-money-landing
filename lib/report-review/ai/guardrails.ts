@@ -17,6 +17,7 @@ const blockedQuestionPatterns = [
   /\b(refinance|consolidate|balance transfer)\b/i,
   /\b(cancel|dispute|chargeback|call the merchant|contact the merchant)\b/i,
   /\b(rank|priority|prioritize|what should i do first)\b/i,
+  /\b(which|what)\b.*\b(pay|repay).*\bfirst\b/i,
   /\b(calculate|compute|exact amount|how much should i pay)\b/i,
 ];
 

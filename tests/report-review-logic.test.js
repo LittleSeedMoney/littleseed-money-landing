@@ -64,6 +64,10 @@ const {
   parseReportReviewAiDraft,
 } = require("../lib/report-review/ai/provider.ts");
 const {
+  loadReportReviewAiEvalCases,
+  runReportReviewAiEvalSuite,
+} = require("../lib/report-review/ai/eval-harness.ts");
+const {
   explainReportReviewFinding,
   parseReportReviewAiRequest,
   ReportReviewAiRequestError,
@@ -313,6 +317,36 @@ test("report-review AI provider draft parser rejects malformed output", () => {
       }),
     /supported source type/,
   );
+});
+
+test("report-review AI eval harness passes deterministic fixture cases", async () => {
+  const summary = await runReportReviewAiEvalSuite({ providerMode: "fixture" });
+
+  assert.equal(summary.suiteVersion, "report_review_ai_eval.v0");
+  assert.equal(summary.failed, 0);
+  assert.equal(summary.passed, summary.total);
+  assert.ok(summary.total >= 10);
+  assert.ok(
+    summary.results.some(
+      (result) =>
+        result.id === "validator_rejects_action_ranking_answer" &&
+        result.validation.status === "fallback",
+    ),
+  );
+  assert.equal(JSON.stringify(summary).includes("You should pay this debt"), false);
+});
+
+test("report-review AI eval cases cover required boundary categories", () => {
+  const cases = loadReportReviewAiEvalCases();
+  const caseIds = new Set(cases.map((testCase) => testCase.id));
+
+  assert.ok(caseIds.has("allowed_explain_finding"));
+  assert.ok(caseIds.has("allowed_bounded_follow_up"));
+  assert.ok(caseIds.has("refuses_action_ranking_follow_up"));
+  assert.ok(caseIds.has("refuses_llm_calculation_follow_up"));
+  assert.ok(caseIds.has("refuses_tax_legal_product_follow_up"));
+  assert.ok(caseIds.has("rejects_raw_transaction_context"));
+  assert.ok(caseIds.has("validator_rejects_missing_evidence"));
 });
 
 test("saving goal draft calculates the baseline arithmetic", () => {

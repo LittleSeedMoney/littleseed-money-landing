@@ -10,7 +10,10 @@ import {
 import {
   KNOWLEDGE_CORPUS_VERSION,
 } from "./knowledge-artifacts";
-import { selectReportReviewAiProvider } from "./provider";
+import {
+  selectReportReviewAiProvider,
+  type ReportReviewAiProvider,
+} from "./provider";
 import type {
   ReportReviewAiQuestionType,
   ReportReviewAiRequest,
@@ -19,6 +22,10 @@ import type {
 } from "./types";
 
 export class ReportReviewAiRequestError extends Error {}
+
+export type ReportReviewAiExplainOptions = {
+  provider?: ReportReviewAiProvider;
+};
 
 const QUESTION_TYPES: ReportReviewAiQuestionType[] = [
   "explain_finding",
@@ -30,6 +37,7 @@ const QUESTION_TYPES: ReportReviewAiQuestionType[] = [
 
 export async function explainReportReviewFinding(
   request: ReportReviewAiRequest,
+  options: ReportReviewAiExplainOptions = {},
 ): Promise<ReportReviewAiResponse> {
   let contextPack;
 
@@ -43,13 +51,14 @@ export async function explainReportReviewFinding(
     throw error;
   }
 
-  const provider = selectReportReviewAiProvider();
+  const provider = options.provider ?? selectReportReviewAiProvider();
   const versions: ReportReviewAiVersions = {
     answerValidator: "ai_answer_validator.v0",
     contextPack: "coach_context_pack.v0",
     corpus: KNOWLEDGE_CORPUS_VERSION,
     model: provider.model,
     prompt: "report_review_explain.v0",
+    sourceMap: contextPack.versions.sourceMap,
   };
   const boundary = validateQuestionBoundary({
     questionType: request.questionType,

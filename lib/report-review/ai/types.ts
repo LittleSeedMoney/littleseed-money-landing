@@ -85,6 +85,7 @@ export type ReportReviewAiVersions = {
   corpus: "knowledge_corpus.fixture.v0";
   model: string;
   prompt: "report_review_explain.v0";
+  sourceMap: "report_review_context_source_map.v0";
 };
 
 export type ReportReviewAiProviderInfo = {

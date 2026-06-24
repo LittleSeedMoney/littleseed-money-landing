@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "eval:report-review-ai": "node --require ./tests/register.js scripts/run-report-review-ai-eval.js",
     "start": "next start",
     "lint": "tsc --noEmit",
     "test": "node --require ./tests/register.js --test",
