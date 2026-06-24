@@ -57,6 +57,9 @@ const {
   buildFindingContextPack,
 } = require("../lib/report-review/ai/context-pack.ts");
 const {
+  approvedKnowledgeArtifacts,
+} = require("../lib/report-review/ai/knowledge-artifacts.ts");
+const {
   parseReportReviewAiDraft,
 } = require("../lib/report-review/ai/provider.ts");
 const {
@@ -103,19 +106,40 @@ test("report review class names resolve Tailwind utility conflicts", () => {
 test("report-review AI context pack stays bounded to the selected finding", () => {
   const finding = reportReviewSample.findings[0];
   const contextPack = buildFindingContextPack({
-    evidenceSources: reportReviewSample.evidenceSources,
-    finding,
+    targetId: finding.id,
   });
 
   assert.equal(contextPack.version, "coach_context_pack.v0");
+  assert.equal(contextPack.authority, "server");
   assert.equal(contextPack.target.id, finding.id);
   assert.deepEqual(contextPack.finding.evidenceSourceIds, finding.evidenceSourceIds);
-  assert.ok(contextPack.knowledgeArtifacts.length > 0);
+  assert.ok(contextPack.allowedQuestionTypes.includes("follow_up"));
+  assert.deepEqual(
+    contextPack.knowledgeArtifacts.map((artifact) => artifact.id),
+    ["knowledge.debt_cost_context.v0"],
+  );
   assert.ok(contextPack.excludedData.includes("raw transaction rows"));
   assert.ok(contextPack.excludedData.includes("saved AI conversation history"));
+  assert.equal(contextPack.versions.corpus, "knowledge_corpus.fixture.v0");
+  assert.equal(
+    contextPack.versions.sourceMap,
+    "report_review_context_source_map.v0",
+  );
 });
 
-test("report-review AI request parser rejects target drift", () => {
+test("report-review AI approved corpus loader reads collector-shaped JSONL", () => {
+  const artifacts = approvedKnowledgeArtifacts({
+    artifactIds: ["knowledge.debt_cost_context.v0"],
+  });
+
+  assert.equal(artifacts.length, 1);
+  assert.equal(artifacts[0].id, "knowledge.debt_cost_context.v0");
+  assert.equal(artifacts[0].reviewStatus, "approved");
+  assert.equal(artifacts[0].sourcePath.endsWith(".jsonl"), true);
+  assert.ok(artifacts[0].prohibitedUses.length > 0);
+});
+
+test("report-review AI request parser rejects client-supplied context", () => {
   const finding = reportReviewSample.findings[0];
 
   assert.throws(
@@ -125,19 +149,63 @@ test("report-review AI request parser rejects target drift", () => {
         finding,
         questionType: "explain_finding",
         surface: "report_review",
-        targetId: "different-finding",
+        targetId: finding.id,
         targetType: "finding",
         userMessage: null,
       }),
-    ReportReviewAiRequestError,
+    /evidenceSources must not be supplied/,
+  );
+});
+
+test("report-review AI request parser rejects raw data leakage", () => {
+  const finding = reportReviewSample.findings[0];
+
+  assert.throws(
+    () =>
+      parseReportReviewAiRequest({
+        questionType: "explain_finding",
+        rawTransactions: [{ amount: "12.00", merchant: "Example" }],
+        surface: "report_review",
+        targetId: finding.id,
+        targetType: "finding",
+        userMessage: null,
+      }),
+    /rawTransactions must not be supplied/,
+  );
+});
+
+test("report-review AI request parser accepts target-only payload", () => {
+  const finding = reportReviewSample.findings[0];
+
+  const request = parseReportReviewAiRequest({
+    questionType: "explain_finding",
+    surface: "report_review",
+    targetId: finding.id,
+    targetType: "finding",
+    userMessage: null,
+  });
+
+  assert.equal(request.targetId, finding.id);
+  assert.equal(request.questionType, "explain_finding");
+});
+
+test("report-review AI explanation rejects unsupported targets", async () => {
+  await assert.rejects(
+    () =>
+      explainReportReviewFinding({
+        questionType: "explain_finding",
+        surface: "report_review",
+        targetId: "unsupported-finding",
+        targetType: "finding",
+        userMessage: null,
+      }),
+    /targetId is not supported/,
   );
 });
 
 test("report-review AI explanation returns validated fixture answer", async () => {
   const finding = reportReviewSample.findings[0];
   const answer = await explainReportReviewFinding({
-    evidenceSources: reportReviewSample.evidenceSources,
-    finding,
     questionType: "explain_finding",
     surface: "report_review",
     targetId: finding.id,
@@ -156,8 +224,6 @@ test("report-review AI explanation returns validated fixture answer", async () =
 test("report-review AI missing-context answers validate across findings", async () => {
   for (const finding of reportReviewSample.findings) {
     const answer = await explainReportReviewFinding({
-      evidenceSources: reportReviewSample.evidenceSources,
-      finding,
       questionType: "missing_context",
       surface: "report_review",
       targetId: finding.id,
@@ -174,8 +240,6 @@ test("report-review AI missing-context answers validate across findings", async 
 test("report-review AI follow-up allows non-advisory hold phrasing", async () => {
   const finding = reportReviewSample.findings[0];
   const answer = await explainReportReviewFinding({
-    evidenceSources: reportReviewSample.evidenceSources,
-    finding,
     questionType: "follow_up",
     surface: "report_review",
     targetId: finding.id,
@@ -191,8 +255,6 @@ test("report-review AI follow-up allows non-advisory hold phrasing", async () =>
 test("report-review AI follow-up refuses action ranking requests", async () => {
   const finding = reportReviewSample.findings[0];
   const answer = await explainReportReviewFinding({
-    evidenceSources: reportReviewSample.evidenceSources,
-    finding,
     questionType: "follow_up",
     surface: "report_review",
     targetId: finding.id,
