@@ -54,6 +54,7 @@ const {
   formatSavingGoalDraftMoney,
 } = require("../lib/report-review/saving-goal-draft.ts");
 const {
+  approvedKnowledgeArtifactIdsForFinding,
   buildFindingContextPack,
 } = require("../lib/report-review/ai/context-pack.ts");
 const {
@@ -137,6 +138,39 @@ test("report-review AI approved corpus loader reads collector-shaped JSONL", () 
   assert.equal(artifacts[0].reviewStatus, "approved");
   assert.equal(artifacts[0].sourcePath.endsWith(".jsonl"), true);
   assert.ok(artifacts[0].prohibitedUses.length > 0);
+});
+
+test("report-review AI source map covers every approved corpus artifact", () => {
+  const mappedArtifactIds = new Set();
+
+  for (const finding of reportReviewSample.findings) {
+    const artifactIds = approvedKnowledgeArtifactIdsForFinding(finding.id);
+    assert.ok(artifactIds.length > 0);
+
+    const artifacts = approvedKnowledgeArtifacts({ artifactIds });
+    assert.deepEqual(
+      artifacts.map((artifact) => artifact.id),
+      artifactIds,
+    );
+
+    for (const artifactId of artifactIds) {
+      mappedArtifactIds.add(artifactId);
+    }
+  }
+
+  assert.deepEqual(
+    approvedKnowledgeArtifacts()
+      .map((artifact) => artifact.id)
+      .sort(),
+    [...mappedArtifactIds].sort(),
+  );
+});
+
+test("report-review AI source map fails closed for unmapped targets", () => {
+  assert.throws(
+    () => approvedKnowledgeArtifactIdsForFinding("unmapped-finding"),
+    /No approved knowledge artifacts are mapped/,
+  );
 });
 
 test("report-review AI request parser rejects client-supplied context", () => {

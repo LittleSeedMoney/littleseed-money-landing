@@ -23,6 +23,18 @@ const artifactIdsByFindingId: Record<string, string[]> = {
   high_interest_debt_detected: ["knowledge.debt_cost_context.v0"],
 };
 
+export function approvedKnowledgeArtifactIdsForFinding(findingId: string) {
+  const artifactIds = artifactIdsByFindingId[findingId];
+
+  if (!artifactIds || artifactIds.length === 0) {
+    throw new CoachContextPackError(
+      `No approved knowledge artifacts are mapped for targetId ${findingId}.`,
+    );
+  }
+
+  return artifactIds;
+}
+
 export function buildFindingContextPack({
   targetId,
 }: {
@@ -38,7 +50,7 @@ export function buildFindingContextPack({
     );
   }
 
-  const artifactIds = artifactIdsByFindingId[finding.id] ?? [];
+  const artifactIds = approvedKnowledgeArtifactIdsForFinding(finding.id);
 
   return {
     id: `coach_context_pack.v0.${finding.id}`,

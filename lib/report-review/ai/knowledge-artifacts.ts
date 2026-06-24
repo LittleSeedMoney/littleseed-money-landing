@@ -32,12 +32,15 @@ type CorpusRecord = {
   tags: string[];
 };
 
+let corpusRecordCache: CorpusRecord[] | null = null;
+
 export function approvedKnowledgeArtifacts({
   artifactIds,
 }: {
   artifactIds?: string[];
 } = {}) {
-  const allowedIds = artifactIds ? new Set(artifactIds) : null;
+  const allowedIds =
+    artifactIds === undefined ? null : new Set(artifactIds);
   return readCorpusRecords()
     .filter((record) => record.review.status === "approved")
     .filter((record) => !allowedIds || allowedIds.has(record.artifact_id))
@@ -45,10 +48,16 @@ export function approvedKnowledgeArtifacts({
 }
 
 function readCorpusRecords() {
-  return readFileSync(CORPUS_FIXTURE_PATH, "utf8")
+  if (corpusRecordCache) {
+    return corpusRecordCache;
+  }
+
+  corpusRecordCache = readFileSync(CORPUS_FIXTURE_PATH, "utf8")
     .split("\n")
     .filter((line) => line.trim().length > 0)
     .map((line, index) => parseCorpusRecord(JSON.parse(line), index));
+
+  return corpusRecordCache;
 }
 
 function parseCorpusRecord(value: unknown, index: number): CorpusRecord {
