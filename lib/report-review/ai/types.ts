@@ -2,6 +2,7 @@ import type {
   EvidenceSource,
   Finding,
 } from "@/data/report-review-sample";
+import type { ChargeInspectorMonthlySummary } from "@/lib/report-review/charge-inspector";
 
 export type ReportReviewAiQuestionType =
   | "explain_finding"
@@ -43,17 +44,30 @@ export type KnowledgeArtifact = {
 
 export type CoachContextPackAllowedQuestionType = ReportReviewAiQuestionType;
 
+export type ReportReviewAiTargetType = "finding" | "monthly_spending_summary";
+
+export type MonthlySpendingContext = {
+  id: "charge_inspector_monthly_spending_summary";
+  version: "monthly_spending_ai_context.v0";
+  sourceLabel: string;
+  reviewedTransactionCount: number;
+  spendingSummaryVersion: string;
+  rows: ChargeInspectorMonthlySummary[];
+  limitations: string[];
+  excludedFields: string[];
+};
+
 export type CoachContextPack = {
   id: string;
   version: "coach_context_pack.v0";
   surface: "report_review";
   authority: "server";
   target: {
-    type: "finding";
+    type: ReportReviewAiTargetType;
     id: string;
     title: string;
   };
-  finding: Pick<
+  finding?: Pick<
     Finding,
     | "id"
     | "title"
@@ -64,6 +78,7 @@ export type CoachContextPack = {
     | "educationTopics"
     | "evidenceSourceIds"
   >;
+  monthlySpendingSummary?: MonthlySpendingContext;
   evidenceSources: EvidenceSource[];
   knowledgeArtifacts: KnowledgeArtifact[];
   allowedQuestionTypes: CoachContextPackAllowedQuestionType[];
@@ -89,6 +104,7 @@ export type ReportReviewAiVersions = {
   answerValidator: "ai_answer_validator.v0";
   contextPack: "coach_context_pack.v0";
   corpus: "knowledge_corpus.fixture.v0";
+  monthlySpendingContext?: "monthly_spending_ai_context.v0";
   model: string;
   prompt: "report_review_explain.v0";
   sourceMap: "report_review_context_source_map.v0";
@@ -117,7 +133,7 @@ export type ReportReviewAiAnswer = {
 
 export type ReportReviewAiRequest = {
   surface: "report_review";
-  targetType: "finding";
+  targetType: ReportReviewAiTargetType;
   targetId: string;
   questionType: ReportReviewAiQuestionType;
   userMessage: string | null;

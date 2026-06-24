@@ -1,5 +1,5 @@
 import {
-  buildFindingContextPack,
+  buildReportReviewContextPack,
   CoachContextPackError,
 } from "./context-pack";
 import {
@@ -18,6 +18,7 @@ import type {
   ReportReviewAiQuestionType,
   ReportReviewAiRequest,
   ReportReviewAiResponse,
+  ReportReviewAiTargetType,
   ReportReviewAiVersions,
 } from "./types";
 
@@ -42,7 +43,10 @@ export async function explainReportReviewFinding(
   let contextPack;
 
   try {
-    contextPack = buildFindingContextPack({ targetId: request.targetId });
+    contextPack = buildReportReviewContextPack({
+      targetId: request.targetId,
+      targetType: request.targetType,
+    });
   } catch (error) {
     if (error instanceof CoachContextPackError) {
       throw new ReportReviewAiRequestError(error.message);
@@ -56,6 +60,7 @@ export async function explainReportReviewFinding(
     answerValidator: "ai_answer_validator.v0",
     contextPack: "coach_context_pack.v0",
     corpus: KNOWLEDGE_CORPUS_VERSION,
+    monthlySpendingContext: contextPack.monthlySpendingSummary?.version,
     model: provider.model,
     prompt: "report_review_explain.v0",
     sourceMap: contextPack.versions.sourceMap,
@@ -131,7 +136,7 @@ export function parseReportReviewAiRequest(
 ): ReportReviewAiRequest {
   const record = expectRecord(value, "AI explanation request");
   const surface = readString(record, "surface", "AI explanation request");
-  const targetType = readString(record, "targetType", "AI explanation request");
+  const targetType = readTargetType(record.targetType);
   const targetId = readString(record, "targetId", "AI explanation request");
   const questionType = readQuestionType(record.questionType);
   const userMessage = readNullableString(
@@ -141,10 +146,6 @@ export function parseReportReviewAiRequest(
 
   if (surface !== "report_review") {
     throw new ReportReviewAiRequestError("surface must be report_review.");
-  }
-
-  if (targetType !== "finding") {
-    throw new ReportReviewAiRequestError("targetType must be finding.");
   }
 
   rejectClientSuppliedContext(record);
@@ -168,6 +169,18 @@ function readQuestionType(value: unknown): ReportReviewAiQuestionType {
   }
 
   return value as ReportReviewAiQuestionType;
+}
+
+function readTargetType(value: unknown): ReportReviewAiTargetType {
+  if (typeof value !== "string") {
+    throw new ReportReviewAiRequestError("targetType must be text.");
+  }
+
+  if (value === "finding" || value === "monthly_spending_summary") {
+    return value;
+  }
+
+  throw new ReportReviewAiRequestError("targetType is not supported.");
 }
 
 function readNullableString(value: unknown, label: string) {
@@ -204,7 +217,11 @@ function rejectClientSuppliedContext(record: Record<string, unknown>) {
     "financialProfile",
     "finding",
     "knowledgeArtifacts",
+    "monthly_spending_summary",
+    "monthlySpendingSummary",
     "rawTransactions",
+    "spendingSummary",
+    "transactionSummary",
     "transactionHistory",
   ];
 
