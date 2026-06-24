@@ -224,6 +224,7 @@ function AiAnswerResult({ answer }: { answer: ReportReviewAiResponse }) {
           <VersionItem label="Model" value={answer.versions.model} />
           <VersionItem label="Context" value={answer.versions.contextPack} />
           <VersionItem label="Corpus" value={answer.versions.corpus} />
+          <VersionItem label="Source map" value={answer.versions.sourceMap} />
           <VersionItem
             label="Validator"
             value={answer.versions.answerValidator}

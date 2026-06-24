@@ -8,6 +8,16 @@ import type {
 
 const MAX_FOLLOW_UP_LENGTH = 280;
 
+const payoffPriorityQuestionPattern = new RegExp(
+  [
+    "^(?=.*\\b(which|what|should)\\b)",
+    "(?=.*\\b(debts?|credit cards?|cards?|loans?|balances?|debt accounts?|loan accounts?|credit accounts?)\\b)",
+    "(?=.*\\b(repay|pay(?:\\s+(?:off|down))?)\\b)",
+    "(?=.*\\b(first|priority|prioritize|rank(?:ing)?)\\b).*$",
+  ].join(""),
+  "i",
+);
+
 const blockedQuestionPatterns = [
   /\b(buy|sell|hold)\s+(a\s+|the\s+|this\s+|that\s+)?(stock|security|securities|crypto|bitcoin|etf|option|bond|shares?)\b/i,
   /\b(which|what|best)\b.*\b(stock|security|securities|crypto|bitcoin|etf|option|bond|shares?)\b/i,
@@ -17,6 +27,7 @@ const blockedQuestionPatterns = [
   /\b(refinance|consolidate|balance transfer)\b/i,
   /\b(cancel|dispute|chargeback|call the merchant|contact the merchant)\b/i,
   /\b(rank|priority|prioritize|what should i do first)\b/i,
+  payoffPriorityQuestionPattern,
   /\b(calculate|compute|exact amount|how much should i pay)\b/i,
 ];
 
@@ -95,8 +106,15 @@ export function validateAiDraft({
     reasons.push("Answer is missing source references.");
   }
 
+  const renderedDraftSurface = [
+    draft.answer,
+    ...draft.limitations,
+    ...draft.evidence.map((evidence) => evidence.text),
+    ...draft.sources.map((source) => source.title),
+  ].join("\n");
+
   for (const pattern of blockedAnswerPatterns) {
-    if (pattern.test(draft.answer)) {
+    if (pattern.test(renderedDraftSurface)) {
       reasons.push("Answer appears to include prohibited advice or certainty.");
       break;
     }
