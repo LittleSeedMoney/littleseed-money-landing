@@ -122,7 +122,7 @@ export function validateAiDraft({
   }
 
   const allowedSourceIds = new Set([
-    contextPack.finding.id,
+    contextPack.target.id,
     contextPack.id,
     ...contextPack.knowledgeArtifacts.map((artifact) => artifact.id),
     ...contextPack.evidenceSources.map((source) => source.id),

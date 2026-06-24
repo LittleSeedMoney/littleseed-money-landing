@@ -56,6 +56,7 @@ const {
 const {
   approvedKnowledgeArtifactIdsForFinding,
   buildFindingContextPack,
+  buildMonthlySpendingSummaryContextPack,
 } = require("../lib/report-review/ai/context-pack.ts");
 const {
   approvedKnowledgeArtifacts,
@@ -130,6 +131,29 @@ test("report-review AI context pack stays bounded to the selected finding", () =
     contextPack.versions.sourceMap,
     "report_review_context_source_map.v0",
   );
+});
+
+test("report-review AI monthly spending context pack uses aggregate rows only", () => {
+  const contextPack = buildMonthlySpendingSummaryContextPack({
+    targetId: "charge_inspector_monthly_spending_summary",
+  });
+  const renderedContext = JSON.stringify(contextPack);
+
+  assert.equal(contextPack.version, "coach_context_pack.v0");
+  assert.equal(contextPack.authority, "server");
+  assert.equal(contextPack.target.type, "monthly_spending_summary");
+  assert.equal(
+    contextPack.monthlySpendingSummary.version,
+    "monthly_spending_ai_context.v0",
+  );
+  assert.deepEqual(
+    contextPack.monthlySpendingSummary.rows.map((row) => row.month),
+    ["2026-03", "2026-04", "2026-05"],
+  );
+  assert.ok(contextPack.excludedData.includes("raw transaction rows"));
+  assert.ok(contextPack.excludedData.includes("merchant names"));
+  assert.equal(renderedContext.includes("evidenceRows"), false);
+  assert.equal(renderedContext.includes("Streamly Premium"), false);
 });
 
 test("report-review AI approved corpus loader reads collector-shaped JSONL", () => {
@@ -212,6 +236,23 @@ test("report-review AI request parser rejects raw data leakage", () => {
   );
 });
 
+test("report-review AI request parser rejects client-supplied spending context", () => {
+  assert.throws(
+    () =>
+      parseReportReviewAiRequest({
+        monthlySpendingSummary: [
+          { month: "2026-05", debitTotalLabel: "$1.00" },
+        ],
+        questionType: "explain_finding",
+        surface: "report_review",
+        targetId: "charge_inspector_monthly_spending_summary",
+        targetType: "monthly_spending_summary",
+        userMessage: null,
+      }),
+    /monthlySpendingSummary must not be supplied/,
+  );
+});
+
 test("report-review AI request parser accepts target-only payload", () => {
   const finding = reportReviewSample.findings[0];
 
@@ -227,6 +268,19 @@ test("report-review AI request parser accepts target-only payload", () => {
   assert.equal(request.questionType, "explain_finding");
 });
 
+test("report-review AI request parser accepts monthly spending target payload", () => {
+  const request = parseReportReviewAiRequest({
+    questionType: "explain_finding",
+    surface: "report_review",
+    targetId: "charge_inspector_monthly_spending_summary",
+    targetType: "monthly_spending_summary",
+    userMessage: null,
+  });
+
+  assert.equal(request.targetId, "charge_inspector_monthly_spending_summary");
+  assert.equal(request.targetType, "monthly_spending_summary");
+});
+
 test("report-review AI explanation rejects unsupported targets", async () => {
   await assert.rejects(
     () =>
@@ -239,6 +293,32 @@ test("report-review AI explanation rejects unsupported targets", async () => {
       }),
     /targetId is not supported/,
   );
+});
+
+test("report-review AI explains monthly spending aggregate without raw rows", async () => {
+  const answer = await explainReportReviewFinding({
+    questionType: "explain_finding",
+    surface: "report_review",
+    targetId: "charge_inspector_monthly_spending_summary",
+    targetType: "monthly_spending_summary",
+    userMessage: null,
+  });
+
+  assert.equal(answer.answerKind, "validated_answer");
+  assert.equal(answer.validation.status, "passed");
+  assert.equal(answer.target.type, "monthly_spending_summary");
+  assert.equal(
+    answer.versions.monthlySpendingContext,
+    "monthly_spending_ai_context.v0",
+  );
+  assert.equal(
+    answer.evidence.some((item) =>
+      item.text.includes("2026-05: spending $1,889.90"),
+    ),
+    true,
+  );
+  assert.doesNotMatch(JSON.stringify(answer), /Streamly Premium/);
+  assert.doesNotMatch(answer.answer, /you should/i);
 });
 
 test("report-review AI explanation returns validated fixture answer", async () => {
@@ -420,6 +500,8 @@ test("report-review AI eval cases cover required boundary categories", () => {
   assert.ok(caseIds.has("refuses_llm_calculation_follow_up"));
   assert.ok(caseIds.has("refuses_tax_legal_product_follow_up"));
   assert.ok(caseIds.has("rejects_raw_transaction_context"));
+  assert.ok(caseIds.has("allowed_monthly_spending_summary_explain"));
+  assert.ok(caseIds.has("rejects_client_supplied_monthly_spending_context"));
   assert.ok(caseIds.has("validator_rejects_missing_evidence"));
 });
 

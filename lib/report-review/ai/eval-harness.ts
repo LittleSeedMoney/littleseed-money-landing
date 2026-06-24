@@ -318,12 +318,7 @@ function providerForScenario(
       generateAnswer: async ({ contextPack }) => ({
         answer:
           "You should pay this debt first before doing anything else.",
-        evidence: [
-          {
-            id: contextPack.finding.id,
-            text: contextPack.finding.summary,
-          },
-        ],
+        evidence: [evalContextEvidence(contextPack)],
         limitations: ["Eval scenario: prohibited advice should fail validation."],
         sources: [contextPackSource(contextPack)],
       }),
@@ -336,12 +331,7 @@ function providerForScenario(
       generateAnswer: async ({ contextPack }) => ({
         answer:
           "This intentionally malformed eval answer keeps prohibited advice out of the main answer.",
-        evidence: [
-          {
-            id: contextPack.finding.id,
-            text: contextPack.finding.summary,
-          },
-        ],
+        evidence: [evalContextEvidence(contextPack)],
         limitations: [
           "You should pay this debt first before doing anything else.",
         ],
@@ -376,6 +366,27 @@ function contextPackSource(contextPack: CoachContextPack) {
     id: contextPack.id,
     title: contextPack.target.title,
     type: "context_pack" as const,
+  };
+}
+
+function evalContextEvidence(contextPack: CoachContextPack) {
+  if (contextPack.finding) {
+    return {
+      id: contextPack.finding.id,
+      text: contextPack.finding.summary,
+    };
+  }
+
+  if (contextPack.monthlySpendingSummary) {
+    return {
+      id: contextPack.monthlySpendingSummary.id,
+      text: "Monthly spending aggregate rows are available in the context pack.",
+    };
+  }
+
+  return {
+    id: contextPack.id,
+    text: "Context pack evidence is available.",
   };
 }
 
@@ -531,6 +542,7 @@ function readVersionExpectations(value: unknown, label: string) {
       key !== "answerValidator" &&
       key !== "contextPack" &&
       key !== "corpus" &&
+      key !== "monthlySpendingContext" &&
       key !== "model" &&
       key !== "prompt" &&
       key !== "sourceMap"
