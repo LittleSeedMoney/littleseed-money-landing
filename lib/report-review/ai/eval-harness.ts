@@ -33,7 +33,8 @@ type ReportReviewAiEvalStatus = "passed" | "failed";
 type ReportReviewAiEvalProviderScenario =
   | "fixture"
   | "missing_evidence"
-  | "prohibited_advice";
+  | "prohibited_advice"
+  | "prohibited_limitation";
 
 export type ReportReviewAiEvalCase = {
   id: string;
@@ -236,9 +237,18 @@ function evaluateAnswer(
     }
   }
 
+  const renderedAnswerSurface = [
+    answer.answer,
+    ...answer.limitations,
+    ...answer.evidence.map((evidence) => evidence.text),
+    ...answer.sources.map((source) => source.title),
+  ].join("\n");
+
   for (const pattern of testCase.expect.forbiddenAnswerPatterns) {
-    if (pattern.test(answer.answer)) {
-      failures.push(`Answer matched forbidden pattern ${pattern.toString()}.`);
+    if (pattern.test(renderedAnswerSurface)) {
+      failures.push(
+        `Answer surface matched forbidden pattern ${pattern.toString()}.`,
+      );
     }
   }
 
@@ -312,6 +322,26 @@ function providerForScenario(
           },
         ],
         limitations: ["Eval scenario: prohibited advice should fail validation."],
+        sources: [contextPackSource(contextPack)],
+      }),
+    });
+  }
+
+  if (scenario === "prohibited_limitation") {
+    return createScenarioProvider({
+      model: "fixture.report-review-ai.prohibited-limitation.v0",
+      generateAnswer: async ({ contextPack }) => ({
+        answer:
+          "This intentionally malformed eval answer keeps prohibited advice out of the main answer.",
+        evidence: [
+          {
+            id: contextPack.finding.id,
+            text: contextPack.finding.summary,
+          },
+        ],
+        limitations: [
+          "You should pay this debt first before doing anything else.",
+        ],
         sources: [contextPackSource(contextPack)],
       }),
     });
@@ -473,7 +503,11 @@ function readProviderScenario(value: unknown, label: string) {
     return "fixture";
   }
 
-  if (value === "missing_evidence" || value === "prohibited_advice") {
+  if (
+    value === "missing_evidence" ||
+    value === "prohibited_advice" ||
+    value === "prohibited_limitation"
+  ) {
     return value;
   }
 
