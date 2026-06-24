@@ -7,6 +7,7 @@ import type {
   ReportReviewAiAnswerKind,
   ReportReviewAiQuestionType,
   ReportReviewAiResponse,
+  ReportReviewAiTargetType,
 } from "@/lib/report-review/ai/types";
 
 import {
@@ -57,14 +58,46 @@ const answerKindDetails: Record<
 };
 
 const fixedActions: {
-  label: string;
   type: Exclude<ReportReviewAiQuestionType, "follow_up">;
 }[] = [
-  { label: "Explain finding", type: "explain_finding" },
-  { label: "Missing context", type: "missing_context" },
-  { label: "Plain language", type: "plain_language" },
-  { label: "Next questions", type: "next_questions" },
+  { type: "explain_finding" },
+  { type: "missing_context" },
+  { type: "plain_language" },
+  { type: "next_questions" },
 ];
+
+const findingActionLabels: Record<
+  Exclude<ReportReviewAiQuestionType, "follow_up">,
+  string
+> = {
+  explain_finding: "Explain finding",
+  missing_context: "Missing context",
+  next_questions: "Next questions",
+  plain_language: "Plain language",
+};
+
+const monthlySummaryActionLabels: Record<
+  Exclude<ReportReviewAiQuestionType, "follow_up">,
+  string
+> = {
+  explain_finding: "Explain summary",
+  missing_context: "Missing context",
+  next_questions: "Next questions",
+  plain_language: "Plain language",
+};
+
+type AiExplanationTarget = {
+  id: string;
+  type: ReportReviewAiTargetType;
+};
+
+type AiExplanationPanelCopy = {
+  actionLabels: Record<Exclude<ReportReviewAiQuestionType, "follow_up">, string>;
+  disabledDescription: string;
+  enabledDescription: string;
+  followUpPlaceholder?: string;
+  title: string;
+};
 
 export function AiFindingExplanationPanel({
   enabled,
@@ -72,6 +105,63 @@ export function AiFindingExplanationPanel({
 }: {
   enabled: boolean;
   finding: Finding;
+}) {
+  return (
+    <AiReportReviewExplanationPanel
+      allowFollowUp={true}
+      copy={{
+        actionLabels: findingActionLabels,
+        disabledDescription:
+          "This private report-review panel is wired for bounded AI explanations but does not call the AI route until the dev flag is enabled.",
+        enabledDescription:
+          "Answers are limited to this selected finding, approved knowledge corpus, evidence, limitations, and version metadata.",
+        followUpPlaceholder: "Ask about this finding only",
+        title: "AI explanation",
+      }}
+      enabled={enabled}
+      target={{
+        id: finding.id,
+        type: "finding",
+      }}
+    />
+  );
+}
+
+export function AiMonthlySpendingExplanationPanel({
+  enabled,
+}: {
+  enabled: boolean;
+}) {
+  return (
+    <AiReportReviewExplanationPanel
+      allowFollowUp={false}
+      copy={{
+        actionLabels: monthlySummaryActionLabels,
+        disabledDescription:
+          "This monthly summary can be explained only when the private/dev AI flag is enabled. The request still uses server-owned aggregate context, not raw transactions.",
+        enabledDescription:
+          "Answers are limited to server-owned monthly aggregate rows, source labels, limitations, and version metadata. Raw transactions, merchant names, categories, budgets, and action priorities are excluded.",
+        title: "AI monthly summary",
+      }}
+      enabled={enabled}
+      target={{
+        id: "charge_inspector_monthly_spending_summary",
+        type: "monthly_spending_summary",
+      }}
+    />
+  );
+}
+
+function AiReportReviewExplanationPanel({
+  allowFollowUp,
+  copy,
+  enabled,
+  target,
+}: {
+  allowFollowUp: boolean;
+  copy: AiExplanationPanelCopy;
+  enabled: boolean;
+  target: AiExplanationTarget;
 }) {
   const [answer, setAnswer] = useState<ReportReviewAiResponse | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
@@ -95,8 +185,8 @@ export function AiFindingExplanationPanel({
         body: JSON.stringify({
           questionType,
           surface: "report_review",
-          targetId: finding.id,
-          targetType: "finding",
+          targetId: target.id,
+          targetType: target.type,
           userMessage,
         }),
       });
@@ -125,7 +215,7 @@ export function AiFindingExplanationPanel({
     return (
       <aside
         className={reviewSubtlePanelClass("p-4")}
-        data-testid={`ai-explanation-disabled-${finding.id}`}
+        data-testid={`ai-explanation-disabled-${target.id}`}
       >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
@@ -134,8 +224,7 @@ export function AiFindingExplanationPanel({
               AI explanation unavailable
             </h4>
             <p className="mt-1 text-sm leading-6 text-earth-700">
-              This private report-review panel is wired for Phase 4.0 but does
-              not call the AI route until the dev flag is enabled.
+              {copy.disabledDescription}
             </p>
           </div>
           <button
@@ -155,7 +244,7 @@ export function AiFindingExplanationPanel({
   return (
     <aside
       className={reviewSubtlePanelClass("p-4")}
-      data-testid={`ai-explanation-panel-${finding.id}`}
+      data-testid={`ai-explanation-panel-${target.id}`}
     >
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
@@ -164,11 +253,10 @@ export function AiFindingExplanationPanel({
             <StatusPill label="No saved history" tone="stone" />
           </div>
           <h4 className="mt-3 text-sm font-semibold text-seed-950">
-            AI explanation
+            {copy.title}
           </h4>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-earth-700">
-            Answers are limited to this selected finding, approved knowledge
-            corpus, evidence, limitations, and version metadata.
+            {copy.enabledDescription}
           </p>
         </div>
       </div>
@@ -186,42 +274,44 @@ export function AiFindingExplanationPanel({
           >
             {selectedQuestion === action.type && isLoading
               ? "Loading"
-              : action.label}
+              : copy.actionLabels[action.type]}
           </button>
         ))}
       </div>
 
-      <form className="mt-4 space-y-2" onSubmit={submitFollowUp}>
-        <label
-          className="block text-sm font-semibold text-seed-950"
-          htmlFor={`ai-follow-up-${finding.id}`}
-        >
-          Scoped follow-up
-        </label>
-        <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
-          <textarea
-            className="min-h-20 rounded-md border border-stone-300 bg-white px-3 py-2 text-sm leading-6 text-earth-900 outline-none focus:border-seed-500 focus:ring-2 focus:ring-seed-500"
-            disabled={isLoading}
-            id={`ai-follow-up-${finding.id}`}
-            maxLength={280}
-            onChange={(event) => setFollowUp(event.target.value)}
-            placeholder="Ask about this finding only"
-            value={followUp}
-          />
-          <button
-            className={actionButtonClass(false)}
-            disabled={isLoading || followUp.trim().length === 0}
-            type="submit"
+      {allowFollowUp ? (
+        <form className="mt-4 space-y-2" onSubmit={submitFollowUp}>
+          <label
+            className="block text-sm font-semibold text-seed-950"
+            htmlFor={`ai-follow-up-${target.id}`}
           >
-            Ask
-          </button>
-        </div>
-      </form>
+            Scoped follow-up
+          </label>
+          <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+            <textarea
+              className="min-h-20 rounded-md border border-stone-300 bg-white px-3 py-2 text-sm leading-6 text-earth-900 outline-none focus:border-seed-500 focus:ring-2 focus:ring-seed-500"
+              disabled={isLoading}
+              id={`ai-follow-up-${target.id}`}
+              maxLength={280}
+              onChange={(event) => setFollowUp(event.target.value)}
+              placeholder={copy.followUpPlaceholder}
+              value={followUp}
+            />
+            <button
+              className={actionButtonClass(false)}
+              disabled={isLoading || followUp.trim().length === 0}
+              type="submit"
+            >
+              Ask
+            </button>
+          </div>
+        </form>
+      ) : null}
 
       {requestState === "request_error" ? (
         <div
           className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3"
-          data-testid={`ai-request-error-${finding.id}`}
+          data-testid={`ai-request-error-${target.id}`}
         >
           <StatusPill label="Request error" tone="stone" />
           <h5 className="mt-2 text-sm font-semibold text-amber-950">

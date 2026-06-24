@@ -10,6 +10,7 @@ import {
   type ChargeInspectorSummary,
 } from "@/lib/report-review/charge-inspector";
 
+import { AiMonthlySpendingExplanationPanel } from "./ai-explanation-panel";
 import { ChargeInspectorFindingList } from "./charge-inspector-finding-list";
 import {
   ReviewEmptyState,
@@ -22,8 +23,10 @@ import {
 } from "./shared";
 
 export function ChargeInspectorSection({
+  aiEnabled,
   review,
 }: {
+  aiEnabled: boolean;
   review: ChargeInspectorReview;
 }) {
   const [dismissedFindingIds, setDismissedFindingIds] = useState<string[]>([]);
@@ -64,6 +67,7 @@ export function ChargeInspectorSection({
       />
 
       <ChargeInspectorDashboard
+        aiEnabled={aiEnabled}
         hiddenCount={hiddenCount}
         review={review}
         summary={summary}
@@ -109,11 +113,13 @@ export function ChargeInspectorSection({
 }
 
 function ChargeInspectorDashboard({
+  aiEnabled,
   hiddenCount,
   review,
   summary,
   visibleCount,
 }: {
+  aiEnabled: boolean;
   hiddenCount: number;
   review: ChargeInspectorReview;
   summary: ChargeInspectorSummary;
@@ -184,7 +190,7 @@ function ChargeInspectorDashboard({
           </p>
 
           {review.monthlySpendingSummary.length > 0 ? (
-            <MonthlySpendingSummary review={review} />
+            <MonthlySpendingSummary aiEnabled={aiEnabled} review={review} />
           ) : null}
         </>
       ) : null}
@@ -200,8 +206,10 @@ function ChargeInspectorDashboard({
 }
 
 function MonthlySpendingSummary({
+  aiEnabled,
   review,
 }: {
+  aiEnabled: boolean;
   review: ChargeInspectorReview;
 }) {
   return (
@@ -255,6 +263,10 @@ function MonthlySpendingSummary({
         Posted-date monthly totals only. This does not infer budgets,
         categories, or required actions.
       </p>
+
+      <div className="mt-4">
+        <AiMonthlySpendingExplanationPanel enabled={aiEnabled} />
+      </div>
     </div>
   );
 }
