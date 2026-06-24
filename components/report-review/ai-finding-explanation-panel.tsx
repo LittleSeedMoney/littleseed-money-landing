@@ -239,7 +239,9 @@ export function AiFindingExplanationPanel({
 }
 
 function AiAnswerResult({ answer }: { answer: ReportReviewAiResponse }) {
-  const details = answerKindDetails[answer.answerKind];
+  const details =
+    answerKindDetails[answer.answerKind] ??
+    answerKindDetails.provider_error_fallback;
 
   return (
     <div
