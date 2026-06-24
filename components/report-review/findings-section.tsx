@@ -1,7 +1,4 @@
-import type {
-  EvidenceSource,
-  Finding,
-} from "@/data/report-review-sample";
+import type { Finding } from "@/data/report-review-sample";
 
 import {
   EducationTopicLink,
@@ -15,11 +12,9 @@ import { AiFindingExplanationPanel } from "./ai-finding-explanation-panel";
 export function FindingsSection({
   aiEnabled,
   findings,
-  sourceById,
 }: {
   aiEnabled: boolean;
   findings: Finding[];
-  sourceById: Map<string, EvidenceSource>;
 }) {
   return (
     <section
@@ -74,9 +69,6 @@ export function FindingsSection({
             <div className="border-t border-stone-200 px-4 py-4 sm:px-5">
               <AiFindingExplanationPanel
                 enabled={aiEnabled}
-                evidenceSources={finding.evidenceSourceIds
-                  .map((id) => sourceById.get(id))
-                  .filter((source): source is EvidenceSource => Boolean(source))}
                 finding={finding}
               />
             </div>

@@ -2,10 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 
-import type {
-  EvidenceSource,
-  Finding,
-} from "@/data/report-review-sample";
+import type { Finding } from "@/data/report-review-sample";
 import type {
   ReportReviewAiQuestionType,
   ReportReviewAiResponse,
@@ -31,11 +28,9 @@ const fixedActions: {
 
 export function AiFindingExplanationPanel({
   enabled,
-  evidenceSources,
   finding,
 }: {
   enabled: boolean;
-  evidenceSources: EvidenceSource[];
   finding: Finding;
 }) {
   const [answer, setAnswer] = useState<ReportReviewAiResponse | null>(null);
@@ -58,8 +53,6 @@ export function AiFindingExplanationPanel({
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          evidenceSources,
-          finding,
           questionType,
           surface: "report_review",
           targetId: finding.id,
@@ -135,7 +128,7 @@ export function AiFindingExplanationPanel({
           </h4>
           <p className="mt-1 max-w-2xl text-sm leading-6 text-earth-700">
             Answers are limited to this selected finding, approved knowledge
-            fixture, evidence, limitations, and version metadata.
+            corpus, evidence, limitations, and version metadata.
           </p>
         </div>
       </div>

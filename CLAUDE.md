@@ -87,6 +87,7 @@ Does this PR stay within the intended phase boundary?
 - **Phase 1**: Public marketing/landing pages only. No private routes, no auth, no data collection.
 - **Phase 2**: Private `/private/report-review` surface. Read-only report display. No persistence, no account linking.
 - **Phase 3**: Manual input form at `/private/report-review`. In-session state only. No persistence, no account linking, no dashboard.
+- **Phase 4**: Private/dev guarded AI explanation prototype inside approved report-review surfaces only. Server-owned context packs, approved knowledge corpus, source/evidence/limitation/version display, no saved AI history, no account linking, no raw transaction prompting, no public chatbot.
 - **Future (not yet scoped)**: Persistence, user accounts, saved reports, notifications, billing.
 
 If the PR adds functionality that belongs to a future phase, that is a **must** block.

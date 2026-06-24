@@ -123,7 +123,6 @@ export function ReportReviewScreenPanel({
       <FindingsSection
         aiEnabled={aiEnabled}
         findings={report.findings}
-        sourceById={sourceById}
       />
     </>
   );

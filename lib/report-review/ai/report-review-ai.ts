@@ -1,4 +1,7 @@
-import { buildFindingContextPack } from "./context-pack";
+import {
+  buildFindingContextPack,
+  CoachContextPackError,
+} from "./context-pack";
 import {
   fallbackAnswer,
   validateAiDraft,
@@ -28,10 +31,18 @@ const QUESTION_TYPES: ReportReviewAiQuestionType[] = [
 export async function explainReportReviewFinding(
   request: ReportReviewAiRequest,
 ): Promise<ReportReviewAiResponse> {
-  const contextPack = buildFindingContextPack({
-    evidenceSources: request.evidenceSources,
-    finding: request.finding,
-  });
+  let contextPack;
+
+  try {
+    contextPack = buildFindingContextPack({ targetId: request.targetId });
+  } catch (error) {
+    if (error instanceof CoachContextPackError) {
+      throw new ReportReviewAiRequestError(error.message);
+    }
+
+    throw error;
+  }
+
   const provider = selectReportReviewAiProvider();
   const versions: ReportReviewAiVersions = {
     answerValidator: "ai_answer_validator.v0",
@@ -114,7 +125,6 @@ export function parseReportReviewAiRequest(
     record.userMessage,
     "AI explanation request.userMessage",
   );
-  const finding = expectRecord(record.finding, "AI explanation request.finding");
 
   if (surface !== "report_review") {
     throw new ReportReviewAiRequestError("surface must be report_review.");
@@ -124,60 +134,15 @@ export function parseReportReviewAiRequest(
     throw new ReportReviewAiRequestError("targetType must be finding.");
   }
 
-  const parsedFinding = {
-    id: readString(finding, "id", "finding"),
-    title: readString(finding, "title", "finding"),
-    summary: readString(finding, "summary", "finding"),
-    whyItMatters: readString(finding, "whyItMatters", "finding"),
-    options: readStringArray(finding.options, "finding.options"),
-    limitations: readStringArray(finding.limitations, "finding.limitations"),
-    educationTopics: readStringArray(
-      finding.educationTopics,
-      "finding.educationTopics",
-    ),
-    evidenceSourceIds: readStringArray(
-      finding.evidenceSourceIds,
-      "finding.evidenceSourceIds",
-    ),
-  };
-
-  if (targetId !== parsedFinding.id) {
-    throw new ReportReviewAiRequestError(
-      "targetId must match the selected finding id.",
-    );
-  }
+  rejectClientSuppliedContext(record);
 
   return {
-    evidenceSources: parseEvidenceSources(record.evidenceSources),
-    finding: parsedFinding,
     questionType,
     surface,
     targetId,
     targetType,
     userMessage,
   };
-}
-
-function parseEvidenceSources(value: unknown) {
-  if (!Array.isArray(value)) {
-    throw new ReportReviewAiRequestError("evidenceSources must be an array.");
-  }
-
-  return value.map((source, index) => {
-    const record = expectRecord(source, `evidenceSources[${index}]`);
-    return {
-      id: readString(record, "id", `evidenceSources[${index}]`),
-      publisher: readString(record, "publisher", `evidenceSources[${index}]`),
-      title: readString(record, "title", `evidenceSources[${index}]`),
-      url: readString(record, "url", `evidenceSources[${index}]`),
-      reviewedOn: readString(record, "reviewedOn", `evidenceSources[${index}]`),
-      supports: readString(record, "supports", `evidenceSources[${index}]`),
-      limitations: readStringArray(
-        record.limitations,
-        `evidenceSources[${index}].limitations`,
-      ),
-    };
-  });
 }
 
 function readQuestionType(value: unknown): ReportReviewAiQuestionType {
@@ -218,12 +183,25 @@ function readString(
   return value;
 }
 
-function readStringArray(value: unknown, label: string) {
-  if (!Array.isArray(value) || value.some((item) => typeof item !== "string")) {
-    throw new ReportReviewAiRequestError(`${label} must be an array of text.`);
-  }
+function rejectClientSuppliedContext(record: Record<string, unknown>) {
+  const blockedFields = [
+    "accountHistory",
+    "contextPack",
+    "evidenceSources",
+    "financialProfile",
+    "finding",
+    "knowledgeArtifacts",
+    "rawTransactions",
+    "transactionHistory",
+  ];
 
-  return value as string[];
+  for (const field of blockedFields) {
+    if (field in record) {
+      throw new ReportReviewAiRequestError(
+        `${field} must not be supplied by the client.`,
+      );
+    }
+  }
 }
 
 function expectRecord(value: unknown, label: string): Record<string, unknown> {

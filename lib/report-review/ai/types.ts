@@ -20,21 +20,28 @@ export type KnowledgeArtifactReviewStatus =
 
 export type KnowledgeArtifact = {
   id: string;
+  contentHash: string;
   title: string;
-  sourceType: "littleseed-authored";
+  sourceType: "littleseed-authored" | "third-party-approved-summary";
   reviewStatus: KnowledgeArtifactReviewStatus;
   version: string;
   reviewedOn: string;
   summary: string;
   body: string;
   allowedUses: string[];
+  prohibitedUses: string[];
   limitations: string[];
+  sourcePath: string;
+  tags: string[];
 };
+
+export type CoachContextPackAllowedQuestionType = ReportReviewAiQuestionType;
 
 export type CoachContextPack = {
   id: string;
   version: "coach_context_pack.v0";
   surface: "report_review";
+  authority: "server";
   target: {
     type: "finding";
     id: string;
@@ -53,7 +60,12 @@ export type CoachContextPack = {
   >;
   evidenceSources: EvidenceSource[];
   knowledgeArtifacts: KnowledgeArtifact[];
+  allowedQuestionTypes: CoachContextPackAllowedQuestionType[];
   excludedData: string[];
+  versions: {
+    corpus: "knowledge_corpus.fixture.v0";
+    sourceMap: "report_review_context_source_map.v0";
+  };
 };
 
 export type ReportReviewAiEvidence = {
@@ -101,8 +113,6 @@ export type ReportReviewAiRequest = {
   targetId: string;
   questionType: ReportReviewAiQuestionType;
   userMessage: string | null;
-  finding: Finding;
-  evidenceSources: EvidenceSource[];
 };
 
 export type ReportReviewAiResponse = ReportReviewAiAnswer & {

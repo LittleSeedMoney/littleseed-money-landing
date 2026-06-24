@@ -100,7 +100,7 @@ export function createFixtureReportReviewAiProvider(): ReportReviewAiProvider {
       if (questionType === "follow_up") {
         return {
           answer:
-            "For this selected finding, the follow-up can only use the finding summary, why-it-matters text, limitations, and approved knowledge fixture. It cannot choose an action, calculate a new amount, or use account history.",
+            "For this selected finding, the follow-up can only use the finding summary, why-it-matters text, limitations, and approved knowledge corpus. It cannot choose an action, calculate a new amount, or use account history.",
           evidence: baseEvidence,
           limitations: defaultLimitations(contextPack),
           sources: baseSources,
@@ -108,7 +108,7 @@ export function createFixtureReportReviewAiProvider(): ReportReviewAiProvider {
       }
 
       return {
-        answer: `This finding means the report observed: ${contextPack.finding.summary} It may matter because ${contextPack.finding.whyItMatters} The interpretation should stay inside the selected report context and the approved knowledge fixture.`,
+        answer: `This finding means the report observed: ${contextPack.finding.summary} It may matter because ${contextPack.finding.whyItMatters} The interpretation should stay inside the selected report context and the approved knowledge corpus.`,
         evidence: baseEvidence,
         limitations: defaultLimitations(contextPack),
         sources: baseSources,
@@ -223,7 +223,7 @@ export function parseReportReviewAiDraft(value: unknown): ReportReviewAiDraft {
 
 function defaultLimitations(contextPack: CoachContextPack) {
   return [
-    "Uses only the selected report-review finding and approved knowledge fixture.",
+    "Uses only the selected report-review finding and approved knowledge corpus.",
     "Does not use raw transaction rows, account history, account credentials, saved chat history, or long-term memory.",
     ...contextPack.finding.limitations.slice(0, 2),
   ];
