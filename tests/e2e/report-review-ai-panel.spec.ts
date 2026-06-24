@@ -124,6 +124,39 @@ test.describe("private report review AI panel", () => {
     await expect(page.getByText("AI request was rejected")).toBeVisible();
     await expect(page.getByText("targetId is not supported")).toBeVisible();
   });
+
+  test("shows monthly spending AI explanation with monthly context version", async ({
+    page,
+  }) => {
+    await page.goto(`${reportReviewPath}#charge-inspector`);
+
+    const monthlyPanel = page.getByTestId(
+      "ai-explanation-panel-charge_inspector_monthly_spending_summary",
+    );
+    await expect(monthlyPanel).toBeVisible();
+    await expect(monthlyPanel.getByText("AI monthly summary")).toBeVisible();
+    await expect(
+      monthlyPanel.getByText("Raw transactions, merchant names"),
+    ).toBeVisible();
+
+    await monthlyPanel.getByRole("button", { name: "Explain summary" }).click();
+
+    const validatedAnswer = monthlyPanel.getByTestId(
+      "ai-answer-validated_answer",
+    );
+    await expect(validatedAnswer).toBeVisible();
+    await expect(
+      validatedAnswer.getByText("Validated explanation"),
+    ).toBeVisible();
+    await validatedAnswer.getByText("Version details").click();
+    await expect(
+      validatedAnswer.getByText("Monthly spend", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      validatedAnswer.getByText("monthly_spending_ai_context.v0"),
+    ).toBeVisible();
+    await expect(validatedAnswer.getByText("Streamly Premium")).toHaveCount(0);
+  });
 });
 
 async function openFirstAiPanel(page: Page) {
