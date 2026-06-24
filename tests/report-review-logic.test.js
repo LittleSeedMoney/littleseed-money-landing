@@ -569,6 +569,20 @@ test("charge inspector platform parser accepts the review contract", () => {
   assert.equal(parsed.evidence_transactions.length, 8);
 });
 
+test("charge inspector platform parser falls back without monthly summary fields", () => {
+  const payload = chargeInspectorPlatformPayload();
+  delete payload.spending_summary_version;
+  delete payload.monthly_spending_summary;
+
+  const parsed = parseChargeInspectorReviewResponse(payload);
+  const review = mapPlatformChargeInspectorReview(parsed);
+
+  assert.equal(parsed.spending_summary_version, "not_returned");
+  assert.deepEqual(parsed.monthly_spending_summary, []);
+  assert.equal(review.spendingSummaryVersion, "not_returned");
+  assert.deepEqual(review.monthlySpendingSummary, []);
+});
+
 test("charge inspector platform mapper builds UI findings from contract evidence", () => {
   const review = mapPlatformChargeInspectorReview(
     parseChargeInspectorReviewResponse(chargeInspectorPlatformPayload()),
@@ -601,6 +615,19 @@ test("charge inspector platform mapper builds UI findings from contract evidence
     "$4,510.10 net inflow",
   );
   assert.match(review.limitations.join(" "), /charge_inspector_review_v0/);
+});
+
+test("charge inspector monthly cash flow label keeps zero neutral", () => {
+  const payload = chargeInspectorPlatformPayload();
+  payload.monthly_spending_summary = [
+    monthlySummaryPayload("2026-06", "100.00", "100.00", "0", 2, 1, 1),
+  ];
+
+  const review = mapPlatformChargeInspectorReview(
+    parseChargeInspectorReviewResponse(payload),
+  );
+
+  assert.equal(review.monthlySpendingSummary[0].netCashFlowLabel, "$0.00 net");
 });
 
 test("charge inspector maps linked-account and mixed platform sources", () => {

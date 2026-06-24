@@ -590,6 +590,9 @@ function cashFlowLabel(value: DecimalValue): string {
   if (amount < 0) {
     return `${money(Math.abs(amount))} outflow`;
   }
+  if (amount === 0) {
+    return `${money(amount)} net`;
+  }
   return `${money(amount)} net inflow`;
 }
 
