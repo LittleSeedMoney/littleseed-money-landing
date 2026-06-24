@@ -12,6 +12,7 @@ export type PlatformChargeInspectorReviewResponse = {
     bank_fee: string;
     price_increase: string;
   };
+  spending_summary_version: string;
   reviewed_transaction_count: number;
   parse_error_count: number;
   findings: {
@@ -20,9 +21,22 @@ export type PlatformChargeInspectorReviewResponse = {
     bank_fees: PlatformBankFeeCandidate[];
     price_increases: PlatformPriceIncreaseCandidate[];
   };
+  monthly_spending_summary: PlatformMonthlySpendingSummary[];
   evidence_transactions: PlatformNormalizedTransaction[];
   parse_errors: PlatformCsvTransactionValidationError[];
   limitations: string[];
+};
+
+export type PlatformMonthlySpendingSummary = {
+  schema_version: string;
+  month: string;
+  currency: string;
+  debit_total: DecimalValue;
+  credit_total: DecimalValue;
+  net_cash_flow: DecimalValue;
+  transaction_count: number;
+  debit_transaction_count: number;
+  credit_transaction_count: number;
 };
 
 export type PlatformNormalizedTransaction = {
@@ -156,6 +170,13 @@ export function parseChargeInspectorReviewResponse(
         "charge-inspector response.detector_versions.price_increase",
       ),
     },
+    spending_summary_version:
+      response.spending_summary_version == null
+        ? "not_returned"
+        : expectString(
+            response.spending_summary_version,
+            "charge-inspector response.spending_summary_version",
+          ),
     reviewed_transaction_count: expectNumber(
       response.reviewed_transaction_count,
       "charge-inspector response.reviewed_transaction_count",
@@ -186,6 +207,14 @@ export function parseChargeInspectorReviewResponse(
         parsePriceIncreaseCandidate,
       ),
     },
+    monthly_spending_summary:
+      response.monthly_spending_summary == null
+        ? []
+        : parseArray(
+            response.monthly_spending_summary,
+            "charge-inspector response.monthly_spending_summary",
+            parseMonthlySpendingSummary,
+          ),
     evidence_transactions: parseArray(
       response.evidence_transactions,
       "charge-inspector response.evidence_transactions",
@@ -199,6 +228,36 @@ export function parseChargeInspectorReviewResponse(
     limitations: parseStringArray(
       response.limitations,
       "charge-inspector response.limitations",
+    ),
+  };
+}
+
+function parseMonthlySpendingSummary(
+  value: unknown,
+  path: string,
+): PlatformMonthlySpendingSummary {
+  const summary = expectRecord(value, path);
+  return {
+    schema_version: expectString(summary.schema_version, `${path}.schema_version`),
+    month: expectString(summary.month, `${path}.month`),
+    currency: expectString(summary.currency, `${path}.currency`),
+    debit_total: expectDecimalValue(summary.debit_total, `${path}.debit_total`),
+    credit_total: expectDecimalValue(summary.credit_total, `${path}.credit_total`),
+    net_cash_flow: expectDecimalValue(
+      summary.net_cash_flow,
+      `${path}.net_cash_flow`,
+    ),
+    transaction_count: expectNumber(
+      summary.transaction_count,
+      `${path}.transaction_count`,
+    ),
+    debit_transaction_count: expectNumber(
+      summary.debit_transaction_count,
+      `${path}.debit_transaction_count`,
+    ),
+    credit_transaction_count: expectNumber(
+      summary.credit_transaction_count,
+      `${path}.credit_transaction_count`,
     ),
   };
 }

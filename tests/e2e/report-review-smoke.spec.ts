@@ -337,6 +337,13 @@ test.describe("private report review smoke", () => {
   }) => {
     await page.goto(`${reportReviewPath}#charge-inspector`);
 
+    await expect(
+      page.getByTestId("charge-inspector-monthly-spending-summary"),
+    ).toBeVisible();
+    await expect(page.getByTestId("charge-inspector-monthly-row"))
+      .toHaveCount(3);
+    await expect(page.getByText("$4,510.10 net inflow")).toBeVisible();
+
     const findings = chargeInspectorFindings(page);
     await expect(findings.first()).toBeVisible();
 

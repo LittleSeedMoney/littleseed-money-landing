@@ -2,6 +2,7 @@ import type { DecimalValue } from "./platform-workspace-response";
 import type {
   PlatformBankFeeCandidate,
   PlatformChargeInspectorReviewResponse,
+  PlatformMonthlySpendingSummary,
   PlatformDuplicateChargeCandidate,
   PlatformNormalizedTransaction,
   PlatformPriceIncreaseCandidate,
@@ -50,10 +51,22 @@ export type ChargeInspectorEmptyState = {
   checks: string[];
 };
 
+export type ChargeInspectorMonthlySummary = {
+  month: string;
+  debitTotalLabel: string;
+  creditTotalLabel: string;
+  netCashFlowLabel: string;
+  transactionCount: number;
+  debitTransactionCount: number;
+  creditTransactionCount: number;
+};
+
 export type ChargeInspectorReview = {
   dataMode: ChargeInspectorDataMode;
   sourceLabel: string;
   reviewedTransactionCount: number;
+  spendingSummaryVersion: string;
+  monthlySpendingSummary: ChargeInspectorMonthlySummary[];
   findings: ChargeInspectorFinding[];
   emptyState: ChargeInspectorEmptyState;
   limitations: string[];
@@ -82,6 +95,36 @@ export const chargeInspectorSampleReview: ChargeInspectorReview = {
   dataMode: "sample",
   sourceLabel: "Sample CSV review fixture",
   reviewedTransactionCount: 18,
+  spendingSummaryVersion: "sample_fixture",
+  monthlySpendingSummary: [
+    {
+      month: "2026-03",
+      debitTotalLabel: money("25.99"),
+      creditTotalLabel: money("0"),
+      netCashFlowLabel: cashFlowLabel("-25.99"),
+      transactionCount: 2,
+      debitTransactionCount: 2,
+      creditTransactionCount: 0,
+    },
+    {
+      month: "2026-04",
+      debitTotalLabel: money("25.99"),
+      creditTotalLabel: money("0"),
+      netCashFlowLabel: cashFlowLabel("-25.99"),
+      transactionCount: 2,
+      debitTransactionCount: 2,
+      creditTransactionCount: 0,
+    },
+    {
+      month: "2026-05",
+      debitTotalLabel: money("1889.90"),
+      creditTotalLabel: money("6400.00"),
+      netCashFlowLabel: cashFlowLabel("4510.10"),
+      transactionCount: 14,
+      debitTransactionCount: 12,
+      creditTransactionCount: 2,
+    },
+  ],
   findings: [
     {
       id: "sample-recurring-streaming",
@@ -249,6 +292,8 @@ export const chargeInspectorEmptyReview: ChargeInspectorReview = {
   dataMode: "empty",
   sourceLabel: "No transaction review source",
   reviewedTransactionCount: 0,
+  spendingSummaryVersion: "not_applicable",
+  monthlySpendingSummary: [],
   findings: [],
   emptyState: chargeInspectorSampleReview.emptyState,
   limitations: chargeInspectorSampleReview.limitations,
@@ -258,6 +303,8 @@ export const chargeInspectorFallbackReview: ChargeInspectorReview = {
   dataMode: "fallback",
   sourceLabel: "Charge Inspector temporarily unavailable",
   reviewedTransactionCount: 0,
+  spendingSummaryVersion: "not_available",
+  monthlySpendingSummary: [],
   findings: [],
   emptyState: {
     title: "Charge Inspector did not load",
@@ -322,6 +369,10 @@ export function mapPlatformChargeInspectorReview(
     dataMode: mapPlatformChargeInspectorDataMode(response.source),
     sourceLabel: platformChargeInspectorSourceLabel(response.source),
     reviewedTransactionCount: response.reviewed_transaction_count,
+    spendingSummaryVersion: response.spending_summary_version,
+    monthlySpendingSummary: response.monthly_spending_summary.map(
+      mapMonthlySpendingSummary,
+    ),
     findings: [
       ...response.findings.recurring_charges.map((candidate) =>
         mapRecurringCharge(candidate, evidenceById),
@@ -342,6 +393,20 @@ export function mapPlatformChargeInspectorReview(
       ...parseLimitations,
       `Platform review schema: ${response.schema_version}.`,
     ],
+  };
+}
+
+function mapMonthlySpendingSummary(
+  summary: PlatformMonthlySpendingSummary,
+): ChargeInspectorMonthlySummary {
+  return {
+    month: summary.month,
+    debitTotalLabel: money(summary.debit_total),
+    creditTotalLabel: money(summary.credit_total),
+    netCashFlowLabel: cashFlowLabel(summary.net_cash_flow),
+    transactionCount: summary.transaction_count,
+    debitTransactionCount: summary.debit_transaction_count,
+    creditTransactionCount: summary.credit_transaction_count,
   };
 }
 
@@ -515,6 +580,20 @@ function money(value: DecimalValue): string {
     minimumFractionDigits: 2,
     style: "currency",
   }).format(amount);
+}
+
+function cashFlowLabel(value: DecimalValue): string {
+  const amount = decimal(value);
+  if (amount === null) {
+    return "Missing";
+  }
+  if (amount < 0) {
+    return `${money(Math.abs(amount))} outflow`;
+  }
+  if (amount === 0) {
+    return `${money(amount)} net`;
+  }
+  return `${money(amount)} net inflow`;
 }
 
 function decimal(value: DecimalValue): number | null {

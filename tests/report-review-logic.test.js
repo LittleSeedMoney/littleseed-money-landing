@@ -533,6 +533,11 @@ test("charge inspector sample covers every current finding type", () => {
   assert.equal(summary.duplicateCount, 1);
   assert.equal(summary.bankFeeCount, 1);
   assert.equal(summary.priceIncreaseCount, 1);
+  assert.equal(chargeInspectorSampleReview.spendingSummaryVersion, "sample_fixture");
+  assert.deepEqual(
+    chargeInspectorSampleReview.monthlySpendingSummary.map((month) => month.month),
+    ["2026-03", "2026-04", "2026-05"],
+  );
   assert.deepEqual(
     chargeInspectorSampleReview.findings.map((finding) => finding.type).sort(),
     Object.keys(chargeInspectorFindingTypeLabels).sort(),
@@ -558,8 +563,24 @@ test("charge inspector platform parser accepts the review contract", () => {
   assert.equal(parsed.schema_version, "charge_inspector_review_v0");
   assert.equal(parsed.source, "sample_csv");
   assert.equal(parsed.reviewed_transaction_count, 18);
+  assert.equal(parsed.spending_summary_version, "monthly_spending_summary_v0");
+  assert.equal(parsed.monthly_spending_summary[2].debit_total, "1889.90");
   assert.equal(parsed.findings.recurring_charges[0].merchant_name, "Streamly Premium");
   assert.equal(parsed.evidence_transactions.length, 8);
+});
+
+test("charge inspector platform parser falls back without monthly summary fields", () => {
+  const payload = chargeInspectorPlatformPayload();
+  delete payload.spending_summary_version;
+  delete payload.monthly_spending_summary;
+
+  const parsed = parseChargeInspectorReviewResponse(payload);
+  const review = mapPlatformChargeInspectorReview(parsed);
+
+  assert.equal(parsed.spending_summary_version, "not_returned");
+  assert.deepEqual(parsed.monthly_spending_summary, []);
+  assert.equal(review.spendingSummaryVersion, "not_returned");
+  assert.deepEqual(review.monthlySpendingSummary, []);
 });
 
 test("charge inspector platform mapper builds UI findings from contract evidence", () => {
@@ -587,7 +608,26 @@ test("charge inspector platform mapper builds UI findings from contract evidence
       .evidenceRows.map((row) => row.postedDate),
     ["2026-04-21", "2026-05-21"],
   );
+  assert.equal(review.spendingSummaryVersion, "monthly_spending_summary_v0");
+  assert.equal(review.monthlySpendingSummary[2].debitTotalLabel, "$1,889.90");
+  assert.equal(
+    review.monthlySpendingSummary[2].netCashFlowLabel,
+    "$4,510.10 net inflow",
+  );
   assert.match(review.limitations.join(" "), /charge_inspector_review_v0/);
+});
+
+test("charge inspector monthly cash flow label keeps zero neutral", () => {
+  const payload = chargeInspectorPlatformPayload();
+  payload.monthly_spending_summary = [
+    monthlySummaryPayload("2026-06", "100.00", "100.00", "0", 2, 1, 1),
+  ];
+
+  const review = mapPlatformChargeInspectorReview(
+    parseChargeInspectorReviewResponse(payload),
+  );
+
+  assert.equal(review.monthlySpendingSummary[0].netCashFlowLabel, "$0.00 net");
 });
 
 test("charge inspector maps linked-account and mixed platform sources", () => {
@@ -1685,6 +1725,7 @@ function chargeInspectorPlatformPayload() {
       bank_fee: "bank_fee_detector_v0",
       price_increase: "price_increase_detector_v0",
     },
+    spending_summary_version: "monthly_spending_summary_v0",
     reviewed_transaction_count: 18,
     parse_error_count: 0,
     findings: {
@@ -1763,12 +1804,39 @@ function chargeInspectorPlatformPayload() {
         },
       ],
     },
+    monthly_spending_summary: [
+      monthlySummaryPayload("2026-03", "25.99", "0", "-25.99", 2, 2, 0),
+      monthlySummaryPayload("2026-04", "25.99", "0", "-25.99", 2, 2, 0),
+      monthlySummaryPayload("2026-05", "1889.90", "6400.00", "4510.10", 14, 12, 2),
+    ],
     evidence_transactions: evidence,
     parse_errors: [],
     limitations: [
       "Findings are deterministic review prompts, not ranked actions or financial advice.",
       "No account connection, continuous monitoring, merchant contact, or stored transaction history is introduced.",
     ],
+  };
+}
+
+function monthlySummaryPayload(
+  month,
+  debitTotal,
+  creditTotal,
+  netCashFlow,
+  transactionCount,
+  debitTransactionCount,
+  creditTransactionCount,
+) {
+  return {
+    schema_version: "monthly_spending_summary_v0",
+    month,
+    currency: "USD",
+    debit_total: debitTotal,
+    credit_total: creditTotal,
+    net_cash_flow: netCashFlow,
+    transaction_count: transactionCount,
+    debit_transaction_count: debitTransactionCount,
+    credit_transaction_count: creditTransactionCount,
   };
 }
 

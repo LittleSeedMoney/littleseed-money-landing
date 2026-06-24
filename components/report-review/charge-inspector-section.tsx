@@ -182,6 +182,10 @@ function ChargeInspectorDashboard({
             </span>
             .
           </p>
+
+          {review.monthlySpendingSummary.length > 0 ? (
+            <MonthlySpendingSummary review={review} />
+          ) : null}
         </>
       ) : null}
 
@@ -191,6 +195,66 @@ function ChargeInspectorDashboard({
         </summary>
         <BoundaryList items={review.limitations} />
       </details>
+    </div>
+  );
+}
+
+function MonthlySpendingSummary({
+  review,
+}: {
+  review: ChargeInspectorReview;
+}) {
+  return (
+    <div
+      className={reviewDisclosureClass("mt-4 p-3")}
+      data-testid="charge-inspector-monthly-spending-summary"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h4 className="text-sm font-semibold text-seed-950">
+          Monthly spending summary
+        </h4>
+        <StatusPill label={review.spendingSummaryVersion} tone="stone" />
+      </div>
+
+      <div className="mt-3 overflow-x-auto">
+        <table className="w-full min-w-[34rem] text-left text-sm">
+          <thead className="border-b border-stone-200 text-xs font-semibold uppercase text-earth-600">
+            <tr>
+              <th className="py-2 pr-3">Month</th>
+              <th className="px-3 py-2">Spending</th>
+              <th className="px-3 py-2">Credits</th>
+              <th className="px-3 py-2">Net</th>
+              <th className="py-2 pl-3 text-right">Rows</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-stone-100">
+            {review.monthlySpendingSummary.map((month) => (
+              <tr data-testid="charge-inspector-monthly-row" key={month.month}>
+                <td className="py-2 pr-3 font-medium text-seed-950">
+                  {month.month}
+                </td>
+                <td className="px-3 py-2 tabular-nums text-earth-800">
+                  {month.debitTotalLabel}
+                </td>
+                <td className="px-3 py-2 tabular-nums text-earth-800">
+                  {month.creditTotalLabel}
+                </td>
+                <td className="px-3 py-2 tabular-nums text-earth-800">
+                  {month.netCashFlowLabel}
+                </td>
+                <td className="py-2 pl-3 text-right tabular-nums text-earth-800">
+                  {month.transactionCount.toLocaleString("en-US")}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <p className="mt-3 text-xs leading-5 text-earth-600">
+        Posted-date monthly totals only. This does not infer budgets,
+        categories, or required actions.
+      </p>
     </div>
   );
 }
