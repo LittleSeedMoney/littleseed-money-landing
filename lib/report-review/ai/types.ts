@@ -12,6 +12,12 @@ export type ReportReviewAiQuestionType =
 
 export type ReportReviewAiValidationStatus = "passed" | "fallback";
 
+export type ReportReviewAiAnswerKind =
+  | "validated_answer"
+  | "boundary_refusal"
+  | "validation_fallback"
+  | "provider_error_fallback";
+
 export type KnowledgeArtifactReviewStatus =
   | "approved"
   | "needs-review"
@@ -96,6 +102,7 @@ export type ReportReviewAiProviderInfo = {
 
 export type ReportReviewAiAnswer = {
   answer: string;
+  answerKind: ReportReviewAiAnswerKind;
   evidence: ReportReviewAiEvidence[];
   limitations: string[];
   sources: ReportReviewAiSource[];

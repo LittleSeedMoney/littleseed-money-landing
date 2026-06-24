@@ -69,6 +69,7 @@ export async function explainReportReviewFinding(
     return {
       ...fallbackAnswer({
         contextPack,
+        kind: "boundary_refusal",
         reasons: boundary.reasons,
         versions,
       }),
@@ -89,6 +90,7 @@ export async function explainReportReviewFinding(
       return {
         ...fallbackAnswer({
           contextPack,
+          kind: "validation_fallback",
           reasons: validation.reasons,
           versions,
         }),
@@ -99,6 +101,7 @@ export async function explainReportReviewFinding(
 
     return {
       ...draft,
+      answerKind: "validated_answer",
       provider: provider.info,
       questionType: request.questionType,
       target: contextPack.target,
@@ -113,6 +116,7 @@ export async function explainReportReviewFinding(
     return {
       ...fallbackAnswer({
         contextPack,
+        kind: "provider_error_fallback",
         reasons: ["The AI provider could not return a validated answer."],
         versions,
       }),

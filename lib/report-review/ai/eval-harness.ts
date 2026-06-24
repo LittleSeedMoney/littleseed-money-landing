@@ -55,6 +55,7 @@ export type ReportReviewAiEvalCase = {
 };
 
 export type ReportReviewAiEvalResult = {
+  answerKind: ReportReviewAiResponse["answerKind"] | null;
   id: string;
   description: string;
   status: ReportReviewAiEvalStatus;
@@ -135,6 +136,7 @@ async function runReportReviewAiEvalCase(
     const failureReasons = evaluateAnswer(testCase, answer);
 
     return {
+      answerKind: answer.answerKind,
       id: testCase.id,
       description: testCase.description,
       status: failureReasons.length === 0 ? "passed" : "failed",
@@ -159,6 +161,7 @@ async function runReportReviewAiEvalCase(
     const parsedRequest = readRequestHint(testCase.request);
 
     return {
+      answerKind: null,
       id: testCase.id,
       description: testCase.description,
       status: failureReasons.length === 0 ? "passed" : "failed",

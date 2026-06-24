@@ -1,6 +1,7 @@
 import type {
   CoachContextPack,
   ReportReviewAiAnswer,
+  ReportReviewAiAnswerKind,
   ReportReviewAiDraft,
   ReportReviewAiQuestionType,
   ReportReviewAiVersions,
@@ -141,16 +142,19 @@ export function validateAiDraft({
 
 export function fallbackAnswer({
   contextPack,
+  kind,
   reasons,
   versions,
 }: {
   contextPack: CoachContextPack;
+  kind: Exclude<ReportReviewAiAnswerKind, "validated_answer">;
   reasons: string[];
   versions: ReportReviewAiVersions;
 }): ReportReviewAiAnswer {
   return {
     answer:
       "I cannot answer that from this selected report-review finding. This prototype can only explain the finding, name missing context, simplify the result, or suggest non-ranked questions to review next.",
+    answerKind: kind,
     evidence: [
       {
         id: contextPack.id,
