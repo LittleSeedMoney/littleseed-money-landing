@@ -10,7 +10,7 @@ import {
   type ChargeInspectorSummary,
 } from "@/lib/report-review/charge-inspector";
 
-import { AiMonthlySpendingExplanationPanel } from "./ai-finding-explanation-panel";
+import { AiMonthlySpendingExplanationPanel } from "./ai-explanation-panel";
 import { ChargeInspectorFindingList } from "./charge-inspector-finding-list";
 import {
   ReviewEmptyState,

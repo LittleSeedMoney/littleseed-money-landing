@@ -7,7 +7,7 @@ import {
   ReviewSectionHeading,
   StatusPill,
 } from "./shared";
-import { AiFindingExplanationPanel } from "./ai-finding-explanation-panel";
+import { AiFindingExplanationPanel } from "./ai-explanation-panel";
 
 export function FindingsSection({
   aiEnabled,
