@@ -10,10 +10,13 @@ import {
 
 import {
   isChargeInspectorEmpty,
+  recurringPaymentReviewItems,
   summarizeChargeInspectorReview,
   visibleChargeInspectorFindings,
+  type ChargeInspectorFinding,
   type ChargeInspectorReview,
   type ChargeInspectorSummary,
+  type RecurringPaymentReviewItem,
 } from "@/lib/report-review/charge-inspector";
 import { CHARGE_INSPECTOR_CSV_TEXT_MAX_LENGTH } from "@/lib/report-review/charge-inspector-upload";
 
@@ -104,6 +107,7 @@ export function ChargeInspectorSection({
 
       <ChargeInspectorDashboard
         aiEnabled={aiEnabled}
+        findings={visibleFindings}
         hiddenCount={hiddenCount}
         review={activeReview}
         showMonthlyAiPanel={showMonthlyAiPanel}
@@ -305,6 +309,7 @@ function ChargeInspectorCsvUpload({
 
 function ChargeInspectorDashboard({
   aiEnabled,
+  findings,
   hiddenCount,
   review,
   showMonthlyAiPanel,
@@ -312,6 +317,7 @@ function ChargeInspectorDashboard({
   visibleCount,
 }: {
   aiEnabled: boolean;
+  findings: ChargeInspectorFinding[];
   hiddenCount: number;
   review: ChargeInspectorReview;
   showMonthlyAiPanel: boolean;
@@ -319,6 +325,7 @@ function ChargeInspectorDashboard({
   visibleCount: number;
 }) {
   const otherSignalCount = summary.bankFeeCount + summary.priceIncreaseCount;
+  const recurringReviewItems = recurringPaymentReviewItems(findings);
   const showDashboardMetrics = summary.reviewedTransactionCount > 0;
 
   return (
@@ -382,6 +389,10 @@ function ChargeInspectorDashboard({
             .
           </p>
 
+          {recurringReviewItems.length > 0 ? (
+            <RecurringPaymentReviewBoard items={recurringReviewItems} />
+          ) : null}
+
           {review.monthlySpendingSummary.length > 0 ? (
             <MonthlySpendingSummary
               aiEnabled={aiEnabled}
@@ -398,6 +409,78 @@ function ChargeInspectorDashboard({
         </summary>
         <BoundaryList items={review.limitations} />
       </details>
+    </div>
+  );
+}
+
+function RecurringPaymentReviewBoard({
+  items,
+}: {
+  items: RecurringPaymentReviewItem[];
+}) {
+  return (
+    <div
+      className={reviewDisclosureClass("mt-4 p-3")}
+      data-testid="charge-inspector-recurring-payment-board"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h4 className="text-sm font-semibold text-seed-950">
+          Recurring payment review
+        </h4>
+        <StatusPill label="Pattern only" tone="stone" />
+      </div>
+
+      <div className="mt-3 grid gap-3 md:grid-cols-2">
+        {items.map((item) => (
+          <article
+            className={reviewSubtlePanelClass("p-3")}
+            data-testid="charge-inspector-recurring-payment-item"
+            key={item.id}
+          >
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <h5 className="text-sm font-semibold text-seed-950">
+                  {item.merchantName}
+                </h5>
+                <p className="mt-1 text-xs leading-5 text-earth-600">
+                  {item.evidenceCountLabel}
+                </p>
+              </div>
+              <StatusPill label={item.cadenceLabel} tone="earth" />
+            </div>
+
+            <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">
+              <div>
+                <dt className="text-xs font-medium text-earth-600">Amount</dt>
+                <dd className="mt-1 font-semibold tabular-nums text-seed-950">
+                  {item.amountLabel}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs font-medium text-earth-600">
+                  Last seen
+                </dt>
+                <dd className="mt-1 font-semibold text-seed-950">
+                  {item.lastSeenLabel}
+                </dd>
+              </div>
+              <div className="col-span-2">
+                <dt className="text-xs font-medium text-earth-600">
+                  Review window
+                </dt>
+                <dd className="mt-1 font-semibold text-seed-950">
+                  {item.reviewWindowLabel}
+                </dd>
+              </div>
+            </dl>
+
+            <p className="mt-3 text-xs leading-5 text-earth-600">
+              Estimate from matched posting dates only. Not a payment
+              instruction, cancellation instruction, or merchant action.
+            </p>
+          </article>
+        ))}
+      </div>
     </div>
   );
 }

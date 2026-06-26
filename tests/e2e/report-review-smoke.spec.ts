@@ -344,6 +344,15 @@ test.describe("private report review smoke", () => {
       .toHaveCount(3);
     await expect(page.getByText("$4,510.10 net inflow")).toBeVisible();
 
+    const recurringBoard = page.getByTestId(
+      "charge-inspector-recurring-payment-board",
+    );
+    await expect(recurringBoard).toBeVisible();
+    await expect(recurringBoard.getByText("Streamly Premium")).toBeVisible();
+    await expect(recurringBoard.getByText("3 matched rows")).toBeVisible();
+    await expect(recurringBoard.getByText("Around Jun 9, 2026"))
+      .toBeVisible();
+
     const findings = chargeInspectorFindings(page);
     await expect(findings.first()).toBeVisible();
 
@@ -354,6 +363,7 @@ test.describe("private report review smoke", () => {
 
     await page.getByRole("button", { name: "Hide" }).first().click();
 
+    await expect(recurringBoard).toHaveCount(0);
     await expect(findings).toHaveCount(initialCount - 1);
     await expect(metricValue(page, "visible")).toHaveText(
       String(initialCount - 1),
@@ -418,6 +428,9 @@ test.describe("private report review smoke", () => {
       page.getByTestId(
         "ai-explanation-disabled-charge_inspector_monthly_spending_summary",
       ),
+    ).toHaveCount(0);
+    await expect(
+      page.getByTestId("charge-inspector-recurring-payment-board"),
     ).toHaveCount(0);
     await expect(page.getByText("$42.50 outflow")).toBeVisible();
     expect(submittedCsv).toContain("Uploaded Coffee");
@@ -557,19 +570,27 @@ async function expectNoPageHorizontalOverflow(page: Page, screen: string) {
 }
 
 async function clickTab(page: Page, name: string) {
-  const tab = page.getByRole("tab", { name });
-  await tab.scrollIntoViewIfNeeded();
-  await tab.click();
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const tab = page.getByRole("tab", { name });
 
-  try {
-    await expect(tab).toHaveAttribute("aria-selected", "true", {
-      timeout: 1_000,
-    });
-  } catch {
-    await tab.focus();
-    await page.keyboard.press("Enter");
-    await expect(tab).toHaveAttribute("aria-selected", "true");
+    try {
+      await tab.scrollIntoViewIfNeeded();
+      await tab.click();
+      await expect(page.getByRole("tab", { name })).toHaveAttribute(
+        "aria-selected",
+        "true",
+        { timeout: 1_000 },
+      );
+      return;
+    } catch {
+      await page.waitForTimeout(50);
+    }
   }
+
+  const tab = page.getByRole("tab", { name });
+  await tab.focus();
+  await page.keyboard.press("Enter");
+  await expect(tab).toHaveAttribute("aria-selected", "true");
 }
 
 function escapeRegExp(value: string) {

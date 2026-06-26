@@ -28,6 +28,7 @@ const {
   chargeInspectorSampleReview,
   isChargeInspectorEmpty,
   mapPlatformChargeInspectorReview,
+  recurringPaymentReviewItems,
   summarizeChargeInspectorReview,
   visibleChargeInspectorFindings,
 } = require("../lib/report-review/charge-inspector.ts");
@@ -833,6 +834,35 @@ test("charge inspector findings can be hidden without mutating the review", () =
     false,
   );
   assert.equal(chargeInspectorSampleReview.findings.length, 4);
+});
+
+test("charge inspector builds recurring payment review items from visible findings", () => {
+  const items = recurringPaymentReviewItems(chargeInspectorSampleReview.findings);
+
+  assert.equal(items.length, 1);
+  assert.deepEqual(items[0], {
+    id: "sample-recurring-streaming",
+    merchantName: "Streamly Premium",
+    amountLabel: "$15.99",
+    cadenceLabel: "Monthly pattern",
+    evidenceCountLabel: "3 matched rows",
+    lastSeenLabel: "May 9, 2026",
+    reviewWindowLabel: "Around Jun 9, 2026",
+    limitations: [
+      "A recurring pattern does not mean the charge is unwanted.",
+      "The sample does not verify contract terms, household use, or merchant category.",
+    ],
+  });
+});
+
+test("charge inspector recurring payment review follows hidden finding state", () => {
+  const firstFindingId = chargeInspectorSampleReview.findings[0].id;
+  const visibleFindings = visibleChargeInspectorFindings(
+    chargeInspectorSampleReview,
+    [firstFindingId],
+  );
+
+  assert.equal(recurringPaymentReviewItems(visibleFindings).length, 0);
 });
 
 test("charge inspector empty review keeps a safe no-finding state", () => {
