@@ -2,6 +2,7 @@ import type { DecimalValue } from "./platform-workspace-response";
 import type {
   PlatformBankFeeCandidate,
   PlatformChargeInspectorReviewResponse,
+  PlatformTransactionCategorySummary,
   PlatformMonthlySpendingSummary,
   PlatformDuplicateChargeCandidate,
   PlatformNormalizedTransaction,
@@ -61,12 +62,26 @@ export type ChargeInspectorMonthlySummary = {
   creditTransactionCount: number;
 };
 
+export type ChargeInspectorCategorySummary = {
+  category: string;
+  label: string;
+  debitTotalLabel: string;
+  creditTotalLabel: string;
+  transactionCount: number;
+  debitTransactionCount: number;
+  creditTransactionCount: number;
+  ruleIds: string[];
+  limitations: string[];
+};
+
 export type ChargeInspectorReview = {
   dataMode: ChargeInspectorDataMode;
   sourceLabel: string;
   reviewedTransactionCount: number;
   spendingSummaryVersion: string;
+  categorySummaryVersion: string;
   monthlySpendingSummary: ChargeInspectorMonthlySummary[];
+  categorySummary: ChargeInspectorCategorySummary[];
   findings: ChargeInspectorFinding[];
   emptyState: ChargeInspectorEmptyState;
   limitations: string[];
@@ -111,6 +126,7 @@ export const chargeInspectorSampleReview: ChargeInspectorReview = {
   sourceLabel: "Sample CSV review fixture",
   reviewedTransactionCount: 18,
   spendingSummaryVersion: "sample_fixture",
+  categorySummaryVersion: "sample_fixture",
   monthlySpendingSummary: [
     {
       month: "2026-03",
@@ -139,6 +155,19 @@ export const chargeInspectorSampleReview: ChargeInspectorReview = {
       debitTransactionCount: 12,
       creditTransactionCount: 2,
     },
+  ],
+  categorySummary: [
+    categorySummary("income", "Income", "0", "6400.00", 2, 0, 2),
+    categorySummary("housing", "Housing", "1500.00", "0", 1, 1, 0),
+    categorySummary("groceries", "Groceries", "130.56", "0", 2, 2, 0),
+    categorySummary("utilities", "Utilities", "118.20", "0", 1, 1, 0),
+    categorySummary("transportation", "Transportation", "42.10", "0", 1, 1, 0),
+    categorySummary("health", "Health", "23.15", "0", 1, 1, 0),
+    categorySummary("fees", "Fees", "12.00", "0", 1, 1, 0),
+    categorySummary("subscriptions", "Subscriptions", "47.97", "0", 3, 3, 0),
+    categorySummary("fitness", "Fitness", "32.50", "0", 3, 3, 0),
+    categorySummary("dining", "Dining", "16.50", "0", 2, 2, 0),
+    categorySummary("shopping", "Shopping", "18.90", "0", 1, 1, 0),
   ],
   findings: [
     {
@@ -308,7 +337,9 @@ export const chargeInspectorEmptyReview: ChargeInspectorReview = {
   sourceLabel: "No transaction review source",
   reviewedTransactionCount: 0,
   spendingSummaryVersion: "not_applicable",
+  categorySummaryVersion: "not_applicable",
   monthlySpendingSummary: [],
+  categorySummary: [],
   findings: [],
   emptyState: chargeInspectorSampleReview.emptyState,
   limitations: chargeInspectorSampleReview.limitations,
@@ -319,7 +350,9 @@ export const chargeInspectorFallbackReview: ChargeInspectorReview = {
   sourceLabel: "Charge Inspector temporarily unavailable",
   reviewedTransactionCount: 0,
   spendingSummaryVersion: "not_available",
+  categorySummaryVersion: "not_available",
   monthlySpendingSummary: [],
+  categorySummary: [],
   findings: [],
   emptyState: {
     title: "Charge Inspector did not load",
@@ -395,9 +428,11 @@ export function mapPlatformChargeInspectorReview(
     sourceLabel: platformChargeInspectorSourceLabel(response.source),
     reviewedTransactionCount: response.reviewed_transaction_count,
     spendingSummaryVersion: response.spending_summary_version,
+    categorySummaryVersion: response.category_summary_version,
     monthlySpendingSummary: response.monthly_spending_summary.map(
       mapMonthlySpendingSummary,
     ),
+    categorySummary: response.category_summary.map(mapCategorySummary),
     findings: [
       ...response.findings.recurring_charges.map((candidate) =>
         mapRecurringCharge(candidate, evidenceById),
@@ -418,6 +453,22 @@ export function mapPlatformChargeInspectorReview(
       ...parseLimitations,
       `Platform review schema: ${response.schema_version}.`,
     ],
+  };
+}
+
+function mapCategorySummary(
+  summary: PlatformTransactionCategorySummary,
+): ChargeInspectorCategorySummary {
+  return {
+    category: summary.category,
+    label: summary.label,
+    debitTotalLabel: money(summary.debit_total),
+    creditTotalLabel: money(summary.credit_total),
+    transactionCount: summary.transaction_count,
+    debitTransactionCount: summary.debit_transaction_count,
+    creditTransactionCount: summary.credit_transaction_count,
+    ruleIds: summary.rule_ids,
+    limitations: summary.limitations,
   };
 }
 
@@ -467,6 +518,30 @@ function platformChargeInspectorSourceLabel(source: string) {
   }
 
   return "Platform CSV review";
+}
+
+function categorySummary(
+  category: string,
+  label: string,
+  debitTotal: DecimalValue,
+  creditTotal: DecimalValue,
+  transactionCount: number,
+  debitTransactionCount: number,
+  creditTransactionCount: number,
+): ChargeInspectorCategorySummary {
+  return {
+    category,
+    label,
+    debitTotalLabel: money(debitTotal),
+    creditTotalLabel: money(creditTotal),
+    transactionCount,
+    debitTransactionCount,
+    creditTransactionCount,
+    ruleIds: ["sample_fixture"],
+    limitations: [
+      "Category mapping uses deterministic merchant and transaction-type text rules only.",
+    ],
+  };
 }
 
 function countFindings(

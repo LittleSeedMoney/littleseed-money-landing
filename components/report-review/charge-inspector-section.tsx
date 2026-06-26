@@ -14,6 +14,7 @@ import {
   summarizeChargeInspectorReview,
   visibleChargeInspectorFindings,
   type ChargeInspectorFinding,
+  type ChargeInspectorCategorySummary,
   type ChargeInspectorReview,
   type ChargeInspectorSummary,
   type RecurringPaymentReviewItem,
@@ -393,6 +394,10 @@ function ChargeInspectorDashboard({
             <RecurringPaymentReviewBoard items={recurringReviewItems} />
           ) : null}
 
+          {review.categorySummary.length > 0 ? (
+            <CategorySummaryTable review={review} />
+          ) : null}
+
           {review.monthlySpendingSummary.length > 0 ? (
             <MonthlySpendingSummary
               aiEnabled={aiEnabled}
@@ -410,6 +415,71 @@ function ChargeInspectorDashboard({
         <BoundaryList items={review.limitations} />
       </details>
     </div>
+  );
+}
+
+function CategorySummaryTable({ review }: { review: ChargeInspectorReview }) {
+  return (
+    <div
+      className={reviewDisclosureClass("mt-4 p-3")}
+      data-testid="charge-inspector-category-summary"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h4 className="text-sm font-semibold text-seed-950">
+          Category summary
+        </h4>
+        <StatusPill label={review.categorySummaryVersion} tone="stone" />
+      </div>
+
+      <div className="mt-3 overflow-x-auto">
+        <table className="w-full min-w-[38rem] text-left text-sm">
+          <thead className="border-b border-stone-200 text-xs font-semibold uppercase text-earth-600">
+            <tr>
+              <th className="py-2 pr-3">Category</th>
+              <th className="px-3 py-2">Spending</th>
+              <th className="px-3 py-2">Credits</th>
+              <th className="py-2 pl-3 text-right">Rows</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-stone-100">
+            {review.categorySummary.map((category) => (
+              <CategorySummaryRow
+                category={category}
+                key={category.category}
+              />
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <p className="mt-3 text-xs leading-5 text-earth-600">
+        Deterministic text-rule grouping only. This does not infer budgets,
+        spending quality, merchant actions, or required changes.
+      </p>
+    </div>
+  );
+}
+
+function CategorySummaryRow({
+  category,
+}: {
+  category: ChargeInspectorCategorySummary;
+}) {
+  return (
+    <tr data-testid="charge-inspector-category-row">
+      <td className="py-2 pr-3 font-medium text-seed-950">
+        {category.label}
+      </td>
+      <td className="px-3 py-2 tabular-nums text-earth-800">
+        {category.debitTotalLabel}
+      </td>
+      <td className="px-3 py-2 tabular-nums text-earth-800">
+        {category.creditTotalLabel}
+      </td>
+      <td className="py-2 pl-3 text-right tabular-nums text-earth-800">
+        {category.transactionCount.toLocaleString("en-US")}
+      </td>
+    </tr>
   );
 }
 
