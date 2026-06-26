@@ -343,6 +343,12 @@ test.describe("private report review smoke", () => {
     await expect(page.getByTestId("charge-inspector-monthly-row"))
       .toHaveCount(3);
     await expect(page.getByText("$4,510.10 net inflow")).toBeVisible();
+    await expect(page.getByTestId("charge-inspector-category-summary"))
+      .toBeVisible();
+    await expect(page.getByTestId("charge-inspector-category-row"))
+      .toHaveCount(11);
+    await expect(page.getByText("Groceries")).toBeVisible();
+    await expect(page.getByText("$130.56")).toBeVisible();
 
     const recurringBoard = page.getByTestId(
       "charge-inspector-recurring-payment-board",
@@ -424,6 +430,9 @@ test.describe("private report review smoke", () => {
     await expect(metricValue(page, "rows")).toHaveText("2");
     await expect(page.getByTestId("charge-inspector-monthly-row"))
       .toHaveCount(1);
+    await expect(page.getByTestId("charge-inspector-category-row"))
+      .toHaveCount(1);
+    await expect(page.getByText("Dining")).toBeVisible();
     await expect(
       page.getByTestId(
         "ai-explanation-panel-charge_inspector_monthly_spending_summary",
@@ -532,6 +541,22 @@ function uploadedChargeInspectorReview() {
       title: "No visible Charge Inspector findings",
     },
     findings: [],
+    categorySummary: [
+      {
+        category: "dining",
+        creditTotalLabel: "$0.00",
+        creditTransactionCount: 0,
+        debitTotalLabel: "$42.50",
+        debitTransactionCount: 2,
+        label: "Dining",
+        limitations: [
+          "Category mapping uses deterministic merchant and transaction-type text rules only.",
+        ],
+        ruleIds: ["category.dining.coffee.v0"],
+        transactionCount: 2,
+      },
+    ],
+    categorySummaryVersion: "transaction_category_rules_v0",
     limitations: [
       "This review uses only the uploaded CSV rows for the current request.",
       "No account connection, continuous monitoring, or stored transaction history is introduced.",

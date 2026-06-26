@@ -714,7 +714,10 @@ test("charge inspector platform parser accepts the review contract", () => {
   assert.equal(parsed.source, "sample_csv");
   assert.equal(parsed.reviewed_transaction_count, 18);
   assert.equal(parsed.spending_summary_version, "monthly_spending_summary_v0");
+  assert.equal(parsed.category_summary_version, "transaction_category_rules_v0");
   assert.equal(parsed.monthly_spending_summary[2].debit_total, "1889.90");
+  assert.equal(parsed.category_summary[2].category, "groceries");
+  assert.equal(parsed.category_summary[2].debit_total, "130.56");
   assert.equal(parsed.findings.recurring_charges[0].merchant_name, "Streamly Premium");
   assert.equal(parsed.evidence_transactions.length, 8);
 });
@@ -723,14 +726,20 @@ test("charge inspector platform parser falls back without monthly summary fields
   const payload = chargeInspectorPlatformPayload();
   delete payload.spending_summary_version;
   delete payload.monthly_spending_summary;
+  delete payload.category_summary_version;
+  delete payload.category_summary;
 
   const parsed = parseChargeInspectorReviewResponse(payload);
   const review = mapPlatformChargeInspectorReview(parsed);
 
   assert.equal(parsed.spending_summary_version, "not_returned");
   assert.deepEqual(parsed.monthly_spending_summary, []);
+  assert.equal(parsed.category_summary_version, "not_returned");
+  assert.deepEqual(parsed.category_summary, []);
   assert.equal(review.spendingSummaryVersion, "not_returned");
   assert.deepEqual(review.monthlySpendingSummary, []);
+  assert.equal(review.categorySummaryVersion, "not_returned");
+  assert.deepEqual(review.categorySummary, []);
 });
 
 test("charge inspector platform mapper builds UI findings from contract evidence", () => {
@@ -764,6 +773,14 @@ test("charge inspector platform mapper builds UI findings from contract evidence
     review.monthlySpendingSummary[2].netCashFlowLabel,
     "$4,510.10 net inflow",
   );
+  assert.equal(review.categorySummaryVersion, "transaction_category_rules_v0");
+  assert.equal(review.categorySummary[0].label, "Income");
+  assert.equal(review.categorySummary[0].creditTotalLabel, "$6,400.00");
+  assert.equal(review.categorySummary[2].label, "Groceries");
+  assert.equal(review.categorySummary[2].debitTotalLabel, "$130.56");
+  assert.deepEqual(review.categorySummary[2].ruleIds, [
+    "category.groceries.grocer_text.v0",
+  ]);
   assert.match(review.limitations.join(" "), /charge_inspector_review_v0/);
 });
 
@@ -1933,6 +1950,7 @@ function chargeInspectorPlatformPayload() {
       price_increase: "price_increase_detector_v0",
     },
     spending_summary_version: "monthly_spending_summary_v0",
+    category_summary_version: "transaction_category_rules_v0",
     reviewed_transaction_count: 18,
     parse_error_count: 0,
     findings: {
@@ -2016,11 +2034,49 @@ function chargeInspectorPlatformPayload() {
       monthlySummaryPayload("2026-04", "25.99", "0", "-25.99", 2, 2, 0),
       monthlySummaryPayload("2026-05", "1889.90", "6400.00", "4510.10", 14, 12, 2),
     ],
+    category_summary: [
+      categorySummaryPayload("income", "Income", "0", "6400.00", 2, 0, 2, [
+        "category.income.payroll_direct_deposit.v0",
+      ]),
+      categorySummaryPayload("housing", "Housing", "1500.00", "0", 1, 1, 0, [
+        "category.housing.rent_payment.v0",
+      ]),
+      categorySummaryPayload("groceries", "Groceries", "130.56", "0", 2, 2, 0, [
+        "category.groceries.grocer_text.v0",
+      ]),
+    ],
     evidence_transactions: evidence,
     parse_errors: [],
     limitations: [
       "Findings are deterministic review prompts, not ranked actions or financial advice.",
       "No account connection, continuous monitoring, merchant contact, or stored transaction history is introduced.",
+    ],
+  };
+}
+
+function categorySummaryPayload(
+  category,
+  label,
+  debitTotal,
+  creditTotal,
+  transactionCount,
+  debitTransactionCount,
+  creditTransactionCount,
+  ruleIds,
+) {
+  return {
+    schema_version: "transaction_category_summary_v0",
+    category,
+    label,
+    currency: "USD",
+    debit_total: debitTotal,
+    credit_total: creditTotal,
+    transaction_count: transactionCount,
+    debit_transaction_count: debitTransactionCount,
+    credit_transaction_count: creditTransactionCount,
+    rule_ids: ruleIds,
+    limitations: [
+      "Category mapping uses deterministic merchant and transaction-type text rules only.",
     ],
   };
 }
