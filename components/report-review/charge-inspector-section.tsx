@@ -15,6 +15,7 @@ import {
   type ChargeInspectorReview,
   type ChargeInspectorSummary,
 } from "@/lib/report-review/charge-inspector";
+import { CHARGE_INSPECTOR_CSV_TEXT_MAX_LENGTH } from "@/lib/report-review/charge-inspector-upload";
 
 import { AiMonthlySpendingExplanationPanel } from "./ai-explanation-panel";
 import { ChargeInspectorFindingList } from "./charge-inspector-finding-list";
@@ -29,6 +30,8 @@ import {
 } from "./shared";
 
 type CsvReviewRequestState = "idle" | "loading" | "ready" | "error";
+const CSV_FILE_LENGTH_ERROR =
+  "CSV file must be 250,000 characters or fewer.";
 
 export function ChargeInspectorSection({
   aiEnabled,
@@ -56,6 +59,7 @@ export function ChargeInspectorSection({
   const hiddenCount = activeReview.findings.length - visibleFindings.length;
   const showEmptyState =
     isChargeInspectorEmpty(activeReview) || visibleFindings.length === 0;
+  const showMonthlyAiPanel = activeReview === review;
 
   function hideFinding(findingId: string) {
     setDismissedFindingIds((current) =>
@@ -102,6 +106,7 @@ export function ChargeInspectorSection({
         aiEnabled={aiEnabled}
         hiddenCount={hiddenCount}
         review={activeReview}
+        showMonthlyAiPanel={showMonthlyAiPanel}
         summary={summary}
         visibleCount={visibleFindings.length}
       />
@@ -178,6 +183,12 @@ function ChargeInspectorCsvUpload({
       return;
     }
 
+    if (file.size > CHARGE_INSPECTOR_CSV_TEXT_MAX_LENGTH) {
+      setRequestState("error");
+      setErrorMessage(CSV_FILE_LENGTH_ERROR);
+      return;
+    }
+
     setRequestState("loading");
 
     try {
@@ -185,8 +196,8 @@ function ChargeInspectorCsvUpload({
       if (csvText.trim().length === 0) {
         throw new Error("CSV file must not be blank.");
       }
-      if (csvText.length > 250_000) {
-        throw new Error("CSV file must be 250,000 characters or fewer.");
+      if (csvText.length > CHARGE_INSPECTOR_CSV_TEXT_MAX_LENGTH) {
+        throw new Error(CSV_FILE_LENGTH_ERROR);
       }
 
       const response = await fetch(
@@ -296,12 +307,14 @@ function ChargeInspectorDashboard({
   aiEnabled,
   hiddenCount,
   review,
+  showMonthlyAiPanel,
   summary,
   visibleCount,
 }: {
   aiEnabled: boolean;
   hiddenCount: number;
   review: ChargeInspectorReview;
+  showMonthlyAiPanel: boolean;
   summary: ChargeInspectorSummary;
   visibleCount: number;
 }) {
@@ -370,7 +383,11 @@ function ChargeInspectorDashboard({
           </p>
 
           {review.monthlySpendingSummary.length > 0 ? (
-            <MonthlySpendingSummary aiEnabled={aiEnabled} review={review} />
+            <MonthlySpendingSummary
+              aiEnabled={aiEnabled}
+              review={review}
+              showAiPanel={showMonthlyAiPanel}
+            />
           ) : null}
         </>
       ) : null}
@@ -388,9 +405,11 @@ function ChargeInspectorDashboard({
 function MonthlySpendingSummary({
   aiEnabled,
   review,
+  showAiPanel,
 }: {
   aiEnabled: boolean;
   review: ChargeInspectorReview;
+  showAiPanel: boolean;
 }) {
   return (
     <div
@@ -444,9 +463,11 @@ function MonthlySpendingSummary({
         categories, or required actions.
       </p>
 
-      <div className="mt-4">
-        <AiMonthlySpendingExplanationPanel enabled={aiEnabled} />
-      </div>
+      {showAiPanel ? (
+        <div className="mt-4">
+          <AiMonthlySpendingExplanationPanel enabled={aiEnabled} />
+        </div>
+      ) : null}
     </div>
   );
 }

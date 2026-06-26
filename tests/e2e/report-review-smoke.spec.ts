@@ -409,8 +409,51 @@ test.describe("private report review smoke", () => {
     await expect(metricValue(page, "rows")).toHaveText("2");
     await expect(page.getByTestId("charge-inspector-monthly-row"))
       .toHaveCount(1);
+    await expect(
+      page.getByTestId(
+        "ai-explanation-panel-charge_inspector_monthly_spending_summary",
+      ),
+    ).toHaveCount(0);
+    await expect(
+      page.getByTestId(
+        "ai-explanation-disabled-charge_inspector_monthly_spending_summary",
+      ),
+    ).toHaveCount(0);
     await expect(page.getByText("$42.50 outflow")).toBeVisible();
     expect(submittedCsv).toContain("Uploaded Coffee");
+  });
+
+  test("charge inspector rejects oversized CSV files before upload", async ({
+    page,
+  }) => {
+    let requestCount = 0;
+    await page.route(
+      "**/private/report-review/charge-inspector-review",
+      async (route) => {
+        requestCount += 1;
+
+        await route.fulfill({
+          contentType: "application/json",
+          json: { review: uploadedChargeInspectorReview() },
+          status: 200,
+        });
+      },
+    );
+
+    await page.goto(`${reportReviewPath}#charge-inspector`);
+
+    await page.getByTestId("charge-inspector-csv-file").setInputFiles({
+      buffer: Buffer.alloc(250_001, "a"),
+      mimeType: "text/csv",
+      name: "too-large.csv",
+    });
+
+    await page.getByRole("button", { name: "Review CSV" }).click();
+
+    await expect(page.getByTestId("charge-inspector-csv-error")).toHaveText(
+      "CSV file must be 250,000 characters or fewer.",
+    );
+    expect(requestCount).toBe(0);
   });
 
   test("charge inspector restores after all visible findings are hidden", async ({
