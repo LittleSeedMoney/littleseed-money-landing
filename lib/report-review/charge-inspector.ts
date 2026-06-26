@@ -81,6 +81,21 @@ export type ChargeInspectorSummary = {
   priceIncreaseCount: number;
 };
 
+export type RecurringPaymentReviewItem = {
+  id: string;
+  merchantName: string;
+  amountLabel: string;
+  cadenceLabel: string;
+  evidenceCountLabel: string;
+  lastSeenLabel: string;
+  reviewWindowLabel: string;
+  limitations: string[];
+};
+
+type SortableRecurringPaymentReviewItem = RecurringPaymentReviewItem & {
+  sortKey: string;
+};
+
 export const chargeInspectorFindingTypeLabels: Record<
   ChargeInspectorFindingType,
   string
@@ -347,6 +362,16 @@ export function visibleChargeInspectorFindings(
   return review.findings.filter((finding) => !dismissed.has(finding.id));
 }
 
+export function recurringPaymentReviewItems(
+  findings: Iterable<ChargeInspectorFinding>,
+): RecurringPaymentReviewItem[] {
+  return [...findings]
+    .filter((finding) => finding.type === "recurring_charge")
+    .map(recurringPaymentReviewItem)
+    .sort((left, right) => left.sortKey.localeCompare(right.sortKey))
+    .map(({ sortKey: _sortKey, ...item }) => item);
+}
+
 export function mapPlatformChargeInspectorReview(
   response: PlatformChargeInspectorReviewResponse,
 ): ChargeInspectorReview {
@@ -477,6 +502,56 @@ function mapRecurringCharge(
   };
 }
 
+function recurringPaymentReviewItem(
+  finding: ChargeInspectorFinding,
+): SortableRecurringPaymentReviewItem {
+  const latestRow = latestEvidenceRow(finding.evidenceRows);
+  const latestDate = latestRow ? parseIsoDate(latestRow.postedDate) : null;
+  const cadenceLabel = finding.cadenceLabel ?? "Pattern needs review";
+
+  return {
+    id: finding.id,
+    merchantName: latestRow?.merchantName ?? finding.title,
+    amountLabel: finding.amountLabel,
+    cadenceLabel,
+    evidenceCountLabel: `${finding.evidenceRows.length.toLocaleString(
+      "en-US",
+    )} matched row${finding.evidenceRows.length === 1 ? "" : "s"}`,
+    lastSeenLabel: latestDate ? formatDate(latestDate) : "Missing",
+    reviewWindowLabel: nextReviewWindowLabel(cadenceLabel, latestDate),
+    sortKey: latestDate ? latestDate.toISOString() : "9999-12-31T00:00:00.000Z",
+    limitations: finding.limitations,
+  };
+}
+
+function latestEvidenceRow(rows: ChargeInspectorEvidenceRow[]) {
+  return rows.reduce<ChargeInspectorEvidenceRow | null>((latest, row) => {
+    const rowDate = parseIsoDate(row.postedDate);
+    if (!rowDate) {
+      return latest;
+    }
+
+    const latestDate = latest ? parseIsoDate(latest.postedDate) : null;
+    if (!latestDate || rowDate.getTime() > latestDate.getTime()) {
+      return row;
+    }
+
+    return latest;
+  }, null);
+}
+
+function nextReviewWindowLabel(cadenceLabel: string, latestDate: Date | null) {
+  if (!latestDate) {
+    return "Needs statement review";
+  }
+
+  if (cadenceLabel.toLowerCase().includes("monthly")) {
+    return `Around ${formatDate(addUtcMonths(latestDate, 1))}`;
+  }
+
+  return "Cadence needs review";
+}
+
 function mapDuplicateCharge(
   candidate: PlatformDuplicateChargeCandidate,
   evidenceById: Map<string, PlatformNormalizedTransaction>,
@@ -567,6 +642,44 @@ function evidenceRows(
       detail: `Source row ${transaction.source_row_number.toLocaleString("en-US")}.`,
     };
   });
+}
+
+function parseIsoDate(value: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) {
+    return null;
+  }
+
+  const [, year, month, day] = match;
+  return new Date(
+    Date.UTC(Number(year), Number(month) - 1, Number(day)),
+  );
+}
+
+function addUtcMonths(date: Date, months: number) {
+  const targetYear = date.getUTCFullYear();
+  const targetMonth = date.getUTCMonth() + months;
+  const targetDay = date.getUTCDate();
+  const daysInTargetMonth = new Date(
+    Date.UTC(targetYear, targetMonth + 1, 0),
+  ).getUTCDate();
+
+  return new Date(
+    Date.UTC(
+      targetYear,
+      targetMonth,
+      Math.min(targetDay, daysInTargetMonth),
+    ),
+  );
+}
+
+function formatDate(date: Date) {
+  return new Intl.DateTimeFormat("en-US", {
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+    year: "numeric",
+  }).format(date);
 }
 
 function money(value: DecimalValue): string {
