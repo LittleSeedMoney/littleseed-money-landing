@@ -349,6 +349,31 @@ test.describe("private report review smoke", () => {
       .toHaveCount(11);
     await expect(page.getByText("Groceries")).toBeVisible();
     await expect(page.getByText("$130.56")).toBeVisible();
+    await expect(page.getByText("0 confirmed")).toBeVisible();
+    await expect(page.getByText("0 needs review")).toBeVisible();
+
+    const groceriesCategory = page
+      .getByTestId("charge-inspector-category-row")
+      .filter({ hasText: "Groceries" });
+    await groceriesCategory.getByRole("radio", { name: "Confirm" }).click();
+    await expect(page.getByText("1 confirmed")).toBeVisible();
+    await expect(
+      groceriesCategory.getByRole("radio", { name: "Confirm" }),
+    ).toHaveAttribute("aria-checked", "true");
+
+    const feesCategory = page
+      .getByTestId("charge-inspector-category-row")
+      .filter({ hasText: "Fees" });
+    await feesCategory.getByRole("radio", { name: "Needs review" }).click();
+    await expect(page.getByText("1 needs review")).toBeVisible();
+    await expect(
+      feesCategory.getByRole("radio", { name: "Needs review" }),
+    ).toHaveAttribute("aria-checked", "true");
+
+    await groceriesCategory
+      .getByRole("radio", { name: "Unreviewed" })
+      .click();
+    await expect(page.getByText("0 confirmed")).toBeVisible();
 
     const recurringBoard = page.getByTestId(
       "charge-inspector-recurring-payment-board",
@@ -410,6 +435,12 @@ test.describe("private report review smoke", () => {
 
     await page.goto(`${reportReviewPath}#charge-inspector`);
 
+    const groceriesCategory = page
+      .getByTestId("charge-inspector-category-row")
+      .filter({ hasText: "Groceries" });
+    await groceriesCategory.getByRole("radio", { name: "Confirm" }).click();
+    await expect(page.getByText("1 confirmed")).toBeVisible();
+
     await page.getByTestId("charge-inspector-csv-file").setInputFiles({
       buffer: Buffer.from(
         [
@@ -433,6 +464,14 @@ test.describe("private report review smoke", () => {
     await expect(page.getByTestId("charge-inspector-category-row"))
       .toHaveCount(1);
     await expect(page.getByText("Dining")).toBeVisible();
+    await expect(page.getByText("0 confirmed")).toBeVisible();
+    await expect(page.getByText("0 needs review")).toBeVisible();
+    await expect(
+      page
+        .getByTestId("charge-inspector-category-row")
+        .filter({ hasText: "Dining" })
+        .getByRole("radio", { name: "Unreviewed" }),
+    ).toHaveAttribute("aria-checked", "true");
     await expect(
       page.getByTestId(
         "ai-explanation-panel-charge_inspector_monthly_spending_summary",
