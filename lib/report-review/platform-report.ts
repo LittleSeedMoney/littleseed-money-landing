@@ -59,6 +59,11 @@ type WorkspaceReportRequest = {
   userTargetMonths?: string;
 };
 
+type ChargeInspectorReviewRequest = {
+  csvText: string;
+  reviewId?: string;
+};
+
 export type ReportMappingOptions = {
   chargeInspector?: ChargeInspectorReview;
   connectionMessage: string;
@@ -115,6 +120,17 @@ export async function getManualReportReviewData({
     dataMode: "User-entered Platform API",
     connectionMessage:
       "Loaded from the platform workspace-report API using the current manual inputs. The route is in-session only and does not save the profile, report, or snapshot.",
+    });
+}
+
+export async function getChargeInspectorReviewData({
+  csvText,
+  reviewId,
+}: ChargeInspectorReviewRequest): Promise<ChargeInspectorReview> {
+  return requestChargeInspectorReview({
+    csvText,
+    reviewId: reviewId ?? "landing-user-csv-charge-review",
+    source: "user_csv",
   });
 }
 
@@ -164,6 +180,22 @@ async function requestWorkspaceReport({
 }
 
 async function requestChargeInspectorSampleReview(): Promise<ChargeInspectorReview> {
+  return requestChargeInspectorReview({
+    csvText: chargeInspectorSampleCsv,
+    reviewId: "landing-sample-charge-review",
+    source: "sample_csv",
+  });
+}
+
+async function requestChargeInspectorReview({
+  csvText,
+  reviewId,
+  source,
+}: {
+  csvText: string;
+  reviewId: string;
+  source: "sample_csv" | "user_csv";
+}): Promise<ChargeInspectorReview> {
   const platformApiUrl = requirePlatformApiUrl();
   const controller = new AbortController();
   const timeout = setTimeout(
@@ -178,9 +210,9 @@ async function requestChargeInspectorSampleReview(): Promise<ChargeInspectorRevi
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          csv_text: chargeInspectorSampleCsv,
-          review_id: "landing-sample-charge-review",
-          source: "sample_csv",
+          csv_text: csvText,
+          review_id: reviewId,
+          source,
         }),
         cache: "no-store",
         signal: controller.signal,

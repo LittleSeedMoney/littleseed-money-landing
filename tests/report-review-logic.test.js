@@ -35,6 +35,12 @@ const {
   chargeInspectorSampleCsv,
 } = require("../lib/report-review/charge-inspector-sample-csv.ts");
 const {
+  CHARGE_INSPECTOR_CSV_REQUEST_MAX_LENGTH,
+  CHARGE_INSPECTOR_CSV_TEXT_MAX_LENGTH,
+  chargeInspectorCsvRequestBodyExceedsLimit,
+  parseChargeInspectorCsvRequestBody,
+} = require("../lib/report-review/charge-inspector-upload.ts");
+const {
   parseChargeInspectorReviewResponse,
 } = require("../lib/report-review/platform-charge-inspector-response.ts");
 const {
@@ -656,6 +662,46 @@ test("charge inspector sample CSV keeps the platform contract fixture shape", ()
   assert.match(chargeInspectorSampleCsv, /Market Street Coffee/);
   assert.match(chargeInspectorSampleCsv, /Monthly Service Fee/);
   assert.match(chargeInspectorSampleCsv, /FitPlan App/);
+});
+
+test("charge inspector CSV request parser accepts bounded text only", () => {
+  assert.equal(
+    parseChargeInspectorCsvRequestBody({ csvText: "header\nvalue" }),
+    "header\nvalue",
+  );
+
+  assert.throws(
+    () => parseChargeInspectorCsvRequestBody(null),
+    /must be an object/,
+  );
+  assert.throws(
+    () => parseChargeInspectorCsvRequestBody({ csvText: "" }),
+    /must not be blank/,
+  );
+  assert.throws(
+    () =>
+      parseChargeInspectorCsvRequestBody({
+        csvText: "a".repeat(CHARGE_INSPECTOR_CSV_TEXT_MAX_LENGTH + 1),
+      }),
+    /250,000 characters or fewer/,
+  );
+});
+
+test("charge inspector CSV request body limit rejects oversized JSON before parsing", () => {
+  assert.equal(chargeInspectorCsvRequestBodyExceedsLimit(null), false);
+  assert.equal(chargeInspectorCsvRequestBodyExceedsLimit("not-a-number"), false);
+  assert.equal(
+    chargeInspectorCsvRequestBodyExceedsLimit(
+      String(CHARGE_INSPECTOR_CSV_REQUEST_MAX_LENGTH),
+    ),
+    false,
+  );
+  assert.equal(
+    chargeInspectorCsvRequestBodyExceedsLimit(
+      String(CHARGE_INSPECTOR_CSV_REQUEST_MAX_LENGTH + 1),
+    ),
+    true,
+  );
 });
 
 test("charge inspector platform parser accepts the review contract", () => {

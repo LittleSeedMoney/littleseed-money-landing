@@ -1,6 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from "react";
 
 import {
   isChargeInspectorEmpty,
@@ -9,6 +15,7 @@ import {
   type ChargeInspectorReview,
   type ChargeInspectorSummary,
 } from "@/lib/report-review/charge-inspector";
+import { CHARGE_INSPECTOR_CSV_TEXT_MAX_LENGTH } from "@/lib/report-review/charge-inspector-upload";
 
 import { AiMonthlySpendingExplanationPanel } from "./ai-explanation-panel";
 import { ChargeInspectorFindingList } from "./charge-inspector-finding-list";
@@ -22,6 +29,10 @@ import {
   StatusPill,
 } from "./shared";
 
+type CsvReviewRequestState = "idle" | "loading" | "ready" | "error";
+const CSV_FILE_LENGTH_ERROR =
+  "CSV file must be 250,000 characters or fewer.";
+
 export function ChargeInspectorSection({
   aiEnabled,
   review,
@@ -29,18 +40,26 @@ export function ChargeInspectorSection({
   aiEnabled: boolean;
   review: ChargeInspectorReview;
 }) {
+  const [activeReview, setActiveReview] = useState(review);
   const [dismissedFindingIds, setDismissedFindingIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    setActiveReview(review);
+    setDismissedFindingIds([]);
+  }, [review]);
+
   const summary = useMemo(
-    () => summarizeChargeInspectorReview(review),
-    [review],
+    () => summarizeChargeInspectorReview(activeReview),
+    [activeReview],
   );
   const visibleFindings = useMemo(
-    () => visibleChargeInspectorFindings(review, dismissedFindingIds),
-    [dismissedFindingIds, review],
+    () => visibleChargeInspectorFindings(activeReview, dismissedFindingIds),
+    [activeReview, dismissedFindingIds],
   );
-  const hiddenCount = review.findings.length - visibleFindings.length;
+  const hiddenCount = activeReview.findings.length - visibleFindings.length;
   const showEmptyState =
-    isChargeInspectorEmpty(review) || visibleFindings.length === 0;
+    isChargeInspectorEmpty(activeReview) || visibleFindings.length === 0;
+  const showMonthlyAiPanel = activeReview === review;
 
   function hideFinding(findingId: string) {
     setDismissedFindingIds((current) =>
@@ -49,6 +68,16 @@ export function ChargeInspectorSection({
   }
 
   function restoreFindings() {
+    setDismissedFindingIds([]);
+  }
+
+  function loadUploadedReview(nextReview: ChargeInspectorReview) {
+    setActiveReview(nextReview);
+    setDismissedFindingIds([]);
+  }
+
+  function resetReview() {
+    setActiveReview(review);
     setDismissedFindingIds([]);
   }
 
@@ -66,10 +95,18 @@ export function ChargeInspectorSection({
         description="Deterministic transaction review prompts for recurring charges, possible duplicates, fee-like rows, and price changes."
       />
 
+      <ChargeInspectorCsvUpload
+        activeReview={activeReview}
+        onReset={resetReview}
+        onReviewLoaded={loadUploadedReview}
+        showReset={activeReview !== review}
+      />
+
       <ChargeInspectorDashboard
         aiEnabled={aiEnabled}
         hiddenCount={hiddenCount}
-        review={review}
+        review={activeReview}
+        showMonthlyAiPanel={showMonthlyAiPanel}
         summary={summary}
         visibleCount={visibleFindings.length}
       />
@@ -97,7 +134,7 @@ export function ChargeInspectorSection({
 
       {showEmptyState ? (
         <ChargeInspectorEmptyState
-          review={review}
+          review={activeReview}
           showRestore={hiddenCount > 0}
           onRestore={restoreFindings}
         />
@@ -112,16 +149,172 @@ export function ChargeInspectorSection({
   );
 }
 
+function ChargeInspectorCsvUpload({
+  activeReview,
+  onReset,
+  onReviewLoaded,
+  showReset,
+}: {
+  activeReview: ChargeInspectorReview;
+  onReset: () => void;
+  onReviewLoaded: (review: ChargeInspectorReview) => void;
+  showReset: boolean;
+}) {
+  const [errorMessage, setErrorMessage] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [requestState, setRequestState] =
+    useState<CsvReviewRequestState>("idle");
+
+  const isLoading = requestState === "loading";
+
+  function updateFile(event: ChangeEvent<HTMLInputElement>) {
+    setErrorMessage("");
+    setRequestState("idle");
+    setFile(event.target.files?.[0] ?? null);
+  }
+
+  async function submitCsv(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setErrorMessage("");
+
+    if (!file) {
+      setRequestState("error");
+      setErrorMessage("Choose a CSV file before running Charge Inspector.");
+      return;
+    }
+
+    if (file.size > CHARGE_INSPECTOR_CSV_TEXT_MAX_LENGTH) {
+      setRequestState("error");
+      setErrorMessage(CSV_FILE_LENGTH_ERROR);
+      return;
+    }
+
+    setRequestState("loading");
+
+    try {
+      const csvText = await file.text();
+      if (csvText.trim().length === 0) {
+        throw new Error("CSV file must not be blank.");
+      }
+      if (csvText.length > CHARGE_INSPECTOR_CSV_TEXT_MAX_LENGTH) {
+        throw new Error(CSV_FILE_LENGTH_ERROR);
+      }
+
+      const response = await fetch(
+        "/private/report-review/charge-inspector-review",
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ csvText }),
+        },
+      );
+      const payload = (await response.json()) as unknown;
+
+      if (!response.ok) {
+        throw new Error(readRouteError(payload));
+      }
+
+      onReviewLoaded(readRouteReview(payload));
+      setRequestState("ready");
+    } catch (error) {
+      setRequestState("error");
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Charge Inspector CSV review failed.",
+      );
+    }
+  }
+
+  return (
+    <form
+      className={reviewPanelClass("p-4 sm:p-5")}
+      data-testid="charge-inspector-csv-upload"
+      onSubmit={submitCsv}
+    >
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+        <div>
+          <div className="flex flex-wrap gap-2">
+            <StatusPill label="CSV in-session" tone="earth" />
+            <StatusPill label="No storage" tone="stone" />
+          </div>
+          <label
+            className="mt-3 block text-sm font-semibold text-seed-950"
+            htmlFor="charge-inspector-csv-file"
+          >
+            Review a CSV export
+          </label>
+          <p className="mt-1 max-w-3xl text-sm leading-6 text-earth-700">
+            Chase-style checking CSV rows are sent to the internal review route
+            for deterministic parsing, monthly totals, and finding prompts.
+          </p>
+          <input
+            accept=".csv,text/csv"
+            className="mt-3 block w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm text-earth-900 file:mr-3 file:rounded-md file:border-0 file:bg-seed-50 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-seed-900 hover:file:bg-seed-100 focus:outline-none focus:ring-2 focus:ring-seed-500"
+            data-testid="charge-inspector-csv-file"
+            disabled={isLoading}
+            id="charge-inspector-csv-file"
+            onChange={updateFile}
+            type="file"
+          />
+        </div>
+
+        <div className="flex flex-wrap gap-2 lg:justify-end">
+          <button
+            className="min-h-10 rounded-md border border-seed-700 bg-seed-700 px-4 text-sm font-semibold text-white shadow-sm hover:bg-seed-800 focus:outline-none focus:ring-2 focus:ring-seed-500 disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={isLoading}
+            type="submit"
+          >
+            {isLoading ? "Reviewing" : "Review CSV"}
+          </button>
+          {showReset ? (
+            <button
+              className="min-h-10 rounded-md border border-stone-300 bg-white px-4 text-sm font-semibold text-earth-800 shadow-sm hover:border-seed-300 hover:text-seed-900 focus:outline-none focus:ring-2 focus:ring-seed-500"
+              disabled={isLoading}
+              onClick={onReset}
+              type="button"
+            >
+              Reset review
+            </button>
+          ) : null}
+        </div>
+      </div>
+
+      {requestState === "ready" ? (
+        <p
+          className="mt-3 text-sm leading-6 text-seed-900"
+          data-testid="charge-inspector-csv-success"
+        >
+          CSV reviewed for this browser session.{" "}
+          {activeReview.reviewedTransactionCount.toLocaleString("en-US")} rows
+          are visible below.
+        </p>
+      ) : null}
+
+      {requestState === "error" ? (
+        <p
+          className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm leading-6 text-amber-900"
+          data-testid="charge-inspector-csv-error"
+        >
+          {errorMessage}
+        </p>
+      ) : null}
+    </form>
+  );
+}
+
 function ChargeInspectorDashboard({
   aiEnabled,
   hiddenCount,
   review,
+  showMonthlyAiPanel,
   summary,
   visibleCount,
 }: {
   aiEnabled: boolean;
   hiddenCount: number;
   review: ChargeInspectorReview;
+  showMonthlyAiPanel: boolean;
   summary: ChargeInspectorSummary;
   visibleCount: number;
 }) {
@@ -190,7 +383,11 @@ function ChargeInspectorDashboard({
           </p>
 
           {review.monthlySpendingSummary.length > 0 ? (
-            <MonthlySpendingSummary aiEnabled={aiEnabled} review={review} />
+            <MonthlySpendingSummary
+              aiEnabled={aiEnabled}
+              review={review}
+              showAiPanel={showMonthlyAiPanel}
+            />
           ) : null}
         </>
       ) : null}
@@ -208,9 +405,11 @@ function ChargeInspectorDashboard({
 function MonthlySpendingSummary({
   aiEnabled,
   review,
+  showAiPanel,
 }: {
   aiEnabled: boolean;
   review: ChargeInspectorReview;
+  showAiPanel: boolean;
 }) {
   return (
     <div
@@ -264,9 +463,11 @@ function MonthlySpendingSummary({
         categories, or required actions.
       </p>
 
-      <div className="mt-4">
-        <AiMonthlySpendingExplanationPanel enabled={aiEnabled} />
-      </div>
+      {showAiPanel ? (
+        <div className="mt-4">
+          <AiMonthlySpendingExplanationPanel enabled={aiEnabled} />
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -370,4 +571,28 @@ function sourcePillLabel(review: ChargeInspectorReview) {
     return "API fallback";
   }
   return "Sample fixture";
+}
+
+function readRouteReview(payload: unknown): ChargeInspectorReview {
+  if (typeof payload !== "object" || payload === null) {
+    throw new Error("Charge Inspector CSV review returned an invalid response.");
+  }
+
+  const review = (payload as Record<string, unknown>).review;
+  if (typeof review !== "object" || review === null || Array.isArray(review)) {
+    throw new Error("Charge Inspector CSV review returned no review.");
+  }
+
+  return review as ChargeInspectorReview;
+}
+
+function readRouteError(payload: unknown) {
+  if (typeof payload !== "object" || payload === null) {
+    return "Charge Inspector CSV review failed.";
+  }
+
+  const error = (payload as Record<string, unknown>).error;
+  return typeof error === "string"
+    ? error
+    : "Charge Inspector CSV review failed.";
 }
