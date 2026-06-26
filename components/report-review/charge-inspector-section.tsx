@@ -478,6 +478,15 @@ function RecurringPaymentReviewBoard({
               Estimate from matched posting dates only. Not a payment
               instruction, cancellation instruction, or merchant action.
             </p>
+
+            {item.limitations.length > 0 ? (
+              <div className="mt-3 border-t border-stone-200 pt-3">
+                <p className="text-xs font-semibold text-earth-700">
+                  Limitations
+                </p>
+                <BoundaryList items={item.limitations} />
+              </div>
+            ) : null}
           </article>
         ))}
       </div>

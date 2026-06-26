@@ -92,6 +92,10 @@ export type RecurringPaymentReviewItem = {
   limitations: string[];
 };
 
+type SortableRecurringPaymentReviewItem = RecurringPaymentReviewItem & {
+  sortKey: string;
+};
+
 export const chargeInspectorFindingTypeLabels: Record<
   ChargeInspectorFindingType,
   string
@@ -364,9 +368,8 @@ export function recurringPaymentReviewItems(
   return [...findings]
     .filter((finding) => finding.type === "recurring_charge")
     .map(recurringPaymentReviewItem)
-    .sort((left, right) =>
-      left.reviewWindowLabel.localeCompare(right.reviewWindowLabel),
-    );
+    .sort((left, right) => left.sortKey.localeCompare(right.sortKey))
+    .map(({ sortKey: _sortKey, ...item }) => item);
 }
 
 export function mapPlatformChargeInspectorReview(
@@ -501,7 +504,7 @@ function mapRecurringCharge(
 
 function recurringPaymentReviewItem(
   finding: ChargeInspectorFinding,
-): RecurringPaymentReviewItem {
+): SortableRecurringPaymentReviewItem {
   const latestRow = latestEvidenceRow(finding.evidenceRows);
   const latestDate = latestRow ? parseIsoDate(latestRow.postedDate) : null;
   const cadenceLabel = finding.cadenceLabel ?? "Pattern needs review";
@@ -516,6 +519,7 @@ function recurringPaymentReviewItem(
     )} matched row${finding.evidenceRows.length === 1 ? "" : "s"}`,
     lastSeenLabel: latestDate ? formatDate(latestDate) : "Missing",
     reviewWindowLabel: nextReviewWindowLabel(cadenceLabel, latestDate),
+    sortKey: latestDate ? latestDate.toISOString() : "9999-12-31T00:00:00.000Z",
     limitations: finding.limitations,
   };
 }

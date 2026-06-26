@@ -855,6 +855,20 @@ test("charge inspector builds recurring payment review items from visible findin
   });
 });
 
+test("charge inspector recurring payment review sorts by date, not label text", () => {
+  const [recurringFinding] = chargeInspectorSampleReview.findings;
+  const findings = [
+    recurringFindingWithLastSeen(recurringFinding, "recurring-apr", "2026-04-15"),
+    recurringFindingWithLastSeen(recurringFinding, "recurring-dec", "2025-12-01"),
+    recurringFindingWithLastSeen(recurringFinding, "recurring-feb", "2026-02-28"),
+  ];
+
+  assert.deepEqual(
+    recurringPaymentReviewItems(findings).map((item) => item.id),
+    ["recurring-dec", "recurring-feb", "recurring-apr"],
+  );
+});
+
 test("charge inspector recurring payment review follows hidden finding state", () => {
   const firstFindingId = chargeInspectorSampleReview.findings[0].id;
   const visibleFindings = visibleChargeInspectorFindings(
@@ -864,6 +878,20 @@ test("charge inspector recurring payment review follows hidden finding state", (
 
   assert.equal(recurringPaymentReviewItems(visibleFindings).length, 0);
 });
+
+function recurringFindingWithLastSeen(finding, id, postedDate) {
+  return {
+    ...finding,
+    id,
+    evidenceRows: [
+      {
+        ...finding.evidenceRows[0],
+        id: `${id}-evidence`,
+        postedDate,
+      },
+    ],
+  };
+}
 
 test("charge inspector empty review keeps a safe no-finding state", () => {
   const summary = summarizeChargeInspectorReview(chargeInspectorEmptyReview);

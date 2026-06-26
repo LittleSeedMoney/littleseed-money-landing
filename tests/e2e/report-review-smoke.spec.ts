@@ -352,6 +352,11 @@ test.describe("private report review smoke", () => {
     await expect(recurringBoard.getByText("3 matched rows")).toBeVisible();
     await expect(recurringBoard.getByText("Around Jun 9, 2026"))
       .toBeVisible();
+    await expect(
+      recurringBoard.getByText(
+        "A recurring pattern does not mean the charge is unwanted.",
+      ),
+    ).toBeVisible();
 
     const findings = chargeInspectorFindings(page);
     await expect(findings.first()).toBeVisible();
