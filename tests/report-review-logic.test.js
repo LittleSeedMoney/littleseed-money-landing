@@ -62,6 +62,7 @@ const {
 } = require("../lib/report-review/saving-goal-draft.ts");
 const {
   approvedKnowledgeArtifactIdsForFinding,
+  buildCategoryEvidenceContextPack,
   buildFindingContextPack,
   buildMonthlySpendingSummaryContextPack,
 } = require("../lib/report-review/ai/context-pack.ts");
@@ -163,6 +164,41 @@ test("report-review AI monthly spending context pack uses aggregate rows only", 
   assert.equal(renderedContext.includes("Streamly Premium"), false);
 });
 
+test("report-review AI category evidence context pack stays bounded", () => {
+  const contextPack = buildCategoryEvidenceContextPack({
+    categoryReviewStatuses: {
+      fees: "needs-review",
+      groceries: "confirmed",
+    },
+    targetId: "charge_inspector_category_evidence",
+  });
+  const renderedContext = JSON.stringify(contextPack);
+  const groceries = contextPack.categoryEvidence.categories.find(
+    (category) => category.category === "groceries",
+  );
+  const fees = contextPack.categoryEvidence.categories.find(
+    (category) => category.category === "fees",
+  );
+
+  assert.equal(contextPack.version, "coach_context_pack.v0");
+  assert.equal(contextPack.authority, "server");
+  assert.equal(contextPack.target.type, "category_evidence");
+  assert.equal(
+    contextPack.categoryEvidence.version,
+    "category_evidence_ai_context.v0",
+  );
+  assert.equal(groceries.reviewStatus, "confirmed");
+  assert.equal(fees.reviewStatus, "needs-review");
+  assert.deepEqual(
+    groceries.evidenceRows.map((row) => row.merchantName),
+    ["Corner Grocer", "Corner Grocer"],
+  );
+  assert.ok(contextPack.excludedData.includes("raw transaction rows"));
+  assert.ok(contextPack.excludedData.includes("automatic recategorization"));
+  assert.equal(renderedContext.includes("original_description"), false);
+  assert.equal(renderedContext.includes("Balance"), false);
+});
+
 test("report-review AI approved corpus loader reads collector-shaped JSONL", () => {
   const artifacts = approvedKnowledgeArtifacts({
     artifactIds: ["knowledge.debt_cost_context.v0"],
@@ -260,6 +296,21 @@ test("report-review AI request parser rejects client-supplied spending context",
   );
 });
 
+test("report-review AI request parser rejects client-supplied category evidence", () => {
+  assert.throws(
+    () =>
+      parseReportReviewAiRequest({
+        categoryEvidence: [{ merchantName: "Injected Merchant" }],
+        questionType: "explain_finding",
+        surface: "report_review",
+        targetId: "charge_inspector_category_evidence",
+        targetType: "category_evidence",
+        userMessage: null,
+      }),
+    /categoryEvidence must not be supplied/,
+  );
+});
+
 test("report-review AI request parser accepts target-only payload", () => {
   const finding = reportReviewSample.findings[0];
 
@@ -286,6 +337,40 @@ test("report-review AI request parser accepts monthly spending target payload", 
 
   assert.equal(request.targetId, "charge_inspector_monthly_spending_summary");
   assert.equal(request.targetType, "monthly_spending_summary");
+});
+
+test("report-review AI request parser accepts category review statuses only for category evidence", () => {
+  const request = parseReportReviewAiRequest({
+    categoryReviewStatuses: {
+      fees: "needs-review",
+      groceries: "confirmed",
+    },
+    questionType: "explain_finding",
+    surface: "report_review",
+    targetId: "charge_inspector_category_evidence",
+    targetType: "category_evidence",
+    userMessage: null,
+  });
+
+  assert.equal(request.targetId, "charge_inspector_category_evidence");
+  assert.equal(request.targetType, "category_evidence");
+  assert.deepEqual(request.categoryReviewStatuses, {
+    fees: "needs-review",
+    groceries: "confirmed",
+  });
+
+  assert.throws(
+    () =>
+      parseReportReviewAiRequest({
+        categoryReviewStatuses: { groceries: "confirmed" },
+        questionType: "explain_finding",
+        surface: "report_review",
+        targetId: "charge_inspector_monthly_spending_summary",
+        targetType: "monthly_spending_summary",
+        userMessage: null,
+      }),
+    /categoryReviewStatuses is only supported for category evidence/,
+  );
 });
 
 test("report-review AI explanation rejects unsupported targets", async () => {
@@ -345,6 +430,55 @@ test("report-review AI monthly spending copy avoids finding-only wording", async
     assert.doesNotMatch(answer.answer, /obligations temporary or recurring/i);
     assert.doesNotMatch(answer.answer, /you should/i);
   }
+});
+
+test("report-review AI explains category evidence without recategorizing", async () => {
+  const answer = await explainReportReviewFinding({
+    categoryReviewStatuses: {
+      fees: "needs-review",
+      groceries: "confirmed",
+    },
+    questionType: "explain_finding",
+    surface: "report_review",
+    targetId: "charge_inspector_category_evidence",
+    targetType: "category_evidence",
+    userMessage: null,
+  });
+
+  assert.equal(answer.answerKind, "validated_answer");
+  assert.equal(answer.validation.status, "passed");
+  assert.equal(answer.target.type, "category_evidence");
+  assert.equal(
+    answer.versions.categoryEvidenceContext,
+    "category_evidence_ai_context.v0",
+  );
+  assert.equal(
+    answer.evidence.some((item) => item.text.includes("Corner Grocer")),
+    true,
+  );
+  assert.equal(
+    answer.evidence.some((item) => item.text.includes("Fees (needs-review)")),
+    true,
+  );
+  assert.doesNotMatch(JSON.stringify(answer), /"original_description"/i);
+  assert.doesNotMatch(JSON.stringify(answer), /"balance"/i);
+  assert.doesNotMatch(answer.answer, /you should/i);
+  assert.doesNotMatch(answer.answer, /wrong category/i);
+});
+
+test("report-review AI category evidence refuses unsupported follow-up", async () => {
+  const answer = await explainReportReviewFinding({
+    questionType: "follow_up",
+    surface: "report_review",
+    targetId: "charge_inspector_category_evidence",
+    targetType: "category_evidence",
+    userMessage: "Why is this category here?",
+  });
+
+  assert.equal(answer.answerKind, "boundary_refusal");
+  assert.equal(answer.validation.status, "fallback");
+  assert.equal(answer.validation.fallbackUsed, true);
+  assert.match(answer.validation.reasons.join(" "), /not enabled/);
 });
 
 test("report-review AI explanation returns validated fixture answer", async () => {
@@ -530,6 +664,10 @@ test("report-review AI eval cases cover required boundary categories", () => {
   assert.ok(caseIds.has("allowed_monthly_spending_summary_missing_context"));
   assert.ok(caseIds.has("allowed_monthly_spending_summary_next_questions"));
   assert.ok(caseIds.has("rejects_client_supplied_monthly_spending_context"));
+  assert.ok(caseIds.has("allowed_category_evidence_explain"));
+  assert.ok(caseIds.has("allowed_category_evidence_missing_context"));
+  assert.ok(caseIds.has("refuses_category_evidence_follow_up"));
+  assert.ok(caseIds.has("rejects_client_supplied_category_evidence_context"));
   assert.ok(caseIds.has("validator_rejects_missing_evidence"));
 });
 
@@ -718,6 +856,10 @@ test("charge inspector platform parser accepts the review contract", () => {
   assert.equal(parsed.monthly_spending_summary[2].debit_total, "1889.90");
   assert.equal(parsed.category_summary[2].category, "groceries");
   assert.equal(parsed.category_summary[2].debit_total, "130.56");
+  assert.deepEqual(
+    parsed.category_summary[2].evidence_rows.map((row) => row.merchant_name),
+    ["Corner Grocer", "Corner Grocer"],
+  );
   assert.equal(parsed.findings.recurring_charges[0].merchant_name, "Streamly Premium");
   assert.equal(parsed.evidence_transactions.length, 8);
 });
@@ -781,6 +923,28 @@ test("charge inspector platform mapper builds UI findings from contract evidence
   assert.deepEqual(review.categorySummary[2].ruleIds, [
     "category.groceries.grocer_text.v0",
   ]);
+  assert.deepEqual(
+    review.categorySummary[2].evidenceRows.map((row) => [
+      row.merchantName,
+      row.amountLabel,
+      row.directionLabel,
+      row.ruleId,
+    ]),
+    [
+      [
+        "Corner Grocer",
+        "$76.44",
+        "Debit",
+        "category.groceries.grocer_text.v0",
+      ],
+      [
+        "Corner Grocer",
+        "$54.12",
+        "Debit",
+        "category.groceries.grocer_text.v0",
+      ],
+    ],
+  );
   assert.match(review.limitations.join(" "), /charge_inspector_review_v0/);
 });
 
@@ -2041,9 +2205,34 @@ function chargeInspectorPlatformPayload() {
       categorySummaryPayload("housing", "Housing", "1500.00", "0", 1, 1, 0, [
         "category.housing.rent_payment.v0",
       ]),
-      categorySummaryPayload("groceries", "Groceries", "130.56", "0", 2, 2, 0, [
-        "category.groceries.grocer_text.v0",
-      ]),
+      categorySummaryPayload(
+        "groceries",
+        "Groceries",
+        "130.56",
+        "0",
+        2,
+        2,
+        0,
+        ["category.groceries.grocer_text.v0"],
+        [
+          categoryEvidencePayload(
+            "txn-groceries-1",
+            "2026-05-03",
+            "Corner Grocer",
+            "76.44",
+            "debit",
+            "category.groceries.grocer_text.v0",
+          ),
+          categoryEvidencePayload(
+            "txn-groceries-2",
+            "2026-05-18",
+            "Corner Grocer",
+            "54.12",
+            "debit",
+            "category.groceries.grocer_text.v0",
+          ),
+        ],
+      ),
     ],
     evidence_transactions: evidence,
     parse_errors: [],
@@ -2063,6 +2252,7 @@ function categorySummaryPayload(
   debitTransactionCount,
   creditTransactionCount,
   ruleIds,
+  evidenceRows = [],
 ) {
   return {
     schema_version: "transaction_category_summary_v0",
@@ -2075,9 +2265,29 @@ function categorySummaryPayload(
     debit_transaction_count: debitTransactionCount,
     credit_transaction_count: creditTransactionCount,
     rule_ids: ruleIds,
+    evidence_rows: evidenceRows,
     limitations: [
       "Category mapping uses deterministic merchant and transaction-type text rules only.",
     ],
+  };
+}
+
+function categoryEvidencePayload(
+  evidenceId,
+  postedDate,
+  merchantName,
+  amount,
+  direction,
+  ruleId,
+) {
+  return {
+    evidence_id: evidenceId,
+    posted_date: postedDate,
+    merchant_name: merchantName,
+    amount,
+    direction,
+    currency: "USD",
+    rule_id: ruleId,
   };
 }
 

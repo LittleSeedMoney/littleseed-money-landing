@@ -3,6 +3,11 @@
 import { useState, type FormEvent } from "react";
 
 import type { Finding } from "@/data/report-review-sample";
+import type { ChargeInspectorCategoryReviewStatus } from "@/lib/report-review/charge-inspector";
+import {
+  REPORT_REVIEW_AI_CATEGORY_EVIDENCE_TARGET_ID,
+  REPORT_REVIEW_AI_MONTHLY_SPENDING_TARGET_ID,
+} from "@/lib/report-review/ai/types";
 import type {
   ReportReviewAiAnswerKind,
   ReportReviewAiQuestionType,
@@ -43,7 +48,7 @@ const answerKindDetails: Record<
   },
   validated_answer: {
     description:
-      "The answer passed the source, evidence, limitation, and boundary checks for this selected finding.",
+      "The answer passed the source, evidence, limitation, and boundary checks for this selected report-review target.",
     label: "Validated answer",
     title: "Validated explanation",
     tone: "seed",
@@ -81,6 +86,16 @@ const monthlySummaryActionLabels: Record<
   string
 > = {
   explain_finding: "Explain summary",
+  missing_context: "Missing context",
+  next_questions: "Next questions",
+  plain_language: "Plain language",
+};
+
+const categoryEvidenceActionLabels: Record<
+  Exclude<ReportReviewAiQuestionType, "follow_up">,
+  string
+> = {
+  explain_finding: "Explain categories",
   missing_context: "Missing context",
   next_questions: "Next questions",
   plain_language: "Plain language",
@@ -145,8 +160,36 @@ export function AiMonthlySpendingExplanationPanel({
       }}
       enabled={enabled}
       target={{
-        id: "charge_inspector_monthly_spending_summary",
+        id: REPORT_REVIEW_AI_MONTHLY_SPENDING_TARGET_ID,
         type: "monthly_spending_summary",
+      }}
+    />
+  );
+}
+
+export function AiCategoryEvidenceExplanationPanel({
+  categoryReviewStatuses,
+  enabled,
+}: {
+  categoryReviewStatuses: Record<string, ChargeInspectorCategoryReviewStatus>;
+  enabled: boolean;
+}) {
+  return (
+    <AiReportReviewExplanationPanel
+      allowFollowUp={false}
+      categoryReviewStatuses={categoryReviewStatuses}
+      copy={{
+        actionLabels: categoryEvidenceActionLabels,
+        disabledDescription:
+          "This category evidence panel is wired for bounded AI explanations but does not call the AI route until the private/dev flag is enabled.",
+        enabledDescription:
+          "Answers are limited to server-owned category totals, bounded merchant-display evidence rows, rule ids, review status, limitations, and version metadata. Raw CSV rows, account history, balances, budget judgments, recategorization, and action ranking are excluded.",
+        title: "AI category evidence",
+      }}
+      enabled={enabled}
+      target={{
+        id: REPORT_REVIEW_AI_CATEGORY_EVIDENCE_TARGET_ID,
+        type: "category_evidence",
       }}
     />
   );
@@ -154,11 +197,13 @@ export function AiMonthlySpendingExplanationPanel({
 
 function AiReportReviewExplanationPanel({
   allowFollowUp,
+  categoryReviewStatuses,
   copy,
   enabled,
   target,
 }: {
   allowFollowUp: boolean;
+  categoryReviewStatuses?: Record<string, ChargeInspectorCategoryReviewStatus>;
   copy: AiExplanationPanelCopy;
   enabled: boolean;
   target: AiExplanationTarget;
@@ -183,6 +228,9 @@ function AiReportReviewExplanationPanel({
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
+          ...(categoryReviewStatuses
+            ? { categoryReviewStatuses }
+            : {}),
           questionType,
           surface: "report_review",
           targetId: target.id,
@@ -375,6 +423,12 @@ function AiAnswerResult({ answer }: { answer: ReportReviewAiResponse }) {
             <VersionItem
               label="Monthly spend"
               value={answer.versions.monthlySpendingContext}
+            />
+          ) : null}
+          {answer.versions.categoryEvidenceContext ? (
+            <VersionItem
+              label="Category evidence"
+              value={answer.versions.categoryEvidenceContext}
             />
           ) : null}
           <VersionItem label="Corpus" value={answer.versions.corpus} />

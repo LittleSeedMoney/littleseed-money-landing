@@ -1,9 +1,14 @@
 import { reportReviewSample } from "@/data/report-review-sample";
 
 import { approvedKnowledgeArtifacts } from "./knowledge-artifacts";
+import {
+  REPORT_REVIEW_AI_CATEGORY_EVIDENCE_TARGET_ID,
+  REPORT_REVIEW_AI_MONTHLY_SPENDING_TARGET_ID,
+} from "./types";
 import type {
   CoachContextPack,
   CoachContextPackAllowedQuestionType,
+  CategoryEvidenceContext,
   ReportReviewAiTargetType,
 } from "./types";
 
@@ -23,9 +28,6 @@ const allowedQuestionTypes: CoachContextPackAllowedQuestionType[] = [
 const artifactIdsByFindingId: Record<string, string[]> = {
   high_interest_debt_detected: ["knowledge.debt_cost_context.v0"],
 };
-
-const MONTHLY_SPENDING_SUMMARY_TARGET_ID =
-  "charge_inspector_monthly_spending_summary";
 
 export function approvedKnowledgeArtifactIdsForFinding(findingId: string) {
   const artifactIds = artifactIdsByFindingId[findingId];
@@ -103,7 +105,7 @@ export function buildMonthlySpendingSummaryContextPack({
 }: {
   targetId: string;
 }): CoachContextPack {
-  if (targetId !== MONTHLY_SPENDING_SUMMARY_TARGET_ID) {
+  if (targetId !== REPORT_REVIEW_AI_MONTHLY_SPENDING_TARGET_ID) {
     throw new CoachContextPackError(
       "targetId is not supported for report-review AI explanation.",
     );
@@ -112,17 +114,17 @@ export function buildMonthlySpendingSummaryContextPack({
   const chargeInspector = reportReviewSample.chargeInspector;
 
   return {
-    id: `coach_context_pack.v0.${MONTHLY_SPENDING_SUMMARY_TARGET_ID}`,
+    id: `coach_context_pack.v0.${REPORT_REVIEW_AI_MONTHLY_SPENDING_TARGET_ID}`,
     version: "coach_context_pack.v0",
     surface: "report_review",
     authority: "server",
     target: {
       type: "monthly_spending_summary",
-      id: MONTHLY_SPENDING_SUMMARY_TARGET_ID,
+      id: REPORT_REVIEW_AI_MONTHLY_SPENDING_TARGET_ID,
       title: "Charge Inspector monthly spending summary",
     },
     monthlySpendingSummary: {
-      id: MONTHLY_SPENDING_SUMMARY_TARGET_ID,
+      id: REPORT_REVIEW_AI_MONTHLY_SPENDING_TARGET_ID,
       version: "monthly_spending_ai_context.v0",
       sourceLabel: chargeInspector.sourceLabel,
       reviewedTransactionCount: chargeInspector.reviewedTransactionCount,
@@ -170,10 +172,123 @@ export function buildMonthlySpendingSummaryContextPack({
   };
 }
 
+export function buildCategoryEvidenceContextPack({
+  categoryReviewStatuses = {},
+  targetId,
+}: {
+  categoryReviewStatuses?: Record<
+    string,
+    CategoryEvidenceContext["categories"][number]["reviewStatus"]
+  >;
+  targetId: string;
+}): CoachContextPack {
+  if (targetId !== REPORT_REVIEW_AI_CATEGORY_EVIDENCE_TARGET_ID) {
+    throw new CoachContextPackError(
+      "targetId is not supported for report-review AI explanation.",
+    );
+  }
+
+  const chargeInspector = reportReviewSample.chargeInspector;
+  const categoryIds = new Set(
+    chargeInspector.categorySummary.map((category) => category.category),
+  );
+
+  for (const category of Object.keys(categoryReviewStatuses)) {
+    if (!categoryIds.has(category)) {
+      throw new CoachContextPackError(
+        `categoryReviewStatuses includes unsupported category ${category}.`,
+      );
+    }
+  }
+
+  return {
+    id: `coach_context_pack.v0.${REPORT_REVIEW_AI_CATEGORY_EVIDENCE_TARGET_ID}`,
+    version: "coach_context_pack.v0",
+    surface: "report_review",
+    authority: "server",
+    target: {
+      type: "category_evidence",
+      id: REPORT_REVIEW_AI_CATEGORY_EVIDENCE_TARGET_ID,
+      title: "Charge Inspector category evidence",
+    },
+    categoryEvidence: {
+      id: REPORT_REVIEW_AI_CATEGORY_EVIDENCE_TARGET_ID,
+      version: "category_evidence_ai_context.v0",
+      sourceLabel: chargeInspector.sourceLabel,
+      reviewedTransactionCount: chargeInspector.reviewedTransactionCount,
+      categorySummaryVersion: chargeInspector.categorySummaryVersion,
+      categories: chargeInspector.categorySummary.map((category) => ({
+        category: category.category,
+        label: category.label,
+        debitTotalLabel: category.debitTotalLabel,
+        creditTotalLabel: category.creditTotalLabel,
+        transactionCount: category.transactionCount,
+        debitTransactionCount: category.debitTransactionCount,
+        creditTransactionCount: category.creditTransactionCount,
+        reviewStatus:
+          categoryReviewStatuses[category.category] ?? "unreviewed",
+        ruleIds: category.ruleIds,
+        evidenceRows: category.evidenceRows,
+        limitations: category.limitations,
+      })),
+      limitations: [
+        "Category evidence is deterministic rule output, not an AI categorization decision.",
+        "Merchant names are bounded display labels from the current review, not full transaction descriptions.",
+        "This context does not include raw CSV rows, balances, check numbers, account identifiers, or full transaction history.",
+        "The AI explanation cannot recategorize rows, judge budgets, rank actions, or tell the user what to change.",
+        ...chargeInspector.limitations,
+      ],
+      excludedFields: [
+        "raw transaction rows",
+        "full transaction descriptions",
+        "account identifiers",
+        "balances",
+        "check numbers",
+        "full account history",
+        "automatic recategorization",
+        "budget variance judgments",
+        "merchant actions",
+        "action ranking",
+      ],
+    },
+    evidenceSources: [],
+    knowledgeArtifacts: [],
+    allowedQuestionTypes: allowedQuestionTypes.filter(
+      (questionType) => questionType !== "follow_up",
+    ),
+    excludedData: [
+      "raw transaction rows",
+      "full transaction descriptions",
+      "account identifiers",
+      "balances",
+      "check numbers",
+      "full account history",
+      "account credentials",
+      "linked-account data",
+      "saved AI conversation history",
+      "long-term memory",
+      "automatic recategorization",
+      "budget variance judgments",
+      "merchant actions",
+      "action ranking",
+      "unapproved third-party retrieval content",
+    ],
+    versions: {
+      corpus: "knowledge_corpus.fixture.v0",
+      sourceMap: REPORT_REVIEW_CONTEXT_SOURCE_MAP_VERSION,
+    },
+  };
+}
+
 export function buildReportReviewContextPack({
+  categoryReviewStatuses,
   targetId,
   targetType,
 }: {
+  categoryReviewStatuses?: Record<
+    string,
+    CategoryEvidenceContext["categories"][number]["reviewStatus"]
+  >;
   targetId: string;
   targetType: ReportReviewAiTargetType;
 }): CoachContextPack {
@@ -183,6 +298,13 @@ export function buildReportReviewContextPack({
 
   if (targetType === "monthly_spending_summary") {
     return buildMonthlySpendingSummaryContextPack({ targetId });
+  }
+
+  if (targetType === "category_evidence") {
+    return buildCategoryEvidenceContextPack({
+      categoryReviewStatuses,
+      targetId,
+    });
   }
 
   throw new CoachContextPackError(

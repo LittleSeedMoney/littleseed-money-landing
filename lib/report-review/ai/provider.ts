@@ -137,9 +137,10 @@ function createOpenAiReportReviewProvider({
             "You explain selected LittleSeed Money report-review findings.",
             "Use only the supplied context pack and knowledge artifacts.",
             "You may explain monthly spending aggregate rows only when the context pack includes monthlySpendingSummary.",
+            "You may explain bounded category evidence only when the context pack includes categoryEvidence.",
             "Do not calculate new values.",
             "Do not rank actions.",
-            "Do not infer budgets, categories, merchant actions, or required next steps from aggregate spending data.",
+            "Do not infer budgets, recategorize transactions, judge categories as right or wrong, recommend merchant actions, or create required next steps.",
             "Do not provide investment, tax, legal, credit-product, merchant-action, account-linking, or dispute advice.",
             "Return concise JSON that matches the schema.",
           ].join(" "),
@@ -232,6 +233,20 @@ function baseContextEvidence(contextPack: CoachContextPack) {
     ];
   }
 
+  if (contextPack.categoryEvidence) {
+    return [
+      {
+        id: contextPack.categoryEvidence.id,
+        text: categoryEvidenceText(contextPack.categoryEvidence.categories),
+      },
+      {
+        id: contextPack.id,
+        text:
+          "Category evidence context contains bounded merchant-display rows and review status only, not raw transaction history.",
+      },
+    ];
+  }
+
   return [
     {
       id: contextPack.id,
@@ -282,6 +297,15 @@ function explainAnswer(contextPack: CoachContextPack) {
     return `This monthly spending summary shows aggregate posted-date totals for ${contextPack.monthlySpendingSummary.rows.length.toLocaleString("en-US")} month${contextPack.monthlySpendingSummary.rows.length === 1 ? "" : "s"}. It can explain spending, credits, net cash flow, and row counts, but it cannot infer budgets, categories, or required actions.`;
   }
 
+  if (contextPack.categoryEvidence) {
+    const visibleEvidenceCount = contextPack.categoryEvidence.categories.reduce(
+      (count, category) => count + category.evidenceRows.length,
+      0,
+    );
+
+    return `This category evidence summary shows deterministic rule output for ${contextPack.categoryEvidence.categories.length.toLocaleString("en-US")} categor${contextPack.categoryEvidence.categories.length === 1 ? "y" : "ies"} and ${visibleEvidenceCount.toLocaleString("en-US")} bounded merchant-display evidence row${visibleEvidenceCount === 1 ? "" : "s"}. It can explain which visible rows are attached to a category and what review status is selected, but it cannot recategorize rows, judge budgets, or rank actions.`;
+  }
+
   return "This context pack does not include enough supported detail to explain.";
 }
 
@@ -290,7 +314,15 @@ function plainLanguageAnswer(contextPack: CoachContextPack) {
     return `In plain language, this finding says: ${contextPack.finding.summary} It is an area to review, not a ranked action or a product recommendation.`;
   }
 
-  return "In plain language, the monthly spending summary is a table of totals by posted-date month. It is useful for checking what the normalized rows add up to, but it is not a budget, category model, or recommendation.";
+  if (contextPack.monthlySpendingSummary) {
+    return "In plain language, the monthly spending summary is a table of totals by posted-date month. It is useful for checking what the normalized rows add up to, but it is not a budget, category model, or recommendation.";
+  }
+
+  if (contextPack.categoryEvidence) {
+    return "In plain language, category evidence is the visible trail behind the category table: category totals, matched merchant-display rows, rule ids, and the current review status. It is explanation support, not an automatic recategorization or budget judgement.";
+  }
+
+  return "In plain language, this context pack does not include enough supported detail to explain.";
 }
 
 function missingContextAnswer(contextPack: CoachContextPack) {
@@ -300,6 +332,10 @@ function missingContextAnswer(contextPack: CoachContextPack) {
 
   if (contextPack.monthlySpendingSummary) {
     return "This monthly spending summary is limited by the aggregate fields available here. Missing context includes whether each month is complete, whether credits are income, transfers, refunds, or reimbursements, and whether any rows were excluded or failed parsing.";
+  }
+
+  if (contextPack.categoryEvidence) {
+    return "This category evidence is limited by the bounded fields available here. Missing context includes receipts, full merchant descriptors, statement period completeness, and whether a product owner has reviewed any ambiguous category rules.";
   }
 
   return "This context is limited by the fields available in the selected context pack.";
@@ -314,6 +350,10 @@ function nextQuestionsAnswer(contextPack: CoachContextPack) {
     return "Useful next questions are: Is each month complete? Are the credits income, transfers, refunds, or reimbursements? Were any rows excluded or returned as parse errors? Are any net cash-flow months worth reviewing for context? These are review questions, not action priorities.";
   }
 
+  if (contextPack.categoryEvidence) {
+    return "Useful next questions are: Which merchant-display labels look ambiguous? Which categories are marked needs review? Are any rule ids too broad for product review? Does the statement period look complete? These are review questions, not action priorities.";
+  }
+
   return "Useful next questions should stay inside the selected context pack and focus on missing context, source limits, and versioned evidence.";
 }
 
@@ -322,7 +362,11 @@ function followUpBoundaryAnswer(contextPack: CoachContextPack) {
     return "For this selected finding, the follow-up can only use the finding summary, why-it-matters text, limitations, and approved knowledge corpus. It cannot choose an action, calculate a new amount, or use account history.";
   }
 
-  return "For this monthly spending summary, the follow-up can only use aggregate monthly totals, row counts, source labels, versions, and limitations. It cannot use raw transactions, calculate new totals, rank actions, or infer categories.";
+  if (contextPack.monthlySpendingSummary) {
+    return "For this monthly spending summary, the follow-up can only use aggregate monthly totals, row counts, source labels, versions, and limitations. It cannot use raw transactions, calculate new totals, rank actions, or infer categories.";
+  }
+
+  return "For this category evidence context, follow-up is not enabled. Use one of the fixed explanation questions so the answer stays inside bounded category evidence, review status, rule ids, versions, and limitations.";
 }
 
 function monthlySpendingEvidenceText(
@@ -340,12 +384,46 @@ function monthlySpendingEvidenceText(
     .join(" ");
 }
 
+function categoryEvidenceText(
+  categories: NonNullable<CoachContextPack["categoryEvidence"]>["categories"],
+) {
+  const categoriesWithEvidence = categories.filter(
+    (category) => category.evidenceRows.length > 0,
+  );
+
+  if (categoriesWithEvidence.length === 0) {
+    return "No category evidence rows are available.";
+  }
+
+  return categoriesWithEvidence
+    .map((category) => {
+      const rows = category.evidenceRows
+        .map(
+          (row) =>
+            `${row.postedDate} ${row.merchantName} ${row.amountLabel} ${row.directionLabel.toLowerCase()} via ${row.ruleId}`,
+        )
+        .join("; ");
+
+      return `${category.label} (${category.reviewStatus}): ${rows}.`;
+    })
+    .join(" ");
+}
+
 function defaultLimitations(contextPack: CoachContextPack) {
   if (contextPack.monthlySpendingSummary) {
     return [
       "Uses only monthly aggregate totals and row counts from the server-owned context pack.",
       "Does not use raw transaction rows, merchant names, account history, account credentials, saved chat history, or long-term memory.",
       ...contextPack.monthlySpendingSummary.limitations.slice(0, 2),
+    ];
+  }
+
+  if (contextPack.categoryEvidence) {
+    return [
+      "Uses only bounded category evidence from the server-owned context pack.",
+      "Does not use raw CSV rows, full descriptions, balances, account identifiers, saved chat history, or long-term memory.",
+      "Does not recategorize rows, judge budgets, rank actions, or recommend merchant actions.",
+      ...contextPack.categoryEvidence.limitations.slice(0, 2),
     ];
   }
 

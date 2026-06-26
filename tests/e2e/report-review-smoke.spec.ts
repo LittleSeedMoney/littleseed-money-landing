@@ -347,7 +347,7 @@ test.describe("private report review smoke", () => {
       .toBeVisible();
     await expect(page.getByTestId("charge-inspector-category-row"))
       .toHaveCount(11);
-    await expect(page.getByText("Groceries")).toBeVisible();
+    await expect(page.getByText("Groceries", { exact: true })).toBeVisible();
     await expect(page.getByText("$130.56")).toBeVisible();
     await expect(page.getByText("0 confirmed")).toBeVisible();
     await expect(page.getByText("0 needs review")).toBeVisible();
@@ -355,6 +355,15 @@ test.describe("private report review smoke", () => {
     const groceriesCategory = page
       .getByTestId("charge-inspector-category-row")
       .filter({ hasText: "Groceries" });
+    await groceriesCategory.locator("summary").click();
+    await expect(groceriesCategory.getByText("Corner Grocer").first())
+      .toBeVisible();
+    await expect(
+      groceriesCategory.getByText("Rule: category.groceries.grocer_text.v0"),
+    ).toHaveCount(2);
+    await expect(
+      page.getByTestId("ai-explanation-disabled-charge_inspector_category_evidence"),
+    ).toBeVisible();
     await groceriesCategory.getByRole("radio", { name: "Confirm" }).click();
     await expect(page.getByText("1 confirmed")).toBeVisible();
     await expect(
@@ -446,7 +455,7 @@ test.describe("private report review smoke", () => {
         [
           "Details,Posting Date,Description,Amount,Type,Balance,Check or Slip #",
           "DEBIT,06/01/2026,Uploaded Coffee,-12.50,DEBIT_CARD,100.00,",
-          "DEBIT,06/02/2026,Uploaded Grocer,-30.00,DEBIT_CARD,70.00,",
+          "DEBIT,06/02/2026,Uploaded Cafe,-30.00,DEBIT_CARD,70.00,",
         ].join("\n"),
       ),
       mimeType: "text/csv",
@@ -463,7 +472,7 @@ test.describe("private report review smoke", () => {
       .toHaveCount(1);
     await expect(page.getByTestId("charge-inspector-category-row"))
       .toHaveCount(1);
-    await expect(page.getByText("Dining")).toBeVisible();
+    await expect(page.getByText("Dining", { exact: true })).toBeVisible();
     await expect(page.getByText("0 confirmed")).toBeVisible();
     await expect(page.getByText("0 needs review")).toBeVisible();
     await expect(
@@ -472,6 +481,12 @@ test.describe("private report review smoke", () => {
         .filter({ hasText: "Dining" })
         .getByRole("radio", { name: "Unreviewed" }),
     ).toHaveAttribute("aria-checked", "true");
+    const uploadedDiningCategory = page
+      .getByTestId("charge-inspector-category-row")
+      .filter({ hasText: "Dining" });
+    await uploadedDiningCategory.locator("summary").click();
+    await expect(uploadedDiningCategory.getByText("Uploaded Coffee"))
+      .toBeVisible();
     await expect(
       page.getByTestId(
         "ai-explanation-panel-charge_inspector_monthly_spending_summary",
@@ -481,6 +496,12 @@ test.describe("private report review smoke", () => {
       page.getByTestId(
         "ai-explanation-disabled-charge_inspector_monthly_spending_summary",
       ),
+    ).toHaveCount(0);
+    await expect(
+      page.getByTestId("ai-explanation-panel-charge_inspector_category_evidence"),
+    ).toHaveCount(0);
+    await expect(
+      page.getByTestId("ai-explanation-disabled-charge_inspector_category_evidence"),
     ).toHaveCount(0);
     await expect(
       page.getByTestId("charge-inspector-recurring-payment-board"),
@@ -587,6 +608,24 @@ function uploadedChargeInspectorReview() {
         creditTransactionCount: 0,
         debitTotalLabel: "$42.50",
         debitTransactionCount: 2,
+        evidenceRows: [
+          {
+            amountLabel: "$12.50",
+            directionLabel: "Debit",
+            id: "uploaded-dining-1",
+            merchantName: "Uploaded Coffee",
+            postedDate: "2026-06-01",
+            ruleId: "category.dining.coffee.v0",
+          },
+          {
+            amountLabel: "$30.00",
+            directionLabel: "Debit",
+            id: "uploaded-dining-2",
+            merchantName: "Uploaded Cafe",
+            postedDate: "2026-06-02",
+            ruleId: "category.dining.coffee.v0",
+          },
+        ],
         label: "Dining",
         limitations: [
           "Category mapping uses deterministic merchant and transaction-type text rules only.",

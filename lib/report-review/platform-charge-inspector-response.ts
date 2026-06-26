@@ -40,7 +40,18 @@ export type PlatformTransactionCategorySummary = {
   debit_transaction_count: number;
   credit_transaction_count: number;
   rule_ids: string[];
+  evidence_rows: PlatformTransactionCategoryEvidenceRow[];
   limitations: string[];
+};
+
+export type PlatformTransactionCategoryEvidenceRow = {
+  evidence_id: string;
+  posted_date: string;
+  merchant_name: string;
+  amount: DecimalValue;
+  direction: string;
+  currency: string;
+  rule_id: string;
 };
 
 export type PlatformMonthlySpendingSummary = {
@@ -288,7 +299,32 @@ function parseTransactionCategorySummary(
       `${path}.credit_transaction_count`,
     ),
     rule_ids: parseStringArray(summary.rule_ids, `${path}.rule_ids`),
+    evidence_rows:
+      summary.evidence_rows == null
+        ? []
+        : parseArray(
+            summary.evidence_rows,
+            `${path}.evidence_rows`,
+            parseTransactionCategoryEvidenceRow,
+          ),
     limitations: parseStringArray(summary.limitations, `${path}.limitations`),
+  };
+}
+
+function parseTransactionCategoryEvidenceRow(
+  value: unknown,
+  path: string,
+): PlatformTransactionCategoryEvidenceRow {
+  const row = expectRecord(value, path);
+
+  return {
+    evidence_id: expectString(row.evidence_id, `${path}.evidence_id`),
+    posted_date: expectString(row.posted_date, `${path}.posted_date`),
+    merchant_name: expectString(row.merchant_name, `${path}.merchant_name`),
+    amount: expectDecimalValue(row.amount, `${path}.amount`),
+    direction: expectString(row.direction, `${path}.direction`),
+    currency: expectString(row.currency, `${path}.currency`),
+    rule_id: expectString(row.rule_id, `${path}.rule_id`),
   };
 }
 
