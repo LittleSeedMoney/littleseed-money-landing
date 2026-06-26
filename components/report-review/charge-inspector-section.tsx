@@ -405,7 +405,10 @@ function ChargeInspectorDashboard({
           ) : null}
 
           {review.categorySummary.length > 0 ? (
-            <CategorySummaryTable review={review} />
+            <CategorySummaryTable
+              key={categoryReviewKey(review)}
+              review={review}
+            />
           ) : null}
 
           {review.monthlySpendingSummary.length > 0 ? (
@@ -432,15 +435,10 @@ function CategorySummaryTable({ review }: { review: ChargeInspectorReview }) {
   const [reviewStatuses, setReviewStatuses] = useState<
     Record<string, CategoryReviewStatus>
   >({});
-  const reviewKey = useMemo(() => categoryReviewKey(review), [review]);
   const reviewCounts = useMemo(
     () => summarizeCategoryReviewStatuses(review, reviewStatuses),
     [review, reviewStatuses],
   );
-
-  useEffect(() => {
-    setReviewStatuses({});
-  }, [reviewKey]);
 
   function setCategoryStatus(
     category: string,
@@ -545,14 +543,14 @@ function CategorySummaryRow({
           aria-label={`Review status for ${category.label}`}
           className="inline-flex min-h-9 overflow-hidden rounded-md border border-stone-300 bg-white text-xs font-semibold shadow-sm"
           data-testid="charge-inspector-category-review-status"
-          role="group"
+          role="radiogroup"
         >
           {CATEGORY_REVIEW_OPTIONS.map((option) => {
             const isActive = option.status === status;
 
             return (
               <button
-                aria-pressed={isActive}
+                aria-checked={isActive}
                 className={[
                   "px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-seed-500",
                   isActive
@@ -564,6 +562,7 @@ function CategorySummaryRow({
                 onClick={() =>
                   onStatusChange(category.category, option.status)
                 }
+                role="radio"
                 type="button"
               >
                 {option.label}
@@ -601,13 +600,11 @@ function summarizeCategoryReviewStatuses(
         counts.confirmed += 1;
       } else if (status === "needs-review") {
         counts.needsReview += 1;
-      } else {
-        counts.unreviewed += 1;
       }
 
       return counts;
     },
-    { confirmed: 0, needsReview: 0, unreviewed: 0 },
+    { confirmed: 0, needsReview: 0 },
   );
 }
 
