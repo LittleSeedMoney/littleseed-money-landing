@@ -349,6 +349,31 @@ test.describe("private report review smoke", () => {
       .toHaveCount(11);
     await expect(page.getByText("Groceries")).toBeVisible();
     await expect(page.getByText("$130.56")).toBeVisible();
+    await expect(page.getByText("0 confirmed")).toBeVisible();
+    await expect(page.getByText("0 needs review")).toBeVisible();
+
+    const groceriesCategory = page
+      .getByTestId("charge-inspector-category-row")
+      .filter({ hasText: "Groceries" });
+    await groceriesCategory.getByRole("button", { name: "Confirm" }).click();
+    await expect(page.getByText("1 confirmed")).toBeVisible();
+    await expect(
+      groceriesCategory.getByRole("button", { name: "Confirm" }),
+    ).toHaveAttribute("aria-pressed", "true");
+
+    const feesCategory = page
+      .getByTestId("charge-inspector-category-row")
+      .filter({ hasText: "Fees" });
+    await feesCategory.getByRole("button", { name: "Needs review" }).click();
+    await expect(page.getByText("1 needs review")).toBeVisible();
+    await expect(
+      feesCategory.getByRole("button", { name: "Needs review" }),
+    ).toHaveAttribute("aria-pressed", "true");
+
+    await groceriesCategory
+      .getByRole("button", { name: "Unreviewed" })
+      .click();
+    await expect(page.getByText("0 confirmed")).toBeVisible();
 
     const recurringBoard = page.getByTestId(
       "charge-inspector-recurring-payment-board",

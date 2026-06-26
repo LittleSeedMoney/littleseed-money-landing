@@ -34,8 +34,18 @@ import {
 } from "./shared";
 
 type CsvReviewRequestState = "idle" | "loading" | "ready" | "error";
+type CategoryReviewStatus = "unreviewed" | "confirmed" | "needs-review";
+
 const CSV_FILE_LENGTH_ERROR =
   "CSV file must be 250,000 characters or fewer.";
+const CATEGORY_REVIEW_OPTIONS: {
+  label: string;
+  status: CategoryReviewStatus;
+}[] = [
+  { label: "Unreviewed", status: "unreviewed" },
+  { label: "Confirm", status: "confirmed" },
+  { label: "Needs review", status: "needs-review" },
+];
 
 export function ChargeInspectorSection({
   aiEnabled,
@@ -419,6 +429,33 @@ function ChargeInspectorDashboard({
 }
 
 function CategorySummaryTable({ review }: { review: ChargeInspectorReview }) {
+  const [reviewStatuses, setReviewStatuses] = useState<
+    Record<string, CategoryReviewStatus>
+  >({});
+  const reviewKey = useMemo(() => categoryReviewKey(review), [review]);
+  const reviewCounts = useMemo(
+    () => summarizeCategoryReviewStatuses(review, reviewStatuses),
+    [review, reviewStatuses],
+  );
+
+  useEffect(() => {
+    setReviewStatuses({});
+  }, [reviewKey]);
+
+  function setCategoryStatus(
+    category: string,
+    status: CategoryReviewStatus,
+  ) {
+    setReviewStatuses((current) => {
+      if (status === "unreviewed") {
+        const { [category]: _ignored, ...next } = current;
+        return next;
+      }
+
+      return { ...current, [category]: status };
+    });
+  }
+
   return (
     <div
       className={reviewDisclosureClass("mt-4 p-3")}
@@ -428,17 +465,28 @@ function CategorySummaryTable({ review }: { review: ChargeInspectorReview }) {
         <h4 className="text-sm font-semibold text-seed-950">
           Category summary
         </h4>
-        <StatusPill label={review.categorySummaryVersion} tone="stone" />
+        <div className="flex flex-wrap gap-2">
+          <StatusPill label={review.categorySummaryVersion} tone="stone" />
+          <StatusPill
+            label={`${reviewCounts.confirmed.toLocaleString("en-US")} confirmed`}
+            tone="earth"
+          />
+          <StatusPill
+            label={`${reviewCounts.needsReview.toLocaleString("en-US")} needs review`}
+            tone="stone"
+          />
+        </div>
       </div>
 
       <div className="mt-3 overflow-x-auto">
-        <table className="w-full min-w-[38rem] text-left text-sm">
+        <table className="w-full min-w-[48rem] text-left text-sm">
           <thead className="border-b border-stone-200 text-xs font-semibold uppercase text-earth-600">
             <tr>
               <th className="py-2 pr-3">Category</th>
               <th className="px-3 py-2">Spending</th>
               <th className="px-3 py-2">Credits</th>
-              <th className="py-2 pl-3 text-right">Rows</th>
+              <th className="px-3 py-2 text-right">Rows</th>
+              <th className="py-2 pl-3">Review</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-stone-100">
@@ -446,6 +494,10 @@ function CategorySummaryTable({ review }: { review: ChargeInspectorReview }) {
               <CategorySummaryRow
                 category={category}
                 key={category.category}
+                onStatusChange={setCategoryStatus}
+                status={
+                  reviewStatuses[category.category] ?? "unreviewed"
+                }
               />
             ))}
           </tbody>
@@ -454,7 +506,9 @@ function CategorySummaryTable({ review }: { review: ChargeInspectorReview }) {
 
       <p className="mt-3 text-xs leading-5 text-earth-600">
         Deterministic text-rule grouping only. This does not infer budgets,
-        spending quality, merchant actions, or required changes.
+        spending quality, merchant actions, or required changes. Review status
+        stays in this browser session and does not edit category rules or save
+        preferences.
       </p>
     </div>
   );
@@ -462,8 +516,15 @@ function CategorySummaryTable({ review }: { review: ChargeInspectorReview }) {
 
 function CategorySummaryRow({
   category,
+  onStatusChange,
+  status,
 }: {
   category: ChargeInspectorCategorySummary;
+  onStatusChange: (
+    category: string,
+    status: CategoryReviewStatus,
+  ) => void;
+  status: CategoryReviewStatus;
 }) {
   return (
     <tr data-testid="charge-inspector-category-row">
@@ -476,10 +537,77 @@ function CategorySummaryRow({
       <td className="px-3 py-2 tabular-nums text-earth-800">
         {category.creditTotalLabel}
       </td>
-      <td className="py-2 pl-3 text-right tabular-nums text-earth-800">
+      <td className="px-3 py-2 text-right tabular-nums text-earth-800">
         {category.transactionCount.toLocaleString("en-US")}
       </td>
+      <td className="py-2 pl-3">
+        <div
+          aria-label={`Review status for ${category.label}`}
+          className="inline-flex min-h-9 overflow-hidden rounded-md border border-stone-300 bg-white text-xs font-semibold shadow-sm"
+          data-testid="charge-inspector-category-review-status"
+          role="group"
+        >
+          {CATEGORY_REVIEW_OPTIONS.map((option) => {
+            const isActive = option.status === status;
+
+            return (
+              <button
+                aria-pressed={isActive}
+                className={[
+                  "px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-seed-500",
+                  isActive
+                    ? "bg-seed-700 text-white"
+                    : "bg-white text-earth-700 hover:bg-stone-50",
+                ].join(" ")}
+                data-testid={`charge-inspector-category-review-${option.status}`}
+                key={option.status}
+                onClick={() =>
+                  onStatusChange(category.category, option.status)
+                }
+                type="button"
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+      </td>
     </tr>
+  );
+}
+
+function categoryReviewKey(review: ChargeInspectorReview) {
+  return [
+    review.dataMode,
+    review.sourceLabel,
+    review.reviewedTransactionCount,
+    review.categorySummaryVersion,
+    ...review.categorySummary.map(
+      (category) =>
+        `${category.category}:${category.debitTotalLabel}:${category.creditTotalLabel}:${category.transactionCount}`,
+    ),
+  ].join("|");
+}
+
+function summarizeCategoryReviewStatuses(
+  review: ChargeInspectorReview,
+  statuses: Record<string, CategoryReviewStatus>,
+) {
+  return review.categorySummary.reduce(
+    (counts, category) => {
+      const status = statuses[category.category] ?? "unreviewed";
+
+      if (status === "confirmed") {
+        counts.confirmed += 1;
+      } else if (status === "needs-review") {
+        counts.needsReview += 1;
+      } else {
+        counts.unreviewed += 1;
+      }
+
+      return counts;
+    },
+    { confirmed: 0, needsReview: 0, unreviewed: 0 },
   );
 }
 
