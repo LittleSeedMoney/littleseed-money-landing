@@ -1,6 +1,10 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const port = process.env.PLAYWRIGHT_PORT ?? "3100";
+const reportReviewAiEnabled =
+  process.env.LITTLESEED_REPORT_REVIEW_AI_ENABLED === "true" ||
+  process.env.NEXT_PUBLIC_LITTLESEED_REPORT_REVIEW_AI_ENABLED === "true";
+const port =
+  process.env.PLAYWRIGHT_PORT ?? (reportReviewAiEnabled ? "3101" : "3100");
 const baseURL =
   process.env.PLAYWRIGHT_BASE_URL ?? `http://127.0.0.1:${port}`;
 
@@ -23,7 +27,7 @@ export default defineConfig({
     ? undefined
     : {
         command: `npm run dev -- --hostname 127.0.0.1 --port ${port}`,
-        reuseExistingServer: !process.env.CI,
+        reuseExistingServer: !process.env.CI && !reportReviewAiEnabled,
         timeout: 120_000,
         url: baseURL,
       },

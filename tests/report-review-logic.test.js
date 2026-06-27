@@ -200,6 +200,16 @@ test("report-review AI category evidence context pack stays bounded", () => {
     contextPack.categoryEvidence.budgetComparisonVersion,
     "category_budget_comparison_ai_context.v0",
   );
+  assert.equal(
+    contextPack.categoryEvidence.categoryMonthlySummaryVersion,
+    "category_monthly_summary_ai_context.v0",
+  );
+  assert.equal(
+    contextPack.categoryEvidence.categoryMonthlySummaryRows.find(
+      (row) => row.month === "2026-05" && row.category === "groceries",
+    ).debitTotalLabel,
+    "$130.56",
+  );
   assert.equal(groceries.budgetComparison.targetDebitTotalLabel, "$100.00");
   assert.equal(groceries.budgetComparison.varianceAmountLabel, "$30.56 over");
   assert.equal(groceries.budgetComparison.variancePercentLabel, "30.56% over");
@@ -381,6 +391,19 @@ test("report-review AI request parser rejects client-supplied category evidence"
         userMessage: null,
       }),
     /categoryBudgetComparison must not be supplied/,
+  );
+
+  assert.throws(
+    () =>
+      parseReportReviewAiRequest({
+        categoryMonthlySummary: [{ category: "groceries", month: "2026-05" }],
+        questionType: "explain_finding",
+        surface: "report_review",
+        targetId: "charge_inspector_category_evidence",
+        targetType: "category_evidence",
+        userMessage: null,
+      }),
+    /categoryMonthlySummary must not be supplied/,
   );
 });
 
@@ -567,6 +590,10 @@ test("report-review AI explains category evidence without recategorizing", async
     "category_budget_comparison_ai_context.v0",
   );
   assert.equal(
+    answer.versions.categoryMonthlySummaryContext,
+    "category_monthly_summary_ai_context.v0",
+  );
+  assert.equal(
     answer.evidence.some((item) => item.text.includes("Corner Grocer")),
     true,
   );
@@ -578,6 +605,12 @@ test("report-review AI explains category evidence without recategorizing", async
   );
   assert.equal(
     answer.evidence.some((item) => item.text.includes("30.56% over")),
+    true,
+  );
+  assert.equal(
+    answer.evidence.some((item) =>
+      item.text.includes("2026-05 Groceries"),
+    ),
     true,
   );
   assert.equal(
@@ -979,9 +1012,16 @@ test("charge inspector platform parser accepts the review contract", () => {
   assert.equal(parsed.reviewed_transaction_count, 18);
   assert.equal(parsed.spending_summary_version, "monthly_spending_summary_v0");
   assert.equal(parsed.category_summary_version, "transaction_category_rules_v0");
+  assert.equal(
+    parsed.category_monthly_summary_version,
+    "transaction_category_monthly_summary_v0",
+  );
   assert.equal(parsed.monthly_spending_summary[2].debit_total, "1889.90");
   assert.equal(parsed.category_summary[2].category, "groceries");
   assert.equal(parsed.category_summary[2].debit_total, "130.56");
+  assert.equal(parsed.category_monthly_summary[2].month, "2026-05");
+  assert.equal(parsed.category_monthly_summary[2].category, "groceries");
+  assert.equal(parsed.category_monthly_summary[2].debit_total, "130.56");
   assert.deepEqual(
     parsed.category_summary[2].evidence_rows.map((row) => row.merchant_name),
     ["Corner Grocer", "Corner Grocer"],
@@ -996,6 +1036,8 @@ test("charge inspector platform parser falls back without monthly summary fields
   delete payload.monthly_spending_summary;
   delete payload.category_summary_version;
   delete payload.category_summary;
+  delete payload.category_monthly_summary_version;
+  delete payload.category_monthly_summary;
 
   const parsed = parseChargeInspectorReviewResponse(payload);
   const review = mapPlatformChargeInspectorReview(parsed);
@@ -1004,10 +1046,14 @@ test("charge inspector platform parser falls back without monthly summary fields
   assert.deepEqual(parsed.monthly_spending_summary, []);
   assert.equal(parsed.category_summary_version, "not_returned");
   assert.deepEqual(parsed.category_summary, []);
+  assert.equal(parsed.category_monthly_summary_version, "not_returned");
+  assert.deepEqual(parsed.category_monthly_summary, []);
   assert.equal(review.spendingSummaryVersion, "not_returned");
   assert.deepEqual(review.monthlySpendingSummary, []);
   assert.equal(review.categorySummaryVersion, "not_returned");
   assert.deepEqual(review.categorySummary, []);
+  assert.equal(review.categoryMonthlySummaryVersion, "not_returned");
+  assert.deepEqual(review.categoryMonthlySummary, []);
 });
 
 test("charge inspector platform mapper builds UI findings from contract evidence", () => {
@@ -1046,6 +1092,13 @@ test("charge inspector platform mapper builds UI findings from contract evidence
   assert.equal(review.categorySummary[0].creditTotalLabel, "$6,400.00");
   assert.equal(review.categorySummary[2].label, "Groceries");
   assert.equal(review.categorySummary[2].debitTotalLabel, "$130.56");
+  assert.equal(
+    review.categoryMonthlySummaryVersion,
+    "transaction_category_monthly_summary_v0",
+  );
+  assert.equal(review.categoryMonthlySummary[2].month, "2026-05");
+  assert.equal(review.categoryMonthlySummary[2].label, "Groceries");
+  assert.equal(review.categoryMonthlySummary[2].debitTotalLabel, "$130.56");
   assert.deepEqual(review.categorySummary[2].ruleIds, [
     "category.groceries.grocer_text.v0",
   ]);
@@ -2241,6 +2294,7 @@ function chargeInspectorPlatformPayload() {
     },
     spending_summary_version: "monthly_spending_summary_v0",
     category_summary_version: "transaction_category_rules_v0",
+    category_monthly_summary_version: "transaction_category_monthly_summary_v0",
     reviewed_transaction_count: 18,
     parse_error_count: 0,
     findings: {
@@ -2360,6 +2414,41 @@ function chargeInspectorPlatformPayload() {
         ],
       ),
     ],
+    category_monthly_summary: [
+      categoryMonthlySummaryPayload(
+        "2026-03",
+        "subscriptions",
+        "Subscriptions",
+        "15.99",
+        "0",
+        1,
+        1,
+        0,
+        ["category.subscriptions.streaming.v0"],
+      ),
+      categoryMonthlySummaryPayload(
+        "2026-04",
+        "subscriptions",
+        "Subscriptions",
+        "15.99",
+        "0",
+        1,
+        1,
+        0,
+        ["category.subscriptions.streaming.v0"],
+      ),
+      categoryMonthlySummaryPayload(
+        "2026-05",
+        "groceries",
+        "Groceries",
+        "130.56",
+        "0",
+        2,
+        2,
+        0,
+        ["category.groceries.grocer_text.v0"],
+      ),
+    ],
     evidence_transactions: evidence,
     parse_errors: [],
     limitations: [
@@ -2394,6 +2483,35 @@ function categorySummaryPayload(
     evidence_rows: evidenceRows,
     limitations: [
       "Category mapping uses deterministic merchant and transaction-type text rules only.",
+    ],
+  };
+}
+
+function categoryMonthlySummaryPayload(
+  month,
+  category,
+  label,
+  debitTotal,
+  creditTotal,
+  transactionCount,
+  debitTransactionCount,
+  creditTransactionCount,
+  ruleIds,
+) {
+  return {
+    schema_version: "transaction_category_monthly_summary_v0",
+    month,
+    category,
+    label,
+    currency: "USD",
+    debit_total: debitTotal,
+    credit_total: creditTotal,
+    transaction_count: transactionCount,
+    debit_transaction_count: debitTransactionCount,
+    credit_transaction_count: creditTransactionCount,
+    rule_ids: ruleIds,
+    limitations: [
+      "Category monthly summary groups deterministic category totals by posted-date month.",
     ],
   };
 }

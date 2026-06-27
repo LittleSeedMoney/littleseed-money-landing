@@ -64,6 +64,8 @@ export async function explainReportReviewFinding(
     corpus: KNOWLEDGE_CORPUS_VERSION,
     categoryBudgetComparisonContext:
       contextPack.categoryEvidence?.budgetComparisonVersion,
+    categoryMonthlySummaryContext:
+      contextPack.categoryEvidence?.categoryMonthlySummaryVersion,
     categoryEvidenceContext: contextPack.categoryEvidence?.version,
     monthlySpendingContext: contextPack.monthlySpendingSummary?.version,
     model: provider.model,
@@ -319,6 +321,8 @@ function rejectClientSuppliedContext(record: Record<string, unknown>) {
     "categoryEvidenceRows",
     "categoryBudgetComparison",
     "categoryBudgetComparisons",
+    "categoryMonthlySummary",
+    "categoryMonthlySummaryRows",
     "categorySummary",
     "evidenceSources",
     "financialProfile",

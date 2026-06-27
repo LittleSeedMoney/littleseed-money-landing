@@ -6,6 +6,7 @@ import type {
   ChargeInspectorCategoryEvidenceRow,
   ChargeInspectorCategoryBudgetComparison,
   ChargeInspectorCategoryBudgetTargetAmounts,
+  ChargeInspectorCategoryMonthlySummary,
   ChargeInspectorCategoryReviewStatus,
   ChargeInspectorMonthlySummary,
 } from "@/lib/report-review/charge-inspector";
@@ -91,10 +92,13 @@ export type CategoryEvidenceContext = {
   id: "charge_inspector_category_evidence";
   version: "category_evidence_ai_context.v0";
   budgetComparisonVersion?: "category_budget_comparison_ai_context.v0";
+  categoryMonthlySummaryVersion?: "category_monthly_summary_ai_context.v0";
   sourceLabel: string;
   reviewedTransactionCount: number;
   categorySummaryVersion: string;
+  categoryMonthlySummaryContractVersion: string;
   categories: CategoryEvidenceContextCategory[];
+  categoryMonthlySummaryRows: ChargeInspectorCategoryMonthlySummary[];
   limitations: string[];
   excludedFields: string[];
 };
@@ -148,6 +152,7 @@ export type ReportReviewAiVersions = {
   contextPack: "coach_context_pack.v0";
   corpus: "knowledge_corpus.fixture.v0";
   categoryBudgetComparisonContext?: "category_budget_comparison_ai_context.v0";
+  categoryMonthlySummaryContext?: "category_monthly_summary_ai_context.v0";
   categoryEvidenceContext?: "category_evidence_ai_context.v0";
   monthlySpendingContext?: "monthly_spending_ai_context.v0";
   model: string;

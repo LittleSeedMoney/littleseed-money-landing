@@ -238,12 +238,12 @@ function baseContextEvidence(contextPack: CoachContextPack) {
     return [
       {
         id: contextPack.categoryEvidence.id,
-        text: categoryEvidenceText(contextPack.categoryEvidence.categories),
+        text: categoryEvidenceText(contextPack.categoryEvidence),
       },
       {
         id: contextPack.id,
         text:
-          "Category evidence context contains bounded merchant-display rows and review status only, not raw transaction history.",
+          "Category evidence context contains bounded merchant-display rows, review status, and aggregate category-by-month rows only, not raw transaction history.",
       },
     ];
   }
@@ -307,8 +307,10 @@ function explainAnswer(contextPack: CoachContextPack) {
     const targetComparisonCount = contextPack.categoryEvidence.categories.filter(
       (category) => category.budgetComparison,
     ).length;
+    const monthlyCategoryRowCount =
+      contextPack.categoryEvidence.categoryMonthlySummaryRows.length;
 
-    return `This category evidence summary shows deterministic rule output for ${contextPack.categoryEvidence.categories.length.toLocaleString("en-US")} categor${contextPack.categoryEvidence.categories.length === 1 ? "y" : "ies"}, ${visibleEvidenceCount.toLocaleString("en-US")} bounded merchant-display evidence row${visibleEvidenceCount === 1 ? "" : "s"}, and ${targetComparisonCount.toLocaleString("en-US")} user-entered target comparison${targetComparisonCount === 1 ? "" : "s"}. It can explain which visible rows are attached to a category, what review status is selected, and any already-calculated target comparison facts, but it cannot create targets, recategorize rows, judge spending quality, or rank actions.`;
+    return `This category evidence summary shows deterministic rule output for ${contextPack.categoryEvidence.categories.length.toLocaleString("en-US")} categor${contextPack.categoryEvidence.categories.length === 1 ? "y" : "ies"}, ${visibleEvidenceCount.toLocaleString("en-US")} bounded merchant-display evidence row${visibleEvidenceCount === 1 ? "" : "s"}, ${monthlyCategoryRowCount.toLocaleString("en-US")} aggregate category-by-month row${monthlyCategoryRowCount === 1 ? "" : "s"}, and ${targetComparisonCount.toLocaleString("en-US")} user-entered target comparison${targetComparisonCount === 1 ? "" : "s"}. It can explain which visible rows are attached to a category, what review status is selected, category-by-month aggregate facts, and any already-calculated target comparison facts, but it cannot create targets, recategorize rows, judge spending quality, or rank actions.`;
   }
 
   return "This context pack does not include enough supported detail to explain.";
@@ -390,13 +392,14 @@ function monthlySpendingEvidenceText(
 }
 
 function categoryEvidenceText(
-  categories: NonNullable<CoachContextPack["categoryEvidence"]>["categories"],
+  categoryEvidence: NonNullable<CoachContextPack["categoryEvidence"]>,
 ) {
+  const categories = categoryEvidence.categories;
   if (categories.length === 0) {
     return "No category summary rows are available.";
   }
 
-  return categories
+  const categoryRows = categories
     .map((category) => {
       const summary =
         `${category.label} (${category.reviewStatus}): ` +
@@ -422,6 +425,18 @@ function categoryEvidenceText(
       return `${summary}.${budgetComparison} Matched rows: ${rows}.`;
     })
     .join(" ");
+
+  const monthlyRows =
+    categoryEvidence.categoryMonthlySummaryRows.length > 0
+      ? ` Category-by-month aggregate rows: ${categoryEvidence.categoryMonthlySummaryRows
+          .map(
+            (row) =>
+              `${row.month} ${row.label}: ${row.debitTotalLabel} spending, ${row.creditTotalLabel} credits, ${row.transactionCount.toLocaleString("en-US")} rows`,
+          )
+          .join("; ")}.`
+      : " No category-by-month aggregate rows are available.";
+
+  return `${categoryRows}${monthlyRows}`;
 }
 
 function defaultLimitations(contextPack: CoachContextPack) {
@@ -437,7 +452,7 @@ function defaultLimitations(contextPack: CoachContextPack) {
     return [
       "Uses only bounded category evidence from the server-owned context pack.",
       "Does not use raw CSV rows, full descriptions, balances, account identifiers, saved chat history, or long-term memory.",
-      "Does not create budget targets, recategorize rows, judge spending quality, rank actions, or recommend merchant actions.",
+      "Does not create budget targets, recategorize rows, judge spending quality, rank actions, infer monthly budgets, or recommend merchant actions.",
       ...contextPack.categoryEvidence.limitations.slice(0, 2),
     ];
   }

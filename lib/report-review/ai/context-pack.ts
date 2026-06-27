@@ -251,9 +251,17 @@ export function buildCategoryEvidenceContextPack({
               "category_budget_comparison_ai_context.v0" as const,
           }
         : {}),
+      ...(chargeInspector.categoryMonthlySummary.length > 0
+        ? {
+            categoryMonthlySummaryVersion:
+              "category_monthly_summary_ai_context.v0" as const,
+          }
+        : {}),
       sourceLabel: chargeInspector.sourceLabel,
       reviewedTransactionCount: chargeInspector.reviewedTransactionCount,
       categorySummaryVersion: chargeInspector.categorySummaryVersion,
+      categoryMonthlySummaryContractVersion:
+        chargeInspector.categoryMonthlySummaryVersion,
       categories: chargeInspector.categorySummary.map((category) => {
         const budgetComparison = budgetComparisonByCategory.get(
           category.category,
@@ -275,8 +283,10 @@ export function buildCategoryEvidenceContextPack({
           limitations: category.limitations,
         };
       }),
+      categoryMonthlySummaryRows: chargeInspector.categoryMonthlySummary,
       limitations: [
         "Category evidence is deterministic rule output, not an AI categorization decision.",
+        "Category monthly summary rows are aggregate posted-date-month totals only, not monthly budgets.",
         "Merchant names are bounded display labels from the current review, not full transaction descriptions.",
         "Budget comparison facts use only user-entered in-session targets and deterministic current-review category totals.",
         "This context does not include raw CSV rows, balances, check numbers, account identifiers, or full transaction history.",

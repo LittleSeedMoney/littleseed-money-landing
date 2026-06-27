@@ -20,6 +20,7 @@ import {
   type ChargeInspectorCategoryBudgetTargetAmounts,
   type ChargeInspectorCategoryReviewStatus,
   type ChargeInspectorFinding,
+  type ChargeInspectorCategoryMonthlySummary,
   type ChargeInspectorCategorySummary,
   type ChargeInspectorReview,
   type ChargeInspectorSummary,
@@ -421,6 +422,10 @@ function ChargeInspectorDashboard({
             />
           ) : null}
 
+          {review.categoryMonthlySummary.length > 0 ? (
+            <CategoryMonthlySummaryTable review={review} />
+          ) : null}
+
           {review.monthlySpendingSummary.length > 0 ? (
             <MonthlySpendingSummary
               aiEnabled={aiEnabled}
@@ -590,6 +595,93 @@ function CategorySummaryTable({
         </div>
       ) : null}
     </div>
+  );
+}
+
+function CategoryMonthlySummaryTable({
+  review,
+}: {
+  review: ChargeInspectorReview;
+}) {
+  const monthCount = new Set(
+    review.categoryMonthlySummary.map((row) => row.month),
+  ).size;
+
+  return (
+    <div
+      className={reviewDisclosureClass("mt-4 p-3")}
+      data-testid="charge-inspector-category-monthly-summary"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h4 className="text-sm font-semibold text-seed-950">
+          Category by month
+        </h4>
+        <div className="flex flex-wrap gap-2">
+          <StatusPill
+            label={review.categoryMonthlySummaryVersion}
+            tone="stone"
+          />
+          <StatusPill
+            label={`${monthCount.toLocaleString("en-US")} months`}
+            tone="stone"
+          />
+        </div>
+      </div>
+
+      <div className="mt-3 overflow-x-auto">
+        <table className="w-full min-w-[44rem] text-left text-sm">
+          <thead className="border-b border-stone-200 text-xs font-semibold uppercase text-earth-600">
+            <tr>
+              <th className="py-2 pr-3">Month</th>
+              <th className="px-3 py-2">Category</th>
+              <th className="px-3 py-2">Spending</th>
+              <th className="px-3 py-2">Credits</th>
+              <th className="px-3 py-2 text-right">Rows</th>
+              <th className="py-2 pl-3">Rules</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-stone-100">
+            {review.categoryMonthlySummary.map((row) => (
+              <CategoryMonthlySummaryRow
+                key={`${row.month}:${row.category}`}
+                row={row}
+              />
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <p className="mt-3 text-xs leading-5 text-earth-600">
+        Posted-date month plus deterministic category totals only. This is not
+        a monthly budget, spending-quality judgment, action priority, or saved
+        category memory.
+      </p>
+    </div>
+  );
+}
+
+function CategoryMonthlySummaryRow({
+  row,
+}: {
+  row: ChargeInspectorCategoryMonthlySummary;
+}) {
+  return (
+    <tr data-testid="charge-inspector-category-monthly-row">
+      <td className="py-2 pr-3 font-medium text-seed-950">{row.month}</td>
+      <td className="px-3 py-2 text-earth-800">{row.label}</td>
+      <td className="px-3 py-2 tabular-nums text-earth-800">
+        {row.debitTotalLabel}
+      </td>
+      <td className="px-3 py-2 tabular-nums text-earth-800">
+        {row.creditTotalLabel}
+      </td>
+      <td className="px-3 py-2 text-right tabular-nums text-earth-800">
+        {row.transactionCount.toLocaleString("en-US")}
+      </td>
+      <td className="py-2 pl-3 text-xs text-earth-600">
+        {row.ruleIds.join(", ") || "none"}
+      </td>
+    </tr>
   );
 }
 
