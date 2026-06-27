@@ -76,7 +76,7 @@ export function ChargeInspectorSection({
   const hiddenCount = activeReview.findings.length - visibleFindings.length;
   const showEmptyState =
     isChargeInspectorEmpty(activeReview) || visibleFindings.length === 0;
-  const showMonthlyAiPanel = activeReview === review;
+  const showSampleAiPanels = activeReview === review;
 
   function hideFinding(findingId: string) {
     setDismissedFindingIds((current) =>
@@ -124,7 +124,7 @@ export function ChargeInspectorSection({
         findings={visibleFindings}
         hiddenCount={hiddenCount}
         review={activeReview}
-        showMonthlyAiPanel={showMonthlyAiPanel}
+        showSampleAiPanels={showSampleAiPanels}
         summary={summary}
         visibleCount={visibleFindings.length}
       />
@@ -326,7 +326,7 @@ function ChargeInspectorDashboard({
   findings,
   hiddenCount,
   review,
-  showMonthlyAiPanel,
+  showSampleAiPanels,
   summary,
   visibleCount,
 }: {
@@ -334,7 +334,7 @@ function ChargeInspectorDashboard({
   findings: ChargeInspectorFinding[];
   hiddenCount: number;
   review: ChargeInspectorReview;
-  showMonthlyAiPanel: boolean;
+  showSampleAiPanels: boolean;
   summary: ChargeInspectorSummary;
   visibleCount: number;
 }) {
@@ -412,7 +412,7 @@ function ChargeInspectorDashboard({
               aiEnabled={aiEnabled}
               key={categoryReviewKey(review)}
               review={review}
-              showAiPanel={showMonthlyAiPanel}
+              showAiPanel={showSampleAiPanels}
             />
           ) : null}
 
@@ -420,7 +420,7 @@ function ChargeInspectorDashboard({
             <MonthlySpendingSummary
               aiEnabled={aiEnabled}
               review={review}
-              showAiPanel={showMonthlyAiPanel}
+              showAiPanel={showSampleAiPanels}
             />
           ) : null}
         </>

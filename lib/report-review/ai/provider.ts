@@ -387,16 +387,23 @@ function monthlySpendingEvidenceText(
 function categoryEvidenceText(
   categories: NonNullable<CoachContextPack["categoryEvidence"]>["categories"],
 ) {
-  const categoriesWithEvidence = categories.filter(
-    (category) => category.evidenceRows.length > 0,
-  );
-
-  if (categoriesWithEvidence.length === 0) {
-    return "No category evidence rows are available.";
+  if (categories.length === 0) {
+    return "No category summary rows are available.";
   }
 
-  return categoriesWithEvidence
+  return categories
     .map((category) => {
+      const summary =
+        `${category.label} (${category.reviewStatus}): ` +
+        `${category.debitTotalLabel} spending, ` +
+        `${category.creditTotalLabel} credits, ` +
+        `${category.transactionCount.toLocaleString("en-US")} rows, ` +
+        `rules ${category.ruleIds.join(", ") || "none"}`;
+
+      if (category.evidenceRows.length === 0) {
+        return `${summary}. No bounded merchant-display evidence rows are available for this category.`;
+      }
+
       const rows = category.evidenceRows
         .map(
           (row) =>
@@ -404,7 +411,7 @@ function categoryEvidenceText(
         )
         .join("; ");
 
-      return `${category.label} (${category.reviewStatus}): ${rows}.`;
+      return `${summary}. Matched rows: ${rows}.`;
     })
     .join(" ");
 }
