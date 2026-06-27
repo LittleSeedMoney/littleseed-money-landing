@@ -10,7 +10,9 @@ import {
 
 import {
   categoryBudgetTargetsFromInputs,
+  chargeInspectorCategoryOrder,
   compareCategoryBudgetTargets,
+  compareCategoryMonthlyBudgetTargets,
   isChargeInspectorEmpty,
   parseCategoryBudgetTargetInput,
   recurringPaymentReviewItems,
@@ -18,6 +20,7 @@ import {
   visibleChargeInspectorFindings,
   type ChargeInspectorCategoryBudgetComparison,
   type ChargeInspectorCategoryBudgetTargetAmounts,
+  type ChargeInspectorCategoryMonthlyBudgetComparison,
   type ChargeInspectorCategoryReviewStatus,
   type ChargeInspectorFinding,
   type ChargeInspectorCategoryMonthlySummary,
@@ -55,22 +58,8 @@ const CATEGORY_REVIEW_OPTIONS: {
   { label: "Confirm", status: "confirmed" },
   { label: "Needs review", status: "needs-review" },
 ];
-const CATEGORY_DISPLAY_ORDER = [
-  "income",
-  "housing",
-  "groceries",
-  "utilities",
-  "transportation",
-  "health",
-  "fees",
-  "subscriptions",
-  "fitness",
-  "dining",
-  "shopping",
-  "uncategorized",
-];
 const CATEGORY_DISPLAY_INDEX = new Map(
-  CATEGORY_DISPLAY_ORDER.map((category, index) => [category, index]),
+  chargeInspectorCategoryOrder.map((category, index) => [category, index]),
 );
 
 export function ChargeInspectorSection({
@@ -364,6 +353,29 @@ function ChargeInspectorDashboard({
   const otherSignalCount = summary.bankFeeCount + summary.priceIncreaseCount;
   const recurringReviewItems = recurringPaymentReviewItems(findings);
   const showDashboardMetrics = summary.reviewedTransactionCount > 0;
+  const reviewKey = categoryReviewKey(review);
+  const [budgetTargetInputs, setBudgetTargetInputs] = useState<
+    Record<string, string>
+  >({});
+  const budgetTargets = useMemo(
+    () => categoryBudgetTargetsFromInputs(budgetTargetInputs),
+    [budgetTargetInputs],
+  );
+
+  useEffect(() => {
+    setBudgetTargetInputs({});
+  }, [reviewKey]);
+
+  function setBudgetTarget(category: string, value: string) {
+    setBudgetTargetInputs((current) => {
+      if (value.trim().length === 0) {
+        const { [category]: _ignored, ...next } = current;
+        return next;
+      }
+
+      return { ...current, [category]: value };
+    });
+  }
 
   return (
     <div className={reviewPanelClass("p-4 sm:p-5")}>
@@ -433,14 +445,20 @@ function ChargeInspectorDashboard({
           {review.categorySummary.length > 0 ? (
             <CategorySummaryTable
               aiEnabled={aiEnabled}
-              key={categoryReviewKey(review)}
+              budgetTargetInputs={budgetTargetInputs}
+              budgetTargets={budgetTargets}
+              key={reviewKey}
+              onBudgetTargetChange={setBudgetTarget}
               review={review}
               showAiPanel={showSampleAiPanels}
             />
           ) : null}
 
           {review.categoryMonthlySummary.length > 0 ? (
-            <CategoryMonthlySummaryTable review={review} />
+            <CategoryMonthlySummaryTable
+              budgetTargets={budgetTargets}
+              review={review}
+            />
           ) : null}
 
           {review.monthlySpendingSummary.length > 0 ? (
@@ -465,26 +483,25 @@ function ChargeInspectorDashboard({
 
 function CategorySummaryTable({
   aiEnabled,
+  budgetTargetInputs,
+  budgetTargets,
+  onBudgetTargetChange,
   review,
   showAiPanel,
 }: {
   aiEnabled: boolean;
+  budgetTargetInputs: Record<string, string>;
+  budgetTargets: ChargeInspectorCategoryBudgetTargetAmounts;
+  onBudgetTargetChange: (category: string, value: string) => void;
   review: ChargeInspectorReview;
   showAiPanel: boolean;
 }) {
   const [reviewStatuses, setReviewStatuses] = useState<
     Record<string, ChargeInspectorCategoryReviewStatus>
   >({});
-  const [budgetTargetInputs, setBudgetTargetInputs] = useState<
-    Record<string, string>
-  >({});
   const reviewCounts = useMemo(
     () => summarizeCategoryReviewStatuses(review, reviewStatuses),
     [review, reviewStatuses],
-  );
-  const budgetTargets = useMemo(
-    () => categoryBudgetTargetsFromInputs(budgetTargetInputs),
-    [budgetTargetInputs],
   );
   const budgetComparisons = useMemo(
     () => compareCategoryBudgetTargets(review.categorySummary, budgetTargets),
@@ -516,17 +533,6 @@ function CategorySummaryTable({
       }
 
       return { ...current, [category]: status };
-    });
-  }
-
-  function setBudgetTarget(category: string, value: string) {
-    setBudgetTargetInputs((current) => {
-      if (value.trim().length === 0) {
-        const { [category]: _ignored, ...next } = current;
-        return next;
-      }
-
-      return { ...current, [category]: value };
     });
   }
 
@@ -584,7 +590,7 @@ function CategorySummaryTable({
                 }
                 category={category}
                 key={category.category}
-                onBudgetTargetChange={setBudgetTarget}
+                onBudgetTargetChange={onBudgetTargetChange}
                 onStatusChange={setCategoryStatus}
                 status={
                   reviewStatuses[category.category] ?? "unreviewed"
@@ -616,8 +622,10 @@ function CategorySummaryTable({
 }
 
 function CategoryMonthlySummaryTable({
+  budgetTargets,
   review,
 }: {
+  budgetTargets: ChargeInspectorCategoryBudgetTargetAmounts;
   review: ChargeInspectorReview;
 }) {
   const monthCount = new Set(
@@ -626,6 +634,23 @@ function CategoryMonthlySummaryTable({
   const sortedRows = [...review.categoryMonthlySummary].sort(
     compareCategoryMonthlySummaryRows,
   );
+  const localBudgetComparisons = useMemo(
+    () =>
+      compareCategoryMonthlyBudgetTargets(
+        review.categoryMonthlySummary,
+        budgetTargets,
+      ),
+    [budgetTargets, review.categoryMonthlySummary],
+  );
+  const budgetComparisons =
+    localBudgetComparisons.length > 0
+      ? localBudgetComparisons
+      : review.categoryMonthlyBudgetComparison;
+  const budgetCounts = useMemo(
+    () => summarizeCategoryMonthlyBudgetComparisons(budgetComparisons),
+    [budgetComparisons],
+  );
+  const showBudgetComparison = budgetComparisons.length > 0;
 
   return (
     <div
@@ -645,28 +670,63 @@ function CategoryMonthlySummaryTable({
             label={`${monthCount.toLocaleString("en-US")} months`}
             tone="stone"
           />
+          {showBudgetComparison ? (
+            <>
+              <StatusPill
+                label={`${budgetCounts.targetRows.toLocaleString("en-US")} monthly target rows`}
+                tone="stone"
+              />
+              <StatusPill
+                label={`${budgetCounts.overTarget.toLocaleString("en-US")} monthly over`}
+                tone={budgetCounts.overTarget > 0 ? "earth" : "stone"}
+              />
+            </>
+          ) : null}
         </div>
       </div>
 
       <div className="mt-3 overflow-x-auto">
-        <table className="w-full min-w-[44rem] text-left text-sm">
+        <table
+          className={[
+            "w-full text-left text-sm",
+            showBudgetComparison ? "min-w-[56rem]" : "min-w-[44rem]",
+          ].join(" ")}
+        >
           <thead className="border-b border-stone-200 text-xs font-semibold uppercase text-earth-600">
-            <tr>
-              <th className="py-2 pr-3">Month</th>
-              <th className="px-3 py-2">Category</th>
-              <th className="px-3 py-2">Spending</th>
-              <th className="px-3 py-2">Credits</th>
-              <th className="px-3 py-2 text-right">Rows</th>
-              <th className="py-2 pl-3">Rules</th>
-            </tr>
+            {showBudgetComparison ? (
+              <tr>
+                <th className="py-2 pr-3">Month</th>
+                <th className="px-3 py-2">Category</th>
+                <th className="px-3 py-2">Spending</th>
+                <th className="px-3 py-2">Target</th>
+                <th className="px-3 py-2">Difference</th>
+                <th className="py-2 pl-3">Status</th>
+              </tr>
+            ) : (
+              <tr>
+                <th className="py-2 pr-3">Month</th>
+                <th className="px-3 py-2">Category</th>
+                <th className="px-3 py-2">Spending</th>
+                <th className="px-3 py-2">Credits</th>
+                <th className="px-3 py-2 text-right">Rows</th>
+                <th className="py-2 pl-3">Rules</th>
+              </tr>
+            )}
           </thead>
           <tbody className="divide-y divide-stone-100">
-            {sortedRows.map((row) => (
-              <CategoryMonthlySummaryRow
-                key={`${row.month}:${row.category}`}
-                row={row}
-              />
-            ))}
+            {showBudgetComparison
+              ? budgetComparisons.map((comparison) => (
+                  <CategoryMonthlyBudgetComparisonRow
+                    comparison={comparison}
+                    key={`${comparison.month}:${comparison.category}`}
+                  />
+                ))
+              : sortedRows.map((row) => (
+                  <CategoryMonthlySummaryRow
+                    key={`${row.month}:${row.category}`}
+                    row={row}
+                  />
+                ))}
           </tbody>
         </table>
       </div>
@@ -674,7 +734,9 @@ function CategoryMonthlySummaryTable({
       <p className="mt-3 text-xs leading-5 text-earth-600">
         Posted-date month plus deterministic category totals only. This is not
         a monthly budget, spending-quality judgment, action priority, or saved
-        category memory.
+        category memory. Monthly target comparison appears only when a
+        user-entered target is available and uses posted-date-month category
+        debit totals.
       </p>
     </div>
   );
@@ -722,6 +784,41 @@ function CategoryMonthlySummaryRow({
       </td>
       <td className="py-2 pl-3 text-xs text-earth-600">
         {row.ruleIds.join(", ") || "none"}
+      </td>
+    </tr>
+  );
+}
+
+function CategoryMonthlyBudgetComparisonRow({
+  comparison,
+}: {
+  comparison: ChargeInspectorCategoryMonthlyBudgetComparison;
+}) {
+  return (
+    <tr data-testid="charge-inspector-category-monthly-budget-row">
+      <td className="py-2 pr-3 font-medium text-seed-950">
+        {comparison.month}
+      </td>
+      <td className="px-3 py-2 text-earth-800">{comparison.label}</td>
+      <td className="px-3 py-2 tabular-nums text-earth-800">
+        {comparison.actualDebitTotalLabel}
+      </td>
+      <td className="px-3 py-2 tabular-nums text-earth-800">
+        {comparison.targetDebitTotalLabel}
+      </td>
+      <td className="px-3 py-2 text-xs leading-5 text-earth-700">
+        {comparison.varianceAmountLabel}
+        {comparison.variancePercentLabel !== "No target" ? (
+          <span className="ml-1 text-earth-500">
+            ({comparison.variancePercentLabel})
+          </span>
+        ) : null}
+      </td>
+      <td className="py-2 pl-3">
+        <StatusPill
+          label={comparison.statusLabel}
+          tone={comparison.status === "over-target" ? "earth" : "stone"}
+        />
       </td>
     </tr>
   );
@@ -927,6 +1024,23 @@ function summarizeCategoryBudgetComparisons(
       return counts;
     },
     { overTarget: 0, targets: 0 },
+  );
+}
+
+function summarizeCategoryMonthlyBudgetComparisons(
+  comparisons: ChargeInspectorCategoryMonthlyBudgetComparison[],
+) {
+  return comparisons.reduce(
+    (counts, comparison) => {
+      if (comparison.targetDebitTotalCents !== null) {
+        counts.targetRows += 1;
+      }
+      if (comparison.status === "over-target") {
+        counts.overTarget += 1;
+      }
+      return counts;
+    },
+    { overTarget: 0, targetRows: 0 },
   );
 }
 

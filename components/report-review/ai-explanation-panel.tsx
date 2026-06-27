@@ -189,7 +189,7 @@ export function AiCategoryEvidenceExplanationPanel({
         disabledDescription:
           "This category evidence panel is wired for bounded AI explanations but does not call the AI route until the private/dev flag is enabled.",
         enabledDescription:
-          "Answers are limited to server-owned category totals, bounded merchant-display evidence rows, rule ids, review status, user-entered target comparison facts, limitations, and version metadata. Raw CSV rows, account history, balances, inferred budgets, recategorization, and action ranking are excluded.",
+          "Answers are limited to server-owned category totals, bounded merchant-display evidence rows, rule ids, review status, user-entered target comparison facts, monthly target comparison facts, limitations, and version metadata. Raw CSV rows, account history, balances, inferred budgets, recategorization, and action ranking are excluded.",
         title: "AI category evidence",
       }}
       enabled={enabled}
@@ -452,6 +452,12 @@ function AiAnswerResult({ answer }: { answer: ReportReviewAiResponse }) {
             <VersionItem
               label="Target comparison"
               value={answer.versions.categoryBudgetComparisonContext}
+            />
+          ) : null}
+          {answer.versions.categoryMonthlyBudgetComparisonContext ? (
+            <VersionItem
+              label="Monthly target"
+              value={answer.versions.categoryMonthlyBudgetComparisonContext}
             />
           ) : null}
           <VersionItem label="Corpus" value={answer.versions.corpus} />
