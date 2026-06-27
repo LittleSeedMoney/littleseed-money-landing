@@ -55,6 +55,23 @@ const CATEGORY_REVIEW_OPTIONS: {
   { label: "Confirm", status: "confirmed" },
   { label: "Needs review", status: "needs-review" },
 ];
+const CATEGORY_DISPLAY_ORDER = [
+  "income",
+  "housing",
+  "groceries",
+  "utilities",
+  "transportation",
+  "health",
+  "fees",
+  "subscriptions",
+  "fitness",
+  "dining",
+  "shopping",
+  "uncategorized",
+];
+const CATEGORY_DISPLAY_INDEX = new Map(
+  CATEGORY_DISPLAY_ORDER.map((category, index) => [category, index]),
+);
 
 export function ChargeInspectorSection({
   aiEnabled,
@@ -606,6 +623,9 @@ function CategoryMonthlySummaryTable({
   const monthCount = new Set(
     review.categoryMonthlySummary.map((row) => row.month),
   ).size;
+  const sortedRows = [...review.categoryMonthlySummary].sort(
+    compareCategoryMonthlySummaryRows,
+  );
 
   return (
     <div
@@ -641,7 +661,7 @@ function CategoryMonthlySummaryTable({
             </tr>
           </thead>
           <tbody className="divide-y divide-stone-100">
-            {review.categoryMonthlySummary.map((row) => (
+            {sortedRows.map((row) => (
               <CategoryMonthlySummaryRow
                 key={`${row.month}:${row.category}`}
                 row={row}
@@ -658,6 +678,28 @@ function CategoryMonthlySummaryTable({
       </p>
     </div>
   );
+}
+
+function compareCategoryMonthlySummaryRows(
+  left: ChargeInspectorCategoryMonthlySummary,
+  right: ChargeInspectorCategoryMonthlySummary,
+) {
+  const monthComparison = left.month.localeCompare(right.month);
+  if (monthComparison !== 0) {
+    return monthComparison;
+  }
+
+  const categoryComparison =
+    categoryDisplayIndex(left.category) - categoryDisplayIndex(right.category);
+  if (categoryComparison !== 0) {
+    return categoryComparison;
+  }
+
+  return left.label.localeCompare(right.label);
+}
+
+function categoryDisplayIndex(category: string) {
+  return CATEGORY_DISPLAY_INDEX.get(category) ?? Number.MAX_SAFE_INTEGER;
 }
 
 function CategoryMonthlySummaryRow({

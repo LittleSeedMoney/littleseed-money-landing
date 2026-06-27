@@ -201,8 +201,16 @@ test("report-review AI category evidence context pack stays bounded", () => {
     "category_budget_comparison_ai_context.v0",
   );
   assert.equal(
+    contextPack.categoryEvidence.categorySummaryContractVersion,
+    "sample_fixture",
+  );
+  assert.equal(
     contextPack.categoryEvidence.categoryMonthlySummaryVersion,
     "category_monthly_summary_ai_context.v0",
+  );
+  assert.equal(
+    contextPack.categoryEvidence.categoryMonthlySummaryContractVersion,
+    "sample_fixture",
   );
   assert.equal(
     contextPack.categoryEvidence.categoryMonthlySummaryRows.find(

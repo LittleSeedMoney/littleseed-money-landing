@@ -95,7 +95,7 @@ export type CategoryEvidenceContext = {
   categoryMonthlySummaryVersion?: "category_monthly_summary_ai_context.v0";
   sourceLabel: string;
   reviewedTransactionCount: number;
-  categorySummaryVersion: string;
+  categorySummaryContractVersion: string;
   categoryMonthlySummaryContractVersion: string;
   categories: CategoryEvidenceContextCategory[];
   categoryMonthlySummaryRows: ChargeInspectorCategoryMonthlySummary[];

@@ -259,7 +259,7 @@ export function buildCategoryEvidenceContextPack({
         : {}),
       sourceLabel: chargeInspector.sourceLabel,
       reviewedTransactionCount: chargeInspector.reviewedTransactionCount,
-      categorySummaryVersion: chargeInspector.categorySummaryVersion,
+      categorySummaryContractVersion: chargeInspector.categorySummaryVersion,
       categoryMonthlySummaryContractVersion:
         chargeInspector.categoryMonthlySummaryVersion,
       categories: chargeInspector.categorySummary.map((category) => {
