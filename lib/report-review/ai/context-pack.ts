@@ -1,4 +1,8 @@
 import { reportReviewSample } from "@/data/report-review-sample";
+import {
+  compareCategoryBudgetTargets,
+  type ChargeInspectorCategoryBudgetTargetAmounts,
+} from "@/lib/report-review/charge-inspector";
 
 import { approvedKnowledgeArtifacts } from "./knowledge-artifacts";
 import {
@@ -173,9 +177,11 @@ export function buildMonthlySpendingSummaryContextPack({
 }
 
 export function buildCategoryEvidenceContextPack({
+  categoryBudgetTargets = {},
   categoryReviewStatuses = {},
   targetId,
 }: {
+  categoryBudgetTargets?: ChargeInspectorCategoryBudgetTargetAmounts;
   categoryReviewStatuses?: Record<
     string,
     CategoryEvidenceContext["categories"][number]["reviewStatus"]
@@ -201,6 +207,31 @@ export function buildCategoryEvidenceContextPack({
     }
   }
 
+  for (const [category, amountCents] of Object.entries(categoryBudgetTargets)) {
+    if (!categoryIds.has(category)) {
+      throw new CoachContextPackError(
+        `categoryBudgetTargets includes unsupported category ${category}.`,
+      );
+    }
+
+    if (!Number.isSafeInteger(amountCents) || amountCents <= 0) {
+      throw new CoachContextPackError(
+        `categoryBudgetTargets.${category} must be a positive cents integer.`,
+      );
+    }
+  }
+
+  const budgetComparisons = compareCategoryBudgetTargets(
+    chargeInspector.categorySummary,
+    categoryBudgetTargets,
+  );
+  const budgetComparisonByCategory = new Map(
+    budgetComparisons.map((comparison) => [
+      comparison.category,
+      comparison,
+    ]),
+  );
+
   return {
     id: `coach_context_pack.v0.${REPORT_REVIEW_AI_CATEGORY_EVIDENCE_TARGET_ID}`,
     version: "coach_context_pack.v0",
@@ -214,28 +245,42 @@ export function buildCategoryEvidenceContextPack({
     categoryEvidence: {
       id: REPORT_REVIEW_AI_CATEGORY_EVIDENCE_TARGET_ID,
       version: "category_evidence_ai_context.v0",
+      ...(budgetComparisons.length > 0
+        ? {
+            budgetComparisonVersion:
+              "category_budget_comparison_ai_context.v0" as const,
+          }
+        : {}),
       sourceLabel: chargeInspector.sourceLabel,
       reviewedTransactionCount: chargeInspector.reviewedTransactionCount,
       categorySummaryVersion: chargeInspector.categorySummaryVersion,
-      categories: chargeInspector.categorySummary.map((category) => ({
-        category: category.category,
-        label: category.label,
-        debitTotalLabel: category.debitTotalLabel,
-        creditTotalLabel: category.creditTotalLabel,
-        transactionCount: category.transactionCount,
-        debitTransactionCount: category.debitTransactionCount,
-        creditTransactionCount: category.creditTransactionCount,
-        reviewStatus:
-          categoryReviewStatuses[category.category] ?? "unreviewed",
-        ruleIds: category.ruleIds,
-        evidenceRows: category.evidenceRows,
-        limitations: category.limitations,
-      })),
+      categories: chargeInspector.categorySummary.map((category) => {
+        const budgetComparison = budgetComparisonByCategory.get(
+          category.category,
+        );
+
+        return {
+          category: category.category,
+          label: category.label,
+          debitTotalLabel: category.debitTotalLabel,
+          creditTotalLabel: category.creditTotalLabel,
+          transactionCount: category.transactionCount,
+          debitTransactionCount: category.debitTransactionCount,
+          creditTransactionCount: category.creditTransactionCount,
+          reviewStatus:
+            categoryReviewStatuses[category.category] ?? "unreviewed",
+          ...(budgetComparison ? { budgetComparison } : {}),
+          ruleIds: category.ruleIds,
+          evidenceRows: category.evidenceRows,
+          limitations: category.limitations,
+        };
+      }),
       limitations: [
         "Category evidence is deterministic rule output, not an AI categorization decision.",
         "Merchant names are bounded display labels from the current review, not full transaction descriptions.",
+        "Budget comparison facts use only user-entered in-session targets and deterministic current-review category totals.",
         "This context does not include raw CSV rows, balances, check numbers, account identifiers, or full transaction history.",
-        "The AI explanation cannot recategorize rows, judge budgets, rank actions, or tell the user what to change.",
+        "The AI explanation cannot create budget targets, recategorize rows, judge spending quality, rank actions, or tell the user what to change.",
         ...chargeInspector.limitations,
       ],
       excludedFields: [
@@ -246,7 +291,9 @@ export function buildCategoryEvidenceContextPack({
         "check numbers",
         "full account history",
         "automatic recategorization",
+        "inferred budget targets",
         "budget variance judgments",
+        "saved budget targets",
         "merchant actions",
         "action ranking",
       ],
@@ -268,7 +315,9 @@ export function buildCategoryEvidenceContextPack({
       "saved AI conversation history",
       "long-term memory",
       "automatic recategorization",
+      "inferred budget targets",
       "budget variance judgments",
+      "saved budget targets",
       "merchant actions",
       "action ranking",
       "unapproved third-party retrieval content",
@@ -281,10 +330,12 @@ export function buildCategoryEvidenceContextPack({
 }
 
 export function buildReportReviewContextPack({
+  categoryBudgetTargets,
   categoryReviewStatuses,
   targetId,
   targetType,
 }: {
+  categoryBudgetTargets?: ChargeInspectorCategoryBudgetTargetAmounts;
   categoryReviewStatuses?: Record<
     string,
     CategoryEvidenceContext["categories"][number]["reviewStatus"]
@@ -302,6 +353,7 @@ export function buildReportReviewContextPack({
 
   if (targetType === "category_evidence") {
     return buildCategoryEvidenceContextPack({
+      categoryBudgetTargets,
       categoryReviewStatuses,
       targetId,
     });

@@ -44,6 +44,7 @@ export async function explainReportReviewFinding(
 
   try {
     contextPack = buildReportReviewContextPack({
+      categoryBudgetTargets: request.categoryBudgetTargets,
       categoryReviewStatuses: request.categoryReviewStatuses,
       targetId: request.targetId,
       targetType: request.targetType,
@@ -61,6 +62,8 @@ export async function explainReportReviewFinding(
     answerValidator: "ai_answer_validator.v0",
     contextPack: "coach_context_pack.v0",
     corpus: KNOWLEDGE_CORPUS_VERSION,
+    categoryBudgetComparisonContext:
+      contextPack.categoryEvidence?.budgetComparisonVersion,
     categoryEvidenceContext: contextPack.categoryEvidence?.version,
     monthlySpendingContext: contextPack.monthlySpendingSummary?.version,
     model: provider.model,
@@ -152,6 +155,10 @@ export function parseReportReviewAiRequest(
     record.userMessage,
     "AI explanation request.userMessage",
   );
+  const categoryBudgetTargets = readCategoryBudgetTargets(
+    record.categoryBudgetTargets,
+    "AI explanation request.categoryBudgetTargets",
+  );
   const categoryReviewStatuses = readCategoryReviewStatuses(
     record.categoryReviewStatuses,
     "AI explanation request.categoryReviewStatuses",
@@ -169,7 +176,14 @@ export function parseReportReviewAiRequest(
     );
   }
 
+  if (categoryBudgetTargets && targetType !== "category_evidence") {
+    throw new ReportReviewAiRequestError(
+      "categoryBudgetTargets is only supported for category evidence.",
+    );
+  }
+
   return {
+    categoryBudgetTargets,
     categoryReviewStatuses,
     questionType,
     surface,
@@ -217,6 +231,38 @@ function readNullableString(value: unknown, label: string) {
   }
 
   return value;
+}
+
+function readCategoryBudgetTargets(value: unknown, label: string) {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  const record = expectRecord(value, label);
+  const targets: NonNullable<ReportReviewAiRequest["categoryBudgetTargets"]> =
+    {};
+
+  for (const [category, amountCents] of Object.entries(record)) {
+    if (category.trim().length === 0) {
+      throw new ReportReviewAiRequestError(
+        `${label} cannot include a blank category.`,
+      );
+    }
+
+    if (
+      typeof amountCents !== "number" ||
+      !Number.isSafeInteger(amountCents) ||
+      amountCents <= 0
+    ) {
+      throw new ReportReviewAiRequestError(
+        `${label}.${category} must be a positive cents integer.`,
+      );
+    }
+
+    targets[category] = amountCents;
+  }
+
+  return targets;
 }
 
 function readCategoryReviewStatuses(value: unknown, label: string) {
@@ -271,6 +317,8 @@ function rejectClientSuppliedContext(record: Record<string, unknown>) {
     "contextPack",
     "categoryEvidence",
     "categoryEvidenceRows",
+    "categoryBudgetComparison",
+    "categoryBudgetComparisons",
     "categorySummary",
     "evidenceSources",
     "financialProfile",

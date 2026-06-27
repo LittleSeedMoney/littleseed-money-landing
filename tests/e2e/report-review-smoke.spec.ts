@@ -355,6 +355,14 @@ test.describe("private report review smoke", () => {
     const groceriesCategory = page
       .getByTestId("charge-inspector-category-row")
       .filter({ hasText: "Groceries" });
+    await groceriesCategory
+      .getByTestId("charge-inspector-category-budget-target")
+      .fill("$100.00");
+    await expect(groceriesCategory.getByText("Over target")).toBeVisible();
+    await expect(groceriesCategory.getByText("$30.56 over")).toBeVisible();
+    await expect(groceriesCategory.getByText("Target $100.00")).toBeVisible();
+    await expect(page.getByText("1 targets")).toBeVisible();
+    await expect(page.getByText("1 over")).toBeVisible();
     await groceriesCategory.locator("summary").click();
     await expect(groceriesCategory.getByText("Corner Grocer").first())
       .toBeVisible();
@@ -475,6 +483,8 @@ test.describe("private report review smoke", () => {
     await expect(page.getByText("Dining", { exact: true })).toBeVisible();
     await expect(page.getByText("0 confirmed")).toBeVisible();
     await expect(page.getByText("0 needs review")).toBeVisible();
+    await expect(page.getByText("0 targets")).toBeVisible();
+    await expect(page.getByText("0 over")).toBeVisible();
     await expect(
       page
         .getByTestId("charge-inspector-category-row")

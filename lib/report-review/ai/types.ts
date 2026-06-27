@@ -4,6 +4,8 @@ import type {
 } from "@/data/report-review-sample";
 import type {
   ChargeInspectorCategoryEvidenceRow,
+  ChargeInspectorCategoryBudgetComparison,
+  ChargeInspectorCategoryBudgetTargetAmounts,
   ChargeInspectorCategoryReviewStatus,
   ChargeInspectorMonthlySummary,
 } from "@/lib/report-review/charge-inspector";
@@ -79,6 +81,7 @@ export type CategoryEvidenceContextCategory = {
   debitTransactionCount: number;
   creditTransactionCount: number;
   reviewStatus: ChargeInspectorCategoryReviewStatus;
+  budgetComparison?: ChargeInspectorCategoryBudgetComparison;
   ruleIds: string[];
   evidenceRows: ChargeInspectorCategoryEvidenceRow[];
   limitations: string[];
@@ -87,6 +90,7 @@ export type CategoryEvidenceContextCategory = {
 export type CategoryEvidenceContext = {
   id: "charge_inspector_category_evidence";
   version: "category_evidence_ai_context.v0";
+  budgetComparisonVersion?: "category_budget_comparison_ai_context.v0";
   sourceLabel: string;
   reviewedTransactionCount: number;
   categorySummaryVersion: string;
@@ -143,6 +147,7 @@ export type ReportReviewAiVersions = {
   answerValidator: "ai_answer_validator.v0";
   contextPack: "coach_context_pack.v0";
   corpus: "knowledge_corpus.fixture.v0";
+  categoryBudgetComparisonContext?: "category_budget_comparison_ai_context.v0";
   categoryEvidenceContext?: "category_evidence_ai_context.v0";
   monthlySpendingContext?: "monthly_spending_ai_context.v0";
   model: string;
@@ -177,6 +182,7 @@ export type ReportReviewAiRequest = {
   targetId: string;
   questionType: ReportReviewAiQuestionType;
   userMessage: string | null;
+  categoryBudgetTargets?: ChargeInspectorCategoryBudgetTargetAmounts;
   categoryReviewStatuses?: Record<string, ChargeInspectorCategoryReviewStatus>;
 };
 

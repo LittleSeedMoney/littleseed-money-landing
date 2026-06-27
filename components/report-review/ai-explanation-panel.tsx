@@ -3,7 +3,10 @@
 import { useState, type FormEvent } from "react";
 
 import type { Finding } from "@/data/report-review-sample";
-import type { ChargeInspectorCategoryReviewStatus } from "@/lib/report-review/charge-inspector";
+import type {
+  ChargeInspectorCategoryBudgetTargetAmounts,
+  ChargeInspectorCategoryReviewStatus,
+} from "@/lib/report-review/charge-inspector";
 import {
   REPORT_REVIEW_AI_CATEGORY_EVIDENCE_TARGET_ID,
   REPORT_REVIEW_AI_MONTHLY_SPENDING_TARGET_ID,
@@ -168,22 +171,25 @@ export function AiMonthlySpendingExplanationPanel({
 }
 
 export function AiCategoryEvidenceExplanationPanel({
+  categoryBudgetTargets,
   categoryReviewStatuses,
   enabled,
 }: {
+  categoryBudgetTargets: ChargeInspectorCategoryBudgetTargetAmounts;
   categoryReviewStatuses: Record<string, ChargeInspectorCategoryReviewStatus>;
   enabled: boolean;
 }) {
   return (
     <AiReportReviewExplanationPanel
       allowFollowUp={false}
+      categoryBudgetTargets={categoryBudgetTargets}
       categoryReviewStatuses={categoryReviewStatuses}
       copy={{
         actionLabels: categoryEvidenceActionLabels,
         disabledDescription:
           "This category evidence panel is wired for bounded AI explanations but does not call the AI route until the private/dev flag is enabled.",
         enabledDescription:
-          "Answers are limited to server-owned category totals, bounded merchant-display evidence rows, rule ids, review status, limitations, and version metadata. Raw CSV rows, account history, balances, budget judgments, recategorization, and action ranking are excluded.",
+          "Answers are limited to server-owned category totals, bounded merchant-display evidence rows, rule ids, review status, user-entered target comparison facts, limitations, and version metadata. Raw CSV rows, account history, balances, inferred budgets, recategorization, and action ranking are excluded.",
         title: "AI category evidence",
       }}
       enabled={enabled}
@@ -197,12 +203,14 @@ export function AiCategoryEvidenceExplanationPanel({
 
 function AiReportReviewExplanationPanel({
   allowFollowUp,
+  categoryBudgetTargets,
   categoryReviewStatuses,
   copy,
   enabled,
   target,
 }: {
   allowFollowUp: boolean;
+  categoryBudgetTargets?: ChargeInspectorCategoryBudgetTargetAmounts;
   categoryReviewStatuses?: Record<string, ChargeInspectorCategoryReviewStatus>;
   copy: AiExplanationPanelCopy;
   enabled: boolean;
@@ -230,6 +238,9 @@ function AiReportReviewExplanationPanel({
         body: JSON.stringify({
           ...(categoryReviewStatuses
             ? { categoryReviewStatuses }
+            : {}),
+          ...(categoryBudgetTargets && Object.keys(categoryBudgetTargets).length > 0
+            ? { categoryBudgetTargets }
             : {}),
           questionType,
           surface: "report_review",
@@ -429,6 +440,12 @@ function AiAnswerResult({ answer }: { answer: ReportReviewAiResponse }) {
             <VersionItem
               label="Category evidence"
               value={answer.versions.categoryEvidenceContext}
+            />
+          ) : null}
+          {answer.versions.categoryBudgetComparisonContext ? (
+            <VersionItem
+              label="Target comparison"
+              value={answer.versions.categoryBudgetComparisonContext}
             />
           ) : null}
           <VersionItem label="Corpus" value={answer.versions.corpus} />
