@@ -26,8 +26,11 @@ const {
   chargeInspectorFallbackReview,
   chargeInspectorFindingTypeLabels,
   chargeInspectorSampleReview,
+  categoryBudgetTargetsFromInputs,
+  compareCategoryBudgetTarget,
   isChargeInspectorEmpty,
   mapPlatformChargeInspectorReview,
+  parseCategoryBudgetTargetInput,
   recurringPaymentReviewItems,
   summarizeChargeInspectorReview,
   visibleChargeInspectorFindings,
@@ -166,6 +169,10 @@ test("report-review AI monthly spending context pack uses aggregate rows only", 
 
 test("report-review AI category evidence context pack stays bounded", () => {
   const contextPack = buildCategoryEvidenceContextPack({
+    categoryBudgetTargets: {
+      fees: 1000,
+      groceries: 10000,
+    },
     categoryReviewStatuses: {
       fees: "needs-review",
       groceries: "confirmed",
@@ -189,14 +196,67 @@ test("report-review AI category evidence context pack stays bounded", () => {
   );
   assert.equal(groceries.reviewStatus, "confirmed");
   assert.equal(fees.reviewStatus, "needs-review");
+  assert.equal(
+    contextPack.categoryEvidence.budgetComparisonVersion,
+    "category_budget_comparison_ai_context.v0",
+  );
+  assert.equal(groceries.budgetComparison.targetDebitTotalLabel, "$100.00");
+  assert.equal(groceries.budgetComparison.varianceAmountLabel, "$30.56 over");
+  assert.equal(groceries.budgetComparison.variancePercentLabel, "30.56% over");
+  assert.equal(groceries.budgetComparison.status, "over-target");
+  assert.equal(fees.budgetComparison.status, "over-target");
   assert.deepEqual(
     groceries.evidenceRows.map((row) => row.merchantName),
     ["Corner Grocer", "Corner Grocer"],
   );
   assert.ok(contextPack.excludedData.includes("raw transaction rows"));
   assert.ok(contextPack.excludedData.includes("automatic recategorization"));
+  assert.ok(contextPack.excludedData.includes("saved budget targets"));
   assert.equal(renderedContext.includes("original_description"), false);
   assert.equal(renderedContext.includes("Balance"), false);
+});
+
+test("charge inspector category budget target parser keeps deterministic cents", () => {
+  assert.deepEqual(parseCategoryBudgetTargetInput(""), {
+    amountCents: null,
+    errorMessage: null,
+  });
+  assert.deepEqual(parseCategoryBudgetTargetInput("$1,234.50"), {
+    amountCents: 123450,
+    errorMessage: null,
+  });
+  assert.deepEqual(categoryBudgetTargetsFromInputs({
+    groceries: "$100.00",
+    dining: "bad",
+    fees: "",
+  }), {
+    groceries: 10000,
+  });
+  assert.match(
+    parseCategoryBudgetTargetInput("12.345").errorMessage,
+    /up to 2 decimals/,
+  );
+  assert.match(
+    parseCategoryBudgetTargetInput("0").errorMessage,
+    /positive target/,
+  );
+});
+
+test("charge inspector category budget comparison uses user target facts", () => {
+  const groceries = chargeInspectorSampleReview.categorySummary.find(
+    (category) => category.category === "groceries",
+  );
+
+  const comparison = compareCategoryBudgetTarget(groceries, 10000);
+
+  assert.equal(comparison.actualDebitTotalCents, 13056);
+  assert.equal(comparison.actualDebitTotalLabel, "$130.56");
+  assert.equal(comparison.targetDebitTotalLabel, "$100.00");
+  assert.equal(comparison.varianceAmountCents, 3056);
+  assert.equal(comparison.varianceAmountLabel, "$30.56 over");
+  assert.equal(comparison.variancePercentLabel, "30.56% over");
+  assert.equal(comparison.status, "over-target");
+  assert.match(comparison.limitations.join(" "), /user-entered target/);
 });
 
 test("report-review AI approved corpus loader reads collector-shaped JSONL", () => {
@@ -309,6 +369,19 @@ test("report-review AI request parser rejects client-supplied category evidence"
       }),
     /categoryEvidence must not be supplied/,
   );
+
+  assert.throws(
+    () =>
+      parseReportReviewAiRequest({
+        categoryBudgetComparison: [{ category: "groceries" }],
+        questionType: "explain_finding",
+        surface: "report_review",
+        targetId: "charge_inspector_category_evidence",
+        targetType: "category_evidence",
+        userMessage: null,
+      }),
+    /categoryBudgetComparison must not be supplied/,
+  );
 });
 
 test("report-review AI request parser accepts target-only payload", () => {
@@ -341,6 +414,10 @@ test("report-review AI request parser accepts monthly spending target payload", 
 
 test("report-review AI request parser accepts category review statuses only for category evidence", () => {
   const request = parseReportReviewAiRequest({
+    categoryBudgetTargets: {
+      fees: 1000,
+      groceries: 10000,
+    },
     categoryReviewStatuses: {
       fees: "needs-review",
       groceries: "confirmed",
@@ -358,6 +435,10 @@ test("report-review AI request parser accepts category review statuses only for 
     fees: "needs-review",
     groceries: "confirmed",
   });
+  assert.deepEqual(request.categoryBudgetTargets, {
+    fees: 1000,
+    groceries: 10000,
+  });
 
   assert.throws(
     () =>
@@ -370,6 +451,32 @@ test("report-review AI request parser accepts category review statuses only for 
         userMessage: null,
       }),
     /categoryReviewStatuses is only supported for category evidence/,
+  );
+
+  assert.throws(
+    () =>
+      parseReportReviewAiRequest({
+        categoryBudgetTargets: { groceries: 10000 },
+        questionType: "explain_finding",
+        surface: "report_review",
+        targetId: "charge_inspector_monthly_spending_summary",
+        targetType: "monthly_spending_summary",
+        userMessage: null,
+      }),
+    /categoryBudgetTargets is only supported for category evidence/,
+  );
+
+  assert.throws(
+    () =>
+      parseReportReviewAiRequest({
+        categoryBudgetTargets: { groceries: 0 },
+        questionType: "explain_finding",
+        surface: "report_review",
+        targetId: "charge_inspector_category_evidence",
+        targetType: "category_evidence",
+        userMessage: null,
+      }),
+    /positive cents integer/,
   );
 });
 
@@ -434,6 +541,9 @@ test("report-review AI monthly spending copy avoids finding-only wording", async
 
 test("report-review AI explains category evidence without recategorizing", async () => {
   const answer = await explainReportReviewFinding({
+    categoryBudgetTargets: {
+      groceries: 10000,
+    },
     categoryReviewStatuses: {
       fees: "needs-review",
       groceries: "confirmed",
@@ -453,7 +563,21 @@ test("report-review AI explains category evidence without recategorizing", async
     "category_evidence_ai_context.v0",
   );
   assert.equal(
+    answer.versions.categoryBudgetComparisonContext,
+    "category_budget_comparison_ai_context.v0",
+  );
+  assert.equal(
     answer.evidence.some((item) => item.text.includes("Corner Grocer")),
+    true,
+  );
+  assert.equal(
+    answer.evidence.some((item) =>
+      item.text.includes("target $100.00"),
+    ),
+    true,
+  );
+  assert.equal(
+    answer.evidence.some((item) => item.text.includes("30.56% over")),
     true,
   );
   assert.equal(
@@ -666,8 +790,10 @@ test("report-review AI eval cases cover required boundary categories", () => {
   assert.ok(caseIds.has("rejects_client_supplied_monthly_spending_context"));
   assert.ok(caseIds.has("allowed_category_evidence_explain"));
   assert.ok(caseIds.has("allowed_category_evidence_missing_context"));
+  assert.ok(caseIds.has("allowed_category_budget_target_comparison"));
   assert.ok(caseIds.has("refuses_category_evidence_follow_up"));
   assert.ok(caseIds.has("rejects_client_supplied_category_evidence_context"));
+  assert.ok(caseIds.has("rejects_client_supplied_category_budget_comparison"));
   assert.ok(caseIds.has("validator_rejects_missing_evidence"));
 });
 

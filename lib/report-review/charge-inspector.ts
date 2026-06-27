@@ -80,7 +80,9 @@ export type ChargeInspectorCategoryEvidenceRow = {
 export type ChargeInspectorCategorySummary = {
   category: string;
   label: string;
+  debitTotalCents: number;
   debitTotalLabel: string;
+  creditTotalCents: number;
   creditTotalLabel: string;
   transactionCount: number;
   debitTransactionCount: number;
@@ -88,6 +90,30 @@ export type ChargeInspectorCategorySummary = {
   ruleIds: string[];
   evidenceRows: ChargeInspectorCategoryEvidenceRow[];
   limitations: string[];
+};
+
+export type ChargeInspectorCategoryBudgetComparisonStatus =
+  | "within-target"
+  | "over-target";
+
+export type ChargeInspectorCategoryBudgetComparison = {
+  category: string;
+  label: string;
+  actualDebitTotalCents: number;
+  actualDebitTotalLabel: string;
+  targetDebitTotalCents: number;
+  targetDebitTotalLabel: string;
+  varianceAmountCents: number;
+  varianceAmountLabel: string;
+  variancePercentLabel: string;
+  status: ChargeInspectorCategoryBudgetComparisonStatus;
+  statusLabel: string;
+  limitations: string[];
+};
+
+export type ChargeInspectorCategoryBudgetTargetInputResult = {
+  amountCents: number | null;
+  errorMessage: string | null;
 };
 
 export type ChargeInspectorReview = {
@@ -122,6 +148,8 @@ export type RecurringPaymentReviewItem = {
   reviewWindowLabel: string;
   limitations: string[];
 };
+
+export type ChargeInspectorCategoryBudgetTargetAmounts = Record<string, number>;
 
 type SortableRecurringPaymentReviewItem = RecurringPaymentReviewItem & {
   sortKey: string;
@@ -514,6 +542,109 @@ export function recurringPaymentReviewItems(
     .map(({ sortKey: _sortKey, ...item }) => item);
 }
 
+export function parseCategoryBudgetTargetInput(
+  value: string,
+): ChargeInspectorCategoryBudgetTargetInputResult {
+  const trimmed = value.trim();
+  if (trimmed.length === 0) {
+    return { amountCents: null, errorMessage: null };
+  }
+
+  const normalized = trimmed.replace(/[$,\s]/g, "");
+  if (!/^\d+(?:\.\d{0,2})?$/.test(normalized)) {
+    return {
+      amountCents: null,
+      errorMessage: "Enter a dollar amount with up to 2 decimals.",
+    };
+  }
+
+  const [dollars, centsPart = ""] = normalized.split(".");
+  const amountCents =
+    Number(dollars) * 100 + Number(centsPart.padEnd(2, "0"));
+
+  if (!Number.isSafeInteger(amountCents) || amountCents <= 0) {
+    return {
+      amountCents: null,
+      errorMessage: "Enter a positive target.",
+    };
+  }
+
+  if (amountCents > 99_999_999) {
+    return {
+      amountCents: null,
+      errorMessage: "Enter a target below $1,000,000.",
+    };
+  }
+
+  return { amountCents, errorMessage: null };
+}
+
+export function categoryBudgetTargetsFromInputs(
+  inputs: Record<string, string>,
+): ChargeInspectorCategoryBudgetTargetAmounts {
+  return Object.fromEntries(
+    Object.entries(inputs)
+      .map(([category, value]) => [
+        category,
+        parseCategoryBudgetTargetInput(value).amountCents,
+      ] as const)
+      .filter((entry): entry is [string, number] => entry[1] !== null),
+  );
+}
+
+export function compareCategoryBudgetTargets(
+  categories: ChargeInspectorCategorySummary[],
+  targets: ChargeInspectorCategoryBudgetTargetAmounts,
+): ChargeInspectorCategoryBudgetComparison[] {
+  return categories
+    .map((category) => {
+      const targetDebitTotalCents = targets[category.category];
+      if (targetDebitTotalCents === undefined) {
+        return null;
+      }
+
+      return compareCategoryBudgetTarget(category, targetDebitTotalCents);
+    })
+    .filter(
+      (comparison): comparison is ChargeInspectorCategoryBudgetComparison =>
+        comparison !== null,
+    );
+}
+
+export function compareCategoryBudgetTarget(
+  category: ChargeInspectorCategorySummary,
+  targetDebitTotalCents: number,
+): ChargeInspectorCategoryBudgetComparison {
+  const varianceAmountCents =
+    category.debitTotalCents - targetDebitTotalCents;
+  const variancePercent =
+    targetDebitTotalCents > 0
+      ? (varianceAmountCents / targetDebitTotalCents) * 100
+      : 0;
+  const status =
+    varianceAmountCents > 0 ? "over-target" : "within-target";
+
+  return {
+    category: category.category,
+    label: category.label,
+    actualDebitTotalCents: category.debitTotalCents,
+    actualDebitTotalLabel: category.debitTotalLabel,
+    targetDebitTotalCents,
+    targetDebitTotalLabel: moneyFromCents(targetDebitTotalCents),
+    varianceAmountCents,
+    varianceAmountLabel: categoryBudgetVarianceLabel(varianceAmountCents),
+    variancePercentLabel: `${formatPercent(variancePercent)}% ${
+      varianceAmountCents > 0 ? "over" : "within"
+    }`,
+    status,
+    statusLabel: status === "over-target" ? "Over target" : "Within target",
+    limitations: [
+      "Comparison uses only the user-entered target and the current review-period category debit total.",
+      "This is not a recommended budget, spending-quality judgment, or required action.",
+    ],
+  };
+}
+
 export function mapPlatformChargeInspectorReview(
   response: PlatformChargeInspectorReviewResponse,
 ): ChargeInspectorReview {
@@ -571,7 +702,9 @@ function mapCategorySummary(
   return {
     category: summary.category,
     label: summary.label,
+    debitTotalCents: cents(summary.debit_total),
     debitTotalLabel: money(summary.debit_total),
+    creditTotalCents: cents(summary.credit_total),
     creditTotalLabel: money(summary.credit_total),
     transactionCount: summary.transaction_count,
     debitTransactionCount: summary.debit_transaction_count,
@@ -656,7 +789,9 @@ function categorySummary(
   return {
     category,
     label,
+    debitTotalCents: cents(debitTotal),
     debitTotalLabel: money(debitTotal),
+    creditTotalCents: cents(creditTotal),
     creditTotalLabel: money(creditTotal),
     transactionCount,
     debitTransactionCount,
@@ -911,6 +1046,38 @@ function money(value: DecimalValue): string {
     minimumFractionDigits: 2,
     style: "currency",
   }).format(amount);
+}
+
+function moneyFromCents(value: number): string {
+  return new Intl.NumberFormat("en-US", {
+    currency: "USD",
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 2,
+    style: "currency",
+  }).format(value / 100);
+}
+
+function cents(value: DecimalValue): number {
+  const amount = decimal(value);
+  return amount === null ? 0 : Math.round(amount * 100);
+}
+
+function categoryBudgetVarianceLabel(value: number) {
+  const amount = moneyFromCents(Math.abs(value));
+  if (value > 0) {
+    return `${amount} over`;
+  }
+  if (value < 0) {
+    return `${amount} within`;
+  }
+  return "$0.00 difference";
+}
+
+function formatPercent(value: number) {
+  return new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 0,
+  }).format(Math.abs(value));
 }
 
 function cashFlowLabel(value: DecimalValue): string {

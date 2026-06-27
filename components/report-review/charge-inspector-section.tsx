@@ -9,10 +9,15 @@ import {
 } from "react";
 
 import {
+  categoryBudgetTargetsFromInputs,
+  compareCategoryBudgetTargets,
   isChargeInspectorEmpty,
+  parseCategoryBudgetTargetInput,
   recurringPaymentReviewItems,
   summarizeChargeInspectorReview,
   visibleChargeInspectorFindings,
+  type ChargeInspectorCategoryBudgetComparison,
+  type ChargeInspectorCategoryBudgetTargetAmounts,
   type ChargeInspectorCategoryReviewStatus,
   type ChargeInspectorFinding,
   type ChargeInspectorCategorySummary,
@@ -448,9 +453,34 @@ function CategorySummaryTable({
   const [reviewStatuses, setReviewStatuses] = useState<
     Record<string, ChargeInspectorCategoryReviewStatus>
   >({});
+  const [budgetTargetInputs, setBudgetTargetInputs] = useState<
+    Record<string, string>
+  >({});
   const reviewCounts = useMemo(
     () => summarizeCategoryReviewStatuses(review, reviewStatuses),
     [review, reviewStatuses],
+  );
+  const budgetTargets = useMemo(
+    () => categoryBudgetTargetsFromInputs(budgetTargetInputs),
+    [budgetTargetInputs],
+  );
+  const budgetComparisons = useMemo(
+    () => compareCategoryBudgetTargets(review.categorySummary, budgetTargets),
+    [review.categorySummary, budgetTargets],
+  );
+  const budgetComparisonByCategory = useMemo(
+    () =>
+      new Map(
+        budgetComparisons.map((comparison) => [
+          comparison.category,
+          comparison,
+        ]),
+      ),
+    [budgetComparisons],
+  );
+  const budgetCounts = useMemo(
+    () => summarizeCategoryBudgetComparisons(budgetComparisons),
+    [budgetComparisons],
   );
 
   function setCategoryStatus(
@@ -464,6 +494,17 @@ function CategorySummaryTable({
       }
 
       return { ...current, [category]: status };
+    });
+  }
+
+  function setBudgetTarget(category: string, value: string) {
+    setBudgetTargetInputs((current) => {
+      if (value.trim().length === 0) {
+        const { [category]: _ignored, ...next } = current;
+        return next;
+      }
+
+      return { ...current, [category]: value };
     });
   }
 
@@ -486,16 +527,26 @@ function CategorySummaryTable({
             label={`${reviewCounts.needsReview.toLocaleString("en-US")} needs review`}
             tone="stone"
           />
+          <StatusPill
+            label={`${budgetCounts.targets.toLocaleString("en-US")} targets`}
+            tone="stone"
+          />
+          <StatusPill
+            label={`${budgetCounts.overTarget.toLocaleString("en-US")} over`}
+            tone={budgetCounts.overTarget > 0 ? "earth" : "stone"}
+          />
         </div>
       </div>
 
       <div className="mt-3 overflow-x-auto">
-        <table className="w-full min-w-[48rem] text-left text-sm">
+        <table className="w-full min-w-[68rem] text-left text-sm">
           <thead className="border-b border-stone-200 text-xs font-semibold uppercase text-earth-600">
             <tr>
               <th className="py-2 pr-3">Category</th>
               <th className="px-3 py-2">Spending</th>
               <th className="px-3 py-2">Credits</th>
+              <th className="px-3 py-2">Review target</th>
+              <th className="px-3 py-2">Difference</th>
               <th className="px-3 py-2 text-right">Rows</th>
               <th className="py-2 pl-3">Review</th>
             </tr>
@@ -503,8 +554,15 @@ function CategorySummaryTable({
           <tbody className="divide-y divide-stone-100">
             {review.categorySummary.map((category) => (
               <CategorySummaryRow
+                budgetComparison={budgetComparisonByCategory.get(
+                  category.category,
+                ) ?? null}
+                budgetTargetInput={
+                  budgetTargetInputs[category.category] ?? ""
+                }
                 category={category}
                 key={category.category}
+                onBudgetTargetChange={setBudgetTarget}
                 onStatusChange={setCategoryStatus}
                 status={
                   reviewStatuses[category.category] ?? "unreviewed"
@@ -518,13 +576,14 @@ function CategorySummaryTable({
       <p className="mt-3 text-xs leading-5 text-earth-600">
         Deterministic text-rule grouping only. This does not infer budgets,
         spending quality, merchant actions, or required changes. Review status
-        stays in this browser session and does not edit category rules or save
-        preferences.
+        and target comparison stay in this browser session and do not edit
+        category rules, recommend targets, or save preferences.
       </p>
 
       {showAiPanel ? (
         <div className="mt-4">
           <AiCategoryEvidenceExplanationPanel
+            categoryBudgetTargets={budgetTargets}
             categoryReviewStatuses={reviewStatuses}
             enabled={aiEnabled}
           />
@@ -535,17 +594,24 @@ function CategorySummaryTable({
 }
 
 function CategorySummaryRow({
+  budgetComparison,
+  budgetTargetInput,
   category,
+  onBudgetTargetChange,
   onStatusChange,
   status,
 }: {
+  budgetComparison: ChargeInspectorCategoryBudgetComparison | null;
+  budgetTargetInput: string;
   category: ChargeInspectorCategorySummary;
+  onBudgetTargetChange: (category: string, value: string) => void;
   onStatusChange: (
     category: string,
     status: ChargeInspectorCategoryReviewStatus,
   ) => void;
   status: ChargeInspectorCategoryReviewStatus;
 }) {
+  const targetInputResult = parseCategoryBudgetTargetInput(budgetTargetInput);
   return (
     <tr data-testid="charge-inspector-category-row">
       <td className="py-2 pr-3 font-medium text-seed-950">
@@ -592,6 +658,55 @@ function CategorySummaryRow({
       </td>
       <td className="px-3 py-2 tabular-nums text-earth-800">
         {category.creditTotalLabel}
+      </td>
+      <td className="px-3 py-2">
+        <input
+          aria-label={`Review target for ${category.label}`}
+          aria-invalid={targetInputResult.errorMessage ? "true" : "false"}
+          className="h-9 w-32 rounded-md border border-stone-300 bg-white px-2 text-sm tabular-nums text-earth-900 outline-none placeholder:text-earth-400 focus:border-seed-500 focus:ring-2 focus:ring-seed-500"
+          data-testid="charge-inspector-category-budget-target"
+          inputMode="decimal"
+          maxLength={14}
+          onChange={(event) =>
+            onBudgetTargetChange(category.category, event.target.value)
+          }
+          placeholder="$0.00"
+          type="text"
+          value={budgetTargetInput}
+        />
+        {targetInputResult.errorMessage ? (
+          <p
+            className="mt-1 max-w-36 text-xs leading-5 text-amber-800"
+            data-testid="charge-inspector-category-budget-error"
+          >
+            {targetInputResult.errorMessage}
+          </p>
+        ) : null}
+      </td>
+      <td
+        className="px-3 py-2 text-xs leading-5 text-earth-700"
+        data-testid="charge-inspector-category-budget-comparison"
+      >
+        {budgetComparison ? (
+          <div className="space-y-1">
+            <StatusPill
+              label={budgetComparison.statusLabel}
+              tone={
+                budgetComparison.status === "over-target"
+                  ? "earth"
+                  : "seed"
+              }
+            />
+            <div className="font-semibold tabular-nums text-seed-950">
+              {budgetComparison.varianceAmountLabel}
+            </div>
+            <div className="tabular-nums text-earth-600">
+              Target {budgetComparison.targetDebitTotalLabel}
+            </div>
+          </div>
+        ) : (
+          <span className="text-earth-500">No target</span>
+        )}
       </td>
       <td className="px-3 py-2 text-right tabular-nums text-earth-800">
         {category.transactionCount.toLocaleString("en-US")}
@@ -663,6 +778,21 @@ function summarizeCategoryReviewStatuses(
       return counts;
     },
     { confirmed: 0, needsReview: 0 },
+  );
+}
+
+function summarizeCategoryBudgetComparisons(
+  comparisons: ChargeInspectorCategoryBudgetComparison[],
+) {
+  return comparisons.reduce(
+    (counts, comparison) => {
+      counts.targets += 1;
+      if (comparison.status === "over-target") {
+        counts.overTarget += 1;
+      }
+      return counts;
+    },
+    { overTarget: 0, targets: 0 },
   );
 }
 

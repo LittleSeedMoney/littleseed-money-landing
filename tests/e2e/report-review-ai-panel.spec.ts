@@ -207,6 +207,8 @@ test.describe("private report review AI panel", () => {
           },
           versions: {
             answerValidator: "ai_answer_validator.v0",
+            categoryBudgetComparisonContext:
+              "category_budget_comparison_ai_context.v0",
             categoryEvidenceContext: "category_evidence_ai_context.v0",
             contextPack: "coach_context_pack.v0",
             corpus: "knowledge_corpus.fixture.v0",
@@ -224,6 +226,9 @@ test.describe("private report review AI panel", () => {
     const feesCategory = page
       .getByTestId("charge-inspector-category-row")
       .filter({ hasText: "Fees" });
+    await feesCategory
+      .getByTestId("charge-inspector-category-budget-target")
+      .fill("$10.00");
     await feesCategory.getByRole("radio", { name: "Needs review" }).click();
 
     const categoryPanel = page.getByTestId(
@@ -245,8 +250,14 @@ test.describe("private report review AI panel", () => {
     await expect(
       validatedAnswer.getByText("category_evidence_ai_context.v0"),
     ).toBeVisible();
+    await expect(
+      validatedAnswer.getByText("category_budget_comparison_ai_context.v0"),
+    ).toBeVisible();
 
     expect(requestBody).toMatchObject({
+      categoryBudgetTargets: {
+        fees: 1000,
+      },
       categoryReviewStatuses: {
         fees: "needs-review",
       },
@@ -256,6 +267,7 @@ test.describe("private report review AI panel", () => {
       targetType: "category_evidence",
       userMessage: null,
     });
+    expect(JSON.stringify(requestBody)).not.toContain("categoryBudgetComparison");
     expect(JSON.stringify(requestBody)).not.toContain("rawTransactions");
     expect(JSON.stringify(requestBody)).not.toContain("original_description");
   });

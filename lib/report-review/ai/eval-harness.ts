@@ -547,6 +547,7 @@ function readVersionExpectations(value: unknown, label: string) {
   for (const [key, item] of Object.entries(record)) {
     if (
       key !== "answerValidator" &&
+      key !== "categoryBudgetComparisonContext" &&
       key !== "categoryEvidenceContext" &&
       key !== "contextPack" &&
       key !== "corpus" &&
