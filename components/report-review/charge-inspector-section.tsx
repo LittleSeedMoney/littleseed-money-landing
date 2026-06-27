@@ -14,7 +14,9 @@ import {
   compareCategoryBudgetTargets,
   compareCategoryMonthlyBudgetTargets,
   isChargeInspectorEmpty,
+  judgeCategoryMonthlyBudgetComparisons,
   mergeCategoryMonthlyBudgetComparisons,
+  mergeCategoryMonthlyBudgetJudgements,
   parseCategoryBudgetTargetInput,
   recurringPaymentReviewItems,
   summarizeChargeInspectorReview,
@@ -22,6 +24,7 @@ import {
   type ChargeInspectorCategoryBudgetComparison,
   type ChargeInspectorCategoryBudgetTargetAmounts,
   type ChargeInspectorCategoryMonthlyBudgetComparison,
+  type ChargeInspectorCategoryMonthlyBudgetJudgement,
   type ChargeInspectorCategoryReviewStatus,
   type ChargeInspectorFinding,
   type ChargeInspectorCategoryMonthlySummary,
@@ -648,6 +651,32 @@ function CategoryMonthlySummaryTable({
       ),
     [localBudgetComparisons, review.categoryMonthlyBudgetComparison],
   );
+  const localBudgetJudgements = useMemo(
+    () =>
+      judgeCategoryMonthlyBudgetComparisons(
+        budgetComparisons,
+        review.categoryMonthlySummary,
+      ),
+    [budgetComparisons, review.categoryMonthlySummary],
+  );
+  const budgetJudgements = useMemo(
+    () =>
+      mergeCategoryMonthlyBudgetJudgements(
+        review.categoryMonthlyBudgetJudgement,
+        localBudgetJudgements,
+      ),
+    [localBudgetJudgements, review.categoryMonthlyBudgetJudgement],
+  );
+  const budgetJudgementByMonthCategory = useMemo(
+    () =>
+      new Map(
+        budgetJudgements.map((judgement) => [
+          `${judgement.month}:${judgement.category}`,
+          judgement,
+        ]),
+      ),
+    [budgetJudgements],
+  );
   const budgetCounts = useMemo(
     () => summarizeCategoryMonthlyBudgetComparisons(budgetComparisons),
     [budgetComparisons],
@@ -691,7 +720,7 @@ function CategoryMonthlySummaryTable({
         <table
           className={[
             "w-full text-left text-sm",
-            showBudgetComparison ? "min-w-[56rem]" : "min-w-[44rem]",
+            showBudgetComparison ? "min-w-[64rem]" : "min-w-[44rem]",
           ].join(" ")}
         >
           <thead className="border-b border-stone-200 text-xs font-semibold uppercase text-earth-600">
@@ -702,7 +731,8 @@ function CategoryMonthlySummaryTable({
                 <th className="px-3 py-2">Spending</th>
                 <th className="px-3 py-2">Target</th>
                 <th className="px-3 py-2">Difference</th>
-                <th className="py-2 pl-3">Status</th>
+                <th className="px-3 py-2">Status</th>
+                <th className="py-2 pl-3">Judgement</th>
               </tr>
             ) : (
               <tr>
@@ -720,6 +750,11 @@ function CategoryMonthlySummaryTable({
               ? budgetComparisons.map((comparison) => (
                   <CategoryMonthlyBudgetComparisonRow
                     comparison={comparison}
+                    judgement={
+                      budgetJudgementByMonthCategory.get(
+                        `${comparison.month}:${comparison.category}`,
+                      ) ?? null
+                    }
                     key={`${comparison.month}:${comparison.category}`}
                   />
                 ))
@@ -738,7 +773,8 @@ function CategoryMonthlySummaryTable({
         a monthly budget, spending-quality judgment, action priority, or saved
         category memory. Monthly target comparison appears only when a
         user-entered target is available and uses posted-date-month category
-        debit totals.
+        debit totals. Judgement badges are factual states against user-entered
+        targets, not category rankings or spending instructions.
       </p>
     </div>
   );
@@ -793,8 +829,10 @@ function CategoryMonthlySummaryRow({
 
 function CategoryMonthlyBudgetComparisonRow({
   comparison,
+  judgement,
 }: {
   comparison: ChargeInspectorCategoryMonthlyBudgetComparison;
+  judgement: ChargeInspectorCategoryMonthlyBudgetJudgement | null;
 }) {
   return (
     <tr data-testid="charge-inspector-category-monthly-budget-row">
@@ -821,6 +859,18 @@ function CategoryMonthlyBudgetComparisonRow({
           label={comparison.statusLabel}
           tone={comparison.status === "over-target" ? "earth" : "stone"}
         />
+      </td>
+      <td className="py-2 pl-3">
+        {judgement ? (
+          <StatusPill
+            label={judgement.judgementLabel}
+            tone={
+              judgement.judgement === "over-user-target" ? "earth" : "stone"
+            }
+          />
+        ) : (
+          <span className="text-xs text-earth-500">Not available</span>
+        )}
       </td>
     </tr>
   );

@@ -312,8 +312,10 @@ function explainAnswer(contextPack: CoachContextPack) {
       contextPack.categoryEvidence.categoryMonthlySummaryRows.length;
     const monthlyTargetComparisonCount =
       contextPack.categoryEvidence.categoryMonthlyBudgetComparisons.length;
+    const monthlyJudgementCount =
+      contextPack.categoryEvidence.categoryMonthlyBudgetJudgements.length;
 
-    return `This category evidence summary shows deterministic rule output for ${contextPack.categoryEvidence.categories.length.toLocaleString("en-US")} categor${contextPack.categoryEvidence.categories.length === 1 ? "y" : "ies"}, ${visibleEvidenceCount.toLocaleString("en-US")} bounded merchant-display evidence row${visibleEvidenceCount === 1 ? "" : "s"}, ${monthlyCategoryRowCount.toLocaleString("en-US")} aggregate category-by-month row${monthlyCategoryRowCount === 1 ? "" : "s"}, ${targetComparisonCount.toLocaleString("en-US")} user-entered target comparison${targetComparisonCount === 1 ? "" : "s"}, and ${monthlyTargetComparisonCount.toLocaleString("en-US")} monthly target comparison row${monthlyTargetComparisonCount === 1 ? "" : "s"}. It can explain which visible rows are attached to a category, what review status is selected, category-by-month aggregate facts, and any already-calculated target comparison facts, but it cannot create targets, recategorize rows, judge spending quality, or rank actions.`;
+    return `This category evidence summary shows deterministic rule output for ${contextPack.categoryEvidence.categories.length.toLocaleString("en-US")} categor${contextPack.categoryEvidence.categories.length === 1 ? "y" : "ies"}, ${visibleEvidenceCount.toLocaleString("en-US")} bounded merchant-display evidence row${visibleEvidenceCount === 1 ? "" : "s"}, ${monthlyCategoryRowCount.toLocaleString("en-US")} aggregate category-by-month row${monthlyCategoryRowCount === 1 ? "" : "s"}, ${targetComparisonCount.toLocaleString("en-US")} user-entered target comparison${targetComparisonCount === 1 ? "" : "s"}, ${monthlyTargetComparisonCount.toLocaleString("en-US")} monthly target comparison row${monthlyTargetComparisonCount === 1 ? "" : "s"}, and ${monthlyJudgementCount.toLocaleString("en-US")} monthly budget judgement row${monthlyJudgementCount === 1 ? "" : "s"}. It can explain which visible rows are attached to a category, what review status is selected, category-by-month aggregate facts, and any already-calculated target comparison or judgement facts, but it cannot create targets, recategorize rows, score spending quality, recommend changes, or rank actions.`;
   }
 
   return "This context pack does not include enough supported detail to explain.";
@@ -447,8 +449,17 @@ function categoryEvidenceText(
           )
           .join("; ")}.`
       : " No monthly target comparison rows are available.";
+  const monthlyJudgementRows =
+    categoryEvidence.categoryMonthlyBudgetJudgements.length > 0
+      ? ` Monthly budget judgement rows: ${categoryEvidence.categoryMonthlyBudgetJudgements
+          .map(
+            (judgement) =>
+              `${judgement.month} ${judgement.label}: ${judgement.judgementLabel}, actual ${judgement.actualDebitTotalLabel}, target ${judgement.targetDebitTotalLabel}, difference ${judgement.varianceAmountLabel}, evidence rows ${judgement.evidenceRowCount.toLocaleString("en-US")}`,
+          )
+          .join("; ")}.`
+      : " No monthly budget judgement rows are available.";
 
-  return `${categoryRows}${monthlyRows}${monthlyBudgetRows}`;
+  return `${categoryRows}${monthlyRows}${monthlyBudgetRows}${monthlyJudgementRows}`;
 }
 
 function defaultLimitations(contextPack: CoachContextPack) {
@@ -464,7 +475,7 @@ function defaultLimitations(contextPack: CoachContextPack) {
     return [
       "Uses only bounded category evidence from the server-owned context pack.",
       "Does not use raw CSV rows, full descriptions, balances, account identifiers, saved chat history, or long-term memory.",
-      "Does not create budget targets, recategorize rows, judge spending quality, rank actions, infer monthly budgets, or recommend merchant actions.",
+      "Does not create budget targets, recategorize rows, score spending quality, rank actions, infer monthly budgets, or recommend merchant actions.",
       ...contextPack.categoryEvidence.limitations.slice(0, 2),
     ];
   }

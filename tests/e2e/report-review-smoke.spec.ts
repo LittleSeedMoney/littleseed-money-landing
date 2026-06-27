@@ -370,6 +370,12 @@ test.describe("private report review smoke", () => {
         .filter({ hasText: "2026-05" })
         .filter({ hasText: "Groceries" }),
     ).toContainText("$30.56 over");
+    await expect(
+      page
+        .getByTestId("charge-inspector-category-monthly-budget-row")
+        .filter({ hasText: "2026-05" })
+        .filter({ hasText: "Groceries" }),
+    ).toContainText("Over user target");
     await expect(page.getByText("1 targets")).toBeVisible();
     await expect(page.getByText("1 over")).toBeVisible();
     await groceriesCategory.locator("summary").click();
@@ -686,6 +692,9 @@ function uploadedChargeInspectorReview() {
     categoryMonthlyBudgetComparison: [],
     categoryMonthlyBudgetComparisonVersion:
       "transaction_category_monthly_budget_comparison_v0",
+    categoryMonthlyBudgetJudgement: [],
+    categoryMonthlyBudgetJudgementVersion:
+      "transaction_category_monthly_budget_judgement_v0",
     limitations: [
       "This review uses only the uploaded CSV rows for the current request.",
       "No account connection, continuous monitoring, or stored transaction history is introduced.",
