@@ -15,6 +15,7 @@ export type PlatformChargeInspectorReviewResponse = {
   spending_summary_version: string;
   category_summary_version: string;
   category_monthly_summary_version: string;
+  category_monthly_budget_comparison_version: string;
   reviewed_transaction_count: number;
   parse_error_count: number;
   findings: {
@@ -26,6 +27,7 @@ export type PlatformChargeInspectorReviewResponse = {
   monthly_spending_summary: PlatformMonthlySpendingSummary[];
   category_summary: PlatformTransactionCategorySummary[];
   category_monthly_summary: PlatformTransactionCategoryMonthlySummary[];
+  category_monthly_budget_comparison: PlatformTransactionCategoryMonthlyBudgetComparison[];
   evidence_transactions: PlatformNormalizedTransaction[];
   parse_errors: PlatformCsvTransactionValidationError[];
   limitations: string[];
@@ -58,6 +60,20 @@ export type PlatformTransactionCategoryMonthlySummary = {
   debit_transaction_count: number;
   credit_transaction_count: number;
   rule_ids: string[];
+  limitations: string[];
+};
+
+export type PlatformTransactionCategoryMonthlyBudgetComparison = {
+  schema_version: string;
+  month: string;
+  category: string;
+  label: string;
+  currency: string;
+  actual_debit_total: DecimalValue;
+  target_debit_total: DecimalValue | null;
+  variance_amount: DecimalValue | null;
+  variance_percent: DecimalValue | null;
+  status: string;
   limitations: string[];
 };
 
@@ -235,6 +251,13 @@ export function parseChargeInspectorReviewResponse(
             response.category_monthly_summary_version,
             "charge-inspector response.category_monthly_summary_version",
           ),
+    category_monthly_budget_comparison_version:
+      response.category_monthly_budget_comparison_version == null
+        ? "not_returned"
+        : expectString(
+            response.category_monthly_budget_comparison_version,
+            "charge-inspector response.category_monthly_budget_comparison_version",
+          ),
     reviewed_transaction_count: expectNumber(
       response.reviewed_transaction_count,
       "charge-inspector response.reviewed_transaction_count",
@@ -288,6 +311,14 @@ export function parseChargeInspectorReviewResponse(
             response.category_monthly_summary,
             "charge-inspector response.category_monthly_summary",
             parseTransactionCategoryMonthlySummary,
+          ),
+    category_monthly_budget_comparison:
+      response.category_monthly_budget_comparison == null
+        ? []
+        : parseArray(
+            response.category_monthly_budget_comparison,
+            "charge-inspector response.category_monthly_budget_comparison",
+            parseTransactionCategoryMonthlyBudgetComparison,
           ),
     evidence_transactions: parseArray(
       response.evidence_transactions,
@@ -370,6 +401,44 @@ function parseTransactionCategoryMonthlySummary(
     ),
     rule_ids: parseStringArray(summary.rule_ids, `${path}.rule_ids`),
     limitations: parseStringArray(summary.limitations, `${path}.limitations`),
+  };
+}
+
+function parseTransactionCategoryMonthlyBudgetComparison(
+  value: unknown,
+  path: string,
+): PlatformTransactionCategoryMonthlyBudgetComparison {
+  const comparison = expectRecord(value, path);
+  return {
+    schema_version: expectString(comparison.schema_version, `${path}.schema_version`),
+    month: expectString(comparison.month, `${path}.month`),
+    category: expectString(comparison.category, `${path}.category`),
+    label: expectString(comparison.label, `${path}.label`),
+    currency: expectString(comparison.currency, `${path}.currency`),
+    actual_debit_total: expectDecimalValue(
+      comparison.actual_debit_total,
+      `${path}.actual_debit_total`,
+    ),
+    target_debit_total:
+      comparison.target_debit_total == null
+        ? null
+        : expectDecimalValue(
+            comparison.target_debit_total,
+            `${path}.target_debit_total`,
+          ),
+    variance_amount:
+      comparison.variance_amount == null
+        ? null
+        : expectDecimalValue(comparison.variance_amount, `${path}.variance_amount`),
+    variance_percent:
+      comparison.variance_percent == null
+        ? null
+        : expectDecimalValue(
+            comparison.variance_percent,
+            `${path}.variance_percent`,
+          ),
+    status: expectString(comparison.status, `${path}.status`),
+    limitations: parseStringArray(comparison.limitations, `${path}.limitations`),
   };
 }
 

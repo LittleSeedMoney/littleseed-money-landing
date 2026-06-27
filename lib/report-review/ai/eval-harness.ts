@@ -548,6 +548,7 @@ function readVersionExpectations(value: unknown, label: string) {
     if (
       key !== "answerValidator" &&
       key !== "categoryBudgetComparisonContext" &&
+      key !== "categoryMonthlyBudgetComparisonContext" &&
       key !== "categoryMonthlySummaryContext" &&
       key !== "categoryEvidenceContext" &&
       key !== "contextPack" &&

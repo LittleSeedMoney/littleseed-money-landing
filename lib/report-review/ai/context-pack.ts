@@ -1,6 +1,7 @@
 import { reportReviewSample } from "@/data/report-review-sample";
 import {
   compareCategoryBudgetTargets,
+  compareCategoryMonthlyBudgetTargets,
   type ChargeInspectorCategoryBudgetTargetAmounts,
 } from "@/lib/report-review/charge-inspector";
 
@@ -225,6 +226,10 @@ export function buildCategoryEvidenceContextPack({
     chargeInspector.categorySummary,
     categoryBudgetTargets,
   );
+  const monthlyBudgetComparisons = compareCategoryMonthlyBudgetTargets(
+    chargeInspector.categoryMonthlySummary,
+    categoryBudgetTargets,
+  );
   const budgetComparisonByCategory = new Map(
     budgetComparisons.map((comparison) => [
       comparison.category,
@@ -257,11 +262,19 @@ export function buildCategoryEvidenceContextPack({
               "category_monthly_summary_ai_context.v0" as const,
           }
         : {}),
+      ...(monthlyBudgetComparisons.length > 0
+        ? {
+            categoryMonthlyBudgetComparisonVersion:
+              "category_monthly_budget_comparison_ai_context.v0" as const,
+          }
+        : {}),
       sourceLabel: chargeInspector.sourceLabel,
       reviewedTransactionCount: chargeInspector.reviewedTransactionCount,
       categorySummaryContractVersion: chargeInspector.categorySummaryVersion,
       categoryMonthlySummaryContractVersion:
         chargeInspector.categoryMonthlySummaryVersion,
+      categoryMonthlyBudgetComparisonContractVersion:
+        chargeInspector.categoryMonthlyBudgetComparisonVersion,
       categories: chargeInspector.categorySummary.map((category) => {
         const budgetComparison = budgetComparisonByCategory.get(
           category.category,
@@ -284,11 +297,13 @@ export function buildCategoryEvidenceContextPack({
         };
       }),
       categoryMonthlySummaryRows: chargeInspector.categoryMonthlySummary,
+      categoryMonthlyBudgetComparisons: monthlyBudgetComparisons,
       limitations: [
         "Category evidence is deterministic rule output, not an AI categorization decision.",
         "Category monthly summary rows are aggregate posted-date-month totals only, not monthly budgets.",
         "Merchant names are bounded display labels from the current review, not full transaction descriptions.",
         "Budget comparison facts use only user-entered in-session targets and deterministic current-review category totals.",
+        "Monthly budget comparison facts use only user-entered in-session targets and deterministic posted-date-month category debit totals.",
         "This context does not include raw CSV rows, balances, check numbers, account identifiers, or full transaction history.",
         "The AI explanation cannot create budget targets, recategorize rows, judge spending quality, rank actions, or tell the user what to change.",
         ...chargeInspector.limitations,
@@ -303,6 +318,7 @@ export function buildCategoryEvidenceContextPack({
         "automatic recategorization",
         "inferred budget targets",
         "budget variance judgments",
+        "client-supplied monthly budget comparison results",
         "saved budget targets",
         "merchant actions",
         "action ranking",
@@ -325,11 +341,12 @@ export function buildCategoryEvidenceContextPack({
       "saved AI conversation history",
       "long-term memory",
       "automatic recategorization",
-      "inferred budget targets",
-      "budget variance judgments",
-      "saved budget targets",
-      "merchant actions",
-      "action ranking",
+        "inferred budget targets",
+        "budget variance judgments",
+        "client-supplied monthly budget comparison results",
+        "saved budget targets",
+        "merchant actions",
+        "action ranking",
       "unapproved third-party retrieval content",
     ],
     versions: {

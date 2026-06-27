@@ -139,6 +139,7 @@ function createOpenAiReportReviewProvider({
             "You may explain monthly spending aggregate rows only when the context pack includes monthlySpendingSummary.",
             "You may explain bounded category evidence only when the context pack includes categoryEvidence.",
             "You may explain deterministic user-provided target comparisons only when they are already present in categoryEvidence.",
+            "You may explain deterministic monthly target comparison facts only when they are already present in categoryEvidence.",
             "Do not calculate new values.",
             "Do not rank actions.",
             "Do not infer budgets, create targets, recategorize transactions, judge categories as right or wrong, recommend merchant actions, or create required next steps.",
@@ -309,8 +310,10 @@ function explainAnswer(contextPack: CoachContextPack) {
     ).length;
     const monthlyCategoryRowCount =
       contextPack.categoryEvidence.categoryMonthlySummaryRows.length;
+    const monthlyTargetComparisonCount =
+      contextPack.categoryEvidence.categoryMonthlyBudgetComparisons.length;
 
-    return `This category evidence summary shows deterministic rule output for ${contextPack.categoryEvidence.categories.length.toLocaleString("en-US")} categor${contextPack.categoryEvidence.categories.length === 1 ? "y" : "ies"}, ${visibleEvidenceCount.toLocaleString("en-US")} bounded merchant-display evidence row${visibleEvidenceCount === 1 ? "" : "s"}, ${monthlyCategoryRowCount.toLocaleString("en-US")} aggregate category-by-month row${monthlyCategoryRowCount === 1 ? "" : "s"}, and ${targetComparisonCount.toLocaleString("en-US")} user-entered target comparison${targetComparisonCount === 1 ? "" : "s"}. It can explain which visible rows are attached to a category, what review status is selected, category-by-month aggregate facts, and any already-calculated target comparison facts, but it cannot create targets, recategorize rows, judge spending quality, or rank actions.`;
+    return `This category evidence summary shows deterministic rule output for ${contextPack.categoryEvidence.categories.length.toLocaleString("en-US")} categor${contextPack.categoryEvidence.categories.length === 1 ? "y" : "ies"}, ${visibleEvidenceCount.toLocaleString("en-US")} bounded merchant-display evidence row${visibleEvidenceCount === 1 ? "" : "s"}, ${monthlyCategoryRowCount.toLocaleString("en-US")} aggregate category-by-month row${monthlyCategoryRowCount === 1 ? "" : "s"}, ${targetComparisonCount.toLocaleString("en-US")} user-entered target comparison${targetComparisonCount === 1 ? "" : "s"}, and ${monthlyTargetComparisonCount.toLocaleString("en-US")} monthly target comparison row${monthlyTargetComparisonCount === 1 ? "" : "s"}. It can explain which visible rows are attached to a category, what review status is selected, category-by-month aggregate facts, and any already-calculated target comparison facts, but it cannot create targets, recategorize rows, judge spending quality, or rank actions.`;
   }
 
   return "This context pack does not include enough supported detail to explain.";
@@ -326,7 +329,7 @@ function plainLanguageAnswer(contextPack: CoachContextPack) {
   }
 
   if (contextPack.categoryEvidence) {
-    return "In plain language, category evidence is the visible trail behind the category table: category totals, matched merchant-display rows, rule ids, current review status, and optional user-entered target comparisons. It is explanation support, not an automatic recategorization, target recommendation, or spending judgement.";
+    return "In plain language, category evidence is the visible trail behind the category table: category totals, matched merchant-display rows, rule ids, current review status, and optional user-entered target comparisons by review period and month. It is explanation support, not an automatic recategorization, target recommendation, or spending judgement.";
   }
 
   return "In plain language, this context pack does not include enough supported detail to explain.";
@@ -342,7 +345,7 @@ function missingContextAnswer(contextPack: CoachContextPack) {
   }
 
   if (contextPack.categoryEvidence) {
-    return "This category evidence is limited by the bounded fields available here. Missing context includes receipts, full merchant descriptors, statement period completeness, whether the user-entered target covers the same review period, and whether a product owner has reviewed any ambiguous category rules.";
+    return "This category evidence is limited by the bounded fields available here. Missing context includes receipts, full merchant descriptors, statement period completeness, whether the user-entered target covers the same review period and monthly cadence, and whether a product owner has reviewed any ambiguous category rules.";
   }
 
   return "This context is limited by the fields available in the selected context pack.";
@@ -358,7 +361,7 @@ function nextQuestionsAnswer(contextPack: CoachContextPack) {
   }
 
   if (contextPack.categoryEvidence) {
-    return "Useful next questions are: Which merchant-display labels look ambiguous? Which categories are marked needs review? Do any user-entered targets need period context? Are any rule ids too broad for product review? Does the statement period look complete? These are review questions, not action priorities.";
+    return "Useful next questions are: Which merchant-display labels look ambiguous? Which categories are marked needs review? Do any user-entered targets need review-period or monthly context? Are any rule ids too broad for product review? Does the statement period look complete? These are review questions, not action priorities.";
   }
 
   return "Useful next questions should stay inside the selected context pack and focus on missing context, source limits, and versioned evidence.";
@@ -435,8 +438,17 @@ function categoryEvidenceText(
           )
           .join("; ")}.`
       : " No category-by-month aggregate rows are available.";
+  const monthlyBudgetRows =
+    categoryEvidence.categoryMonthlyBudgetComparisons.length > 0
+      ? ` Monthly target comparison rows: ${categoryEvidence.categoryMonthlyBudgetComparisons
+          .map(
+            (comparison) =>
+              `${comparison.month} ${comparison.label}: actual ${comparison.actualDebitTotalLabel}, target ${comparison.targetDebitTotalLabel}, difference ${comparison.varianceAmountLabel} (${comparison.variancePercentLabel}), status ${comparison.statusLabel}`,
+          )
+          .join("; ")}.`
+      : " No monthly target comparison rows are available.";
 
-  return `${categoryRows}${monthlyRows}`;
+  return `${categoryRows}${monthlyRows}${monthlyBudgetRows}`;
 }
 
 function defaultLimitations(contextPack: CoachContextPack) {
