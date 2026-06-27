@@ -384,6 +384,13 @@ function evalContextEvidence(contextPack: CoachContextPack) {
     };
   }
 
+  if (contextPack.categoryEvidence) {
+    return {
+      id: contextPack.categoryEvidence.id,
+      text: "Category evidence rows are available in the context pack.",
+    };
+  }
+
   return {
     id: contextPack.id,
     text: "Context pack evidence is available.",
@@ -540,6 +547,7 @@ function readVersionExpectations(value: unknown, label: string) {
   for (const [key, item] of Object.entries(record)) {
     if (
       key !== "answerValidator" &&
+      key !== "categoryEvidenceContext" &&
       key !== "contextPack" &&
       key !== "corpus" &&
       key !== "monthlySpendingContext" &&

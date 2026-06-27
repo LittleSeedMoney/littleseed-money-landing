@@ -13,6 +13,7 @@ import {
   recurringPaymentReviewItems,
   summarizeChargeInspectorReview,
   visibleChargeInspectorFindings,
+  type ChargeInspectorCategoryReviewStatus,
   type ChargeInspectorFinding,
   type ChargeInspectorCategorySummary,
   type ChargeInspectorReview,
@@ -21,7 +22,10 @@ import {
 } from "@/lib/report-review/charge-inspector";
 import { CHARGE_INSPECTOR_CSV_TEXT_MAX_LENGTH } from "@/lib/report-review/charge-inspector-upload";
 
-import { AiMonthlySpendingExplanationPanel } from "./ai-explanation-panel";
+import {
+  AiCategoryEvidenceExplanationPanel,
+  AiMonthlySpendingExplanationPanel,
+} from "./ai-explanation-panel";
 import { ChargeInspectorFindingList } from "./charge-inspector-finding-list";
 import {
   ReviewEmptyState,
@@ -34,13 +38,12 @@ import {
 } from "./shared";
 
 type CsvReviewRequestState = "idle" | "loading" | "ready" | "error";
-type CategoryReviewStatus = "unreviewed" | "confirmed" | "needs-review";
 
 const CSV_FILE_LENGTH_ERROR =
   "CSV file must be 250,000 characters or fewer.";
 const CATEGORY_REVIEW_OPTIONS: {
   label: string;
-  status: CategoryReviewStatus;
+  status: ChargeInspectorCategoryReviewStatus;
 }[] = [
   { label: "Unreviewed", status: "unreviewed" },
   { label: "Confirm", status: "confirmed" },
@@ -73,7 +76,7 @@ export function ChargeInspectorSection({
   const hiddenCount = activeReview.findings.length - visibleFindings.length;
   const showEmptyState =
     isChargeInspectorEmpty(activeReview) || visibleFindings.length === 0;
-  const showMonthlyAiPanel = activeReview === review;
+  const showSampleAiPanels = activeReview === review;
 
   function hideFinding(findingId: string) {
     setDismissedFindingIds((current) =>
@@ -121,7 +124,7 @@ export function ChargeInspectorSection({
         findings={visibleFindings}
         hiddenCount={hiddenCount}
         review={activeReview}
-        showMonthlyAiPanel={showMonthlyAiPanel}
+        showSampleAiPanels={showSampleAiPanels}
         summary={summary}
         visibleCount={visibleFindings.length}
       />
@@ -323,7 +326,7 @@ function ChargeInspectorDashboard({
   findings,
   hiddenCount,
   review,
-  showMonthlyAiPanel,
+  showSampleAiPanels,
   summary,
   visibleCount,
 }: {
@@ -331,7 +334,7 @@ function ChargeInspectorDashboard({
   findings: ChargeInspectorFinding[];
   hiddenCount: number;
   review: ChargeInspectorReview;
-  showMonthlyAiPanel: boolean;
+  showSampleAiPanels: boolean;
   summary: ChargeInspectorSummary;
   visibleCount: number;
 }) {
@@ -406,8 +409,10 @@ function ChargeInspectorDashboard({
 
           {review.categorySummary.length > 0 ? (
             <CategorySummaryTable
+              aiEnabled={aiEnabled}
               key={categoryReviewKey(review)}
               review={review}
+              showAiPanel={showSampleAiPanels}
             />
           ) : null}
 
@@ -415,7 +420,7 @@ function ChargeInspectorDashboard({
             <MonthlySpendingSummary
               aiEnabled={aiEnabled}
               review={review}
-              showAiPanel={showMonthlyAiPanel}
+              showAiPanel={showSampleAiPanels}
             />
           ) : null}
         </>
@@ -431,9 +436,17 @@ function ChargeInspectorDashboard({
   );
 }
 
-function CategorySummaryTable({ review }: { review: ChargeInspectorReview }) {
+function CategorySummaryTable({
+  aiEnabled,
+  review,
+  showAiPanel,
+}: {
+  aiEnabled: boolean;
+  review: ChargeInspectorReview;
+  showAiPanel: boolean;
+}) {
   const [reviewStatuses, setReviewStatuses] = useState<
-    Record<string, CategoryReviewStatus>
+    Record<string, ChargeInspectorCategoryReviewStatus>
   >({});
   const reviewCounts = useMemo(
     () => summarizeCategoryReviewStatuses(review, reviewStatuses),
@@ -442,7 +455,7 @@ function CategorySummaryTable({ review }: { review: ChargeInspectorReview }) {
 
   function setCategoryStatus(
     category: string,
-    status: CategoryReviewStatus,
+    status: ChargeInspectorCategoryReviewStatus,
   ) {
     setReviewStatuses((current) => {
       if (status === "unreviewed") {
@@ -508,6 +521,15 @@ function CategorySummaryTable({ review }: { review: ChargeInspectorReview }) {
         stays in this browser session and does not edit category rules or save
         preferences.
       </p>
+
+      {showAiPanel ? (
+        <div className="mt-4">
+          <AiCategoryEvidenceExplanationPanel
+            categoryReviewStatuses={reviewStatuses}
+            enabled={aiEnabled}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -520,14 +542,50 @@ function CategorySummaryRow({
   category: ChargeInspectorCategorySummary;
   onStatusChange: (
     category: string,
-    status: CategoryReviewStatus,
+    status: ChargeInspectorCategoryReviewStatus,
   ) => void;
-  status: CategoryReviewStatus;
+  status: ChargeInspectorCategoryReviewStatus;
 }) {
   return (
     <tr data-testid="charge-inspector-category-row">
       <td className="py-2 pr-3 font-medium text-seed-950">
-        {category.label}
+        <div>{category.label}</div>
+        {category.evidenceRows.length > 0 ? (
+          <details
+            className="mt-2 max-w-sm rounded-md border border-stone-200 bg-stone-50 p-2 font-normal"
+            data-testid="charge-inspector-category-evidence"
+          >
+            <summary className="cursor-pointer text-xs font-semibold text-earth-700 outline-none focus:ring-2 focus:ring-seed-500">
+              Matched rows
+            </summary>
+            <p className="mt-2 text-xs leading-5 text-earth-600">
+              Showing {category.evidenceRows.length.toLocaleString("en-US")} of{" "}
+              {category.transactionCount.toLocaleString("en-US")} matched rows.
+              Bounded evidence excludes raw descriptions, balances, and account
+              identifiers.
+            </p>
+            <ul className="mt-2 space-y-2">
+              {category.evidenceRows.map((row) => (
+                <li
+                  className="rounded-md bg-white p-2 text-xs leading-5 text-earth-700"
+                  data-testid="charge-inspector-category-evidence-row"
+                  key={row.id}
+                >
+                  <div className="font-semibold text-seed-950">
+                    {row.merchantName}
+                  </div>
+                  <div>
+                    {row.postedDate} / {row.amountLabel} /{" "}
+                    {row.directionLabel}
+                  </div>
+                  <div className="break-words text-earth-500">
+                    Rule: {row.ruleId}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </details>
+        ) : null}
       </td>
       <td className="px-3 py-2 tabular-nums text-earth-800">
         {category.debitTotalLabel}
@@ -583,14 +641,14 @@ function categoryReviewKey(review: ChargeInspectorReview) {
     review.categorySummaryVersion,
     ...review.categorySummary.map(
       (category) =>
-        `${category.category}:${category.debitTotalLabel}:${category.creditTotalLabel}:${category.transactionCount}`,
+        `${category.category}:${category.debitTotalLabel}:${category.creditTotalLabel}:${category.transactionCount}:${category.evidenceRows.map((row) => row.id).join(",")}`,
     ),
   ].join("|");
 }
 
 function summarizeCategoryReviewStatuses(
   review: ChargeInspectorReview,
-  statuses: Record<string, CategoryReviewStatus>,
+  statuses: Record<string, ChargeInspectorCategoryReviewStatus>,
 ) {
   return review.categorySummary.reduce(
     (counts, category) => {

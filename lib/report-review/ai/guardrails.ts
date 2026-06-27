@@ -34,8 +34,14 @@ const blockedQuestionPatterns = [
 
 const blockedAnswerPatterns = [
   /\byou should\s+(buy|sell|hold|pay|refinance|consolidate|cancel|dispute|apply|open)\b/i,
+  /\byou should\s+(recategorize|categorize|move|change|reduce)\b/i,
   /\bi recommend\s+(buying|selling|holding|paying|refinancing|consolidating|canceling|disputing|applying|opening)\b/i,
+  /\bi recommend\s+(recategorizing|categorizing|moving|changing|reducing)\b/i,
   /\bpay .* first\b/i,
+  /\b(category|categorization)\s+is\s+(wrong|incorrect)\b/i,
+  /\bmove\b.*\bto\s+(groceries|dining|shopping|fees|subscriptions|housing|utilities|transportation|health|fitness|income)\b/i,
+  /\btoo high\b/i,
+  /\breduce\b.*\bspending\b/i,
   /\b(buy|sell|hold)\s+(a\s+|the\s+|this\s+|that\s+)?(stock|security|securities|crypto|bitcoin|etf|option|bond|shares?)\b/i,
   /\brefinance\b/i,
   /\bconsolidate\b/i,
@@ -153,7 +159,7 @@ export function fallbackAnswer({
 }): ReportReviewAiAnswer {
   return {
     answer:
-      "I cannot answer that from this selected report-review finding. This prototype can only explain the finding, name missing context, simplify the result, or suggest non-ranked questions to review next.",
+      "I cannot answer that from this selected report-review target. This prototype can only explain the selected result, name missing context, simplify the result, or suggest non-ranked questions to review next.",
     answerKind: kind,
     evidence: [
       {

@@ -3,6 +3,7 @@ import type {
   PlatformBankFeeCandidate,
   PlatformChargeInspectorReviewResponse,
   PlatformTransactionCategorySummary,
+  PlatformTransactionCategoryEvidenceRow,
   PlatformMonthlySpendingSummary,
   PlatformDuplicateChargeCandidate,
   PlatformNormalizedTransaction,
@@ -62,6 +63,20 @@ export type ChargeInspectorMonthlySummary = {
   creditTransactionCount: number;
 };
 
+export type ChargeInspectorCategoryReviewStatus =
+  | "unreviewed"
+  | "confirmed"
+  | "needs-review";
+
+export type ChargeInspectorCategoryEvidenceRow = {
+  id: string;
+  postedDate: string;
+  merchantName: string;
+  amountLabel: string;
+  directionLabel: string;
+  ruleId: string;
+};
+
 export type ChargeInspectorCategorySummary = {
   category: string;
   label: string;
@@ -71,6 +86,7 @@ export type ChargeInspectorCategorySummary = {
   debitTransactionCount: number;
   creditTransactionCount: number;
   ruleIds: string[];
+  evidenceRows: ChargeInspectorCategoryEvidenceRow[];
   limitations: string[];
 };
 
@@ -159,14 +175,107 @@ export const chargeInspectorSampleReview: ChargeInspectorReview = {
   categorySummary: [
     categorySummary("income", "Income", "0", "6400.00", 2, 0, 2),
     categorySummary("housing", "Housing", "1500.00", "0", 1, 1, 0),
-    categorySummary("groceries", "Groceries", "130.56", "0", 2, 2, 0),
+    categorySummary("groceries", "Groceries", "130.56", "0", 2, 2, 0, [
+      categoryEvidenceRow(
+        "sample-groceries-1",
+        "2026-05-03",
+        "Corner Grocer",
+        "76.44",
+        "debit",
+        "category.groceries.grocer_text.v0",
+      ),
+      categoryEvidenceRow(
+        "sample-groceries-2",
+        "2026-05-18",
+        "Corner Grocer",
+        "54.12",
+        "debit",
+        "category.groceries.grocer_text.v0",
+      ),
+    ]),
     categorySummary("utilities", "Utilities", "118.20", "0", 1, 1, 0),
     categorySummary("transportation", "Transportation", "42.10", "0", 1, 1, 0),
     categorySummary("health", "Health", "23.15", "0", 1, 1, 0),
-    categorySummary("fees", "Fees", "12.00", "0", 1, 1, 0),
-    categorySummary("subscriptions", "Subscriptions", "47.97", "0", 3, 3, 0),
-    categorySummary("fitness", "Fitness", "32.50", "0", 3, 3, 0),
-    categorySummary("dining", "Dining", "16.50", "0", 2, 2, 0),
+    categorySummary("fees", "Fees", "12.00", "0", 1, 1, 0, [
+      categoryEvidenceRow(
+        "sample-bank-fee-1",
+        "2026-05-31",
+        "Neighborhood Bank Monthly Service Fee",
+        "12.00",
+        "debit",
+        "category.fees.bank_fee_text.v0",
+      ),
+    ]),
+    categorySummary("subscriptions", "Subscriptions", "47.97", "0", 3, 3, 0, [
+      categoryEvidenceRow(
+        "sample-recurring-streaming-1",
+        "2026-03-08",
+        "Streamly Premium",
+        "15.99",
+        "debit",
+        "category.subscriptions.recurring_media_text.v0",
+      ),
+      categoryEvidenceRow(
+        "sample-recurring-streaming-2",
+        "2026-04-08",
+        "Streamly Premium",
+        "15.99",
+        "debit",
+        "category.subscriptions.recurring_media_text.v0",
+      ),
+      categoryEvidenceRow(
+        "sample-recurring-streaming-3",
+        "2026-05-09",
+        "Streamly Premium",
+        "15.99",
+        "debit",
+        "category.subscriptions.recurring_media_text.v0",
+      ),
+    ]),
+    categorySummary("fitness", "Fitness", "32.50", "0", 3, 3, 0, [
+      categoryEvidenceRow(
+        "sample-fitness-1",
+        "2026-03-21",
+        "FitPlan App",
+        "10.00",
+        "debit",
+        "category.fitness.fitplan_text.v0",
+      ),
+      categoryEvidenceRow(
+        "sample-fitness-2",
+        "2026-04-21",
+        "FitPlan App",
+        "10.00",
+        "debit",
+        "category.fitness.fitplan_text.v0",
+      ),
+      categoryEvidenceRow(
+        "sample-fitness-3",
+        "2026-05-21",
+        "FitPlan App",
+        "12.50",
+        "debit",
+        "category.fitness.fitplan_text.v0",
+      ),
+    ]),
+    categorySummary("dining", "Dining", "16.50", "0", 2, 2, 0, [
+      categoryEvidenceRow(
+        "sample-dining-1",
+        "2026-05-14",
+        "Market Street Coffee",
+        "8.25",
+        "debit",
+        "category.dining.coffee_text.v0",
+      ),
+      categoryEvidenceRow(
+        "sample-dining-2",
+        "2026-05-14",
+        "Market Street Coffee",
+        "8.25",
+        "debit",
+        "category.dining.coffee_text.v0",
+      ),
+    ]),
     categorySummary("shopping", "Shopping", "18.90", "0", 1, 1, 0),
   ],
   findings: [
@@ -468,7 +577,21 @@ function mapCategorySummary(
     debitTransactionCount: summary.debit_transaction_count,
     creditTransactionCount: summary.credit_transaction_count,
     ruleIds: summary.rule_ids,
+    evidenceRows: summary.evidence_rows.map(mapCategoryEvidenceRow),
     limitations: summary.limitations,
+  };
+}
+
+function mapCategoryEvidenceRow(
+  row: PlatformTransactionCategoryEvidenceRow,
+): ChargeInspectorCategoryEvidenceRow {
+  return {
+    id: row.evidence_id,
+    postedDate: row.posted_date,
+    merchantName: row.merchant_name,
+    amountLabel: money(row.amount),
+    directionLabel: titleCase(row.direction),
+    ruleId: row.rule_id,
   };
 }
 
@@ -528,6 +651,7 @@ function categorySummary(
   transactionCount: number,
   debitTransactionCount: number,
   creditTransactionCount: number,
+  evidenceRows: ChargeInspectorCategoryEvidenceRow[] = [],
 ): ChargeInspectorCategorySummary {
   return {
     category,
@@ -538,9 +662,28 @@ function categorySummary(
     debitTransactionCount,
     creditTransactionCount,
     ruleIds: ["sample_fixture"],
+    evidenceRows,
     limitations: [
       "Category mapping uses deterministic merchant and transaction-type text rules only.",
     ],
+  };
+}
+
+function categoryEvidenceRow(
+  id: string,
+  postedDate: string,
+  merchantName: string,
+  amount: DecimalValue,
+  direction: string,
+  ruleId: string,
+): ChargeInspectorCategoryEvidenceRow {
+  return {
+    id,
+    postedDate,
+    merchantName,
+    amountLabel: money(amount),
+    directionLabel: titleCase(direction),
+    ruleId,
   };
 }
 

@@ -2,7 +2,11 @@ import type {
   EvidenceSource,
   Finding,
 } from "@/data/report-review-sample";
-import type { ChargeInspectorMonthlySummary } from "@/lib/report-review/charge-inspector";
+import type {
+  ChargeInspectorCategoryEvidenceRow,
+  ChargeInspectorCategoryReviewStatus,
+  ChargeInspectorMonthlySummary,
+} from "@/lib/report-review/charge-inspector";
 
 export type ReportReviewAiQuestionType =
   | "explain_finding"
@@ -44,7 +48,16 @@ export type KnowledgeArtifact = {
 
 export type CoachContextPackAllowedQuestionType = ReportReviewAiQuestionType;
 
-export type ReportReviewAiTargetType = "finding" | "monthly_spending_summary";
+export const REPORT_REVIEW_AI_MONTHLY_SPENDING_TARGET_ID =
+  "charge_inspector_monthly_spending_summary";
+
+export const REPORT_REVIEW_AI_CATEGORY_EVIDENCE_TARGET_ID =
+  "charge_inspector_category_evidence";
+
+export type ReportReviewAiTargetType =
+  | "finding"
+  | "monthly_spending_summary"
+  | "category_evidence";
 
 export type MonthlySpendingContext = {
   id: "charge_inspector_monthly_spending_summary";
@@ -53,6 +66,31 @@ export type MonthlySpendingContext = {
   reviewedTransactionCount: number;
   spendingSummaryVersion: string;
   rows: ChargeInspectorMonthlySummary[];
+  limitations: string[];
+  excludedFields: string[];
+};
+
+export type CategoryEvidenceContextCategory = {
+  category: string;
+  label: string;
+  debitTotalLabel: string;
+  creditTotalLabel: string;
+  transactionCount: number;
+  debitTransactionCount: number;
+  creditTransactionCount: number;
+  reviewStatus: ChargeInspectorCategoryReviewStatus;
+  ruleIds: string[];
+  evidenceRows: ChargeInspectorCategoryEvidenceRow[];
+  limitations: string[];
+};
+
+export type CategoryEvidenceContext = {
+  id: "charge_inspector_category_evidence";
+  version: "category_evidence_ai_context.v0";
+  sourceLabel: string;
+  reviewedTransactionCount: number;
+  categorySummaryVersion: string;
+  categories: CategoryEvidenceContextCategory[];
   limitations: string[];
   excludedFields: string[];
 };
@@ -79,6 +117,7 @@ export type CoachContextPack = {
     | "evidenceSourceIds"
   >;
   monthlySpendingSummary?: MonthlySpendingContext;
+  categoryEvidence?: CategoryEvidenceContext;
   evidenceSources: EvidenceSource[];
   knowledgeArtifacts: KnowledgeArtifact[];
   allowedQuestionTypes: CoachContextPackAllowedQuestionType[];
@@ -104,6 +143,7 @@ export type ReportReviewAiVersions = {
   answerValidator: "ai_answer_validator.v0";
   contextPack: "coach_context_pack.v0";
   corpus: "knowledge_corpus.fixture.v0";
+  categoryEvidenceContext?: "category_evidence_ai_context.v0";
   monthlySpendingContext?: "monthly_spending_ai_context.v0";
   model: string;
   prompt: "report_review_explain.v0";
@@ -137,6 +177,7 @@ export type ReportReviewAiRequest = {
   targetId: string;
   questionType: ReportReviewAiQuestionType;
   userMessage: string | null;
+  categoryReviewStatuses?: Record<string, ChargeInspectorCategoryReviewStatus>;
 };
 
 export type ReportReviewAiResponse = ReportReviewAiAnswer & {

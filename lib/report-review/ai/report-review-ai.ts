@@ -44,6 +44,7 @@ export async function explainReportReviewFinding(
 
   try {
     contextPack = buildReportReviewContextPack({
+      categoryReviewStatuses: request.categoryReviewStatuses,
       targetId: request.targetId,
       targetType: request.targetType,
     });
@@ -60,6 +61,7 @@ export async function explainReportReviewFinding(
     answerValidator: "ai_answer_validator.v0",
     contextPack: "coach_context_pack.v0",
     corpus: KNOWLEDGE_CORPUS_VERSION,
+    categoryEvidenceContext: contextPack.categoryEvidence?.version,
     monthlySpendingContext: contextPack.monthlySpendingSummary?.version,
     model: provider.model,
     prompt: "report_review_explain.v0",
@@ -69,6 +71,13 @@ export async function explainReportReviewFinding(
     questionType: request.questionType,
     userMessage: request.userMessage,
   });
+
+  if (!contextPack.allowedQuestionTypes.includes(request.questionType)) {
+    boundary.allowed = false;
+    boundary.reasons.push(
+      "This question type is not enabled for the selected report-review AI target.",
+    );
+  }
 
   if (!boundary.allowed) {
     return {
@@ -143,6 +152,10 @@ export function parseReportReviewAiRequest(
     record.userMessage,
     "AI explanation request.userMessage",
   );
+  const categoryReviewStatuses = readCategoryReviewStatuses(
+    record.categoryReviewStatuses,
+    "AI explanation request.categoryReviewStatuses",
+  );
 
   if (surface !== "report_review") {
     throw new ReportReviewAiRequestError("surface must be report_review.");
@@ -150,7 +163,14 @@ export function parseReportReviewAiRequest(
 
   rejectClientSuppliedContext(record);
 
+  if (categoryReviewStatuses && targetType !== "category_evidence") {
+    throw new ReportReviewAiRequestError(
+      "categoryReviewStatuses is only supported for category evidence.",
+    );
+  }
+
   return {
+    categoryReviewStatuses,
     questionType,
     surface,
     targetId,
@@ -176,7 +196,11 @@ function readTargetType(value: unknown): ReportReviewAiTargetType {
     throw new ReportReviewAiRequestError("targetType must be text.");
   }
 
-  if (value === "finding" || value === "monthly_spending_summary") {
+  if (
+    value === "finding" ||
+    value === "monthly_spending_summary" ||
+    value === "category_evidence"
+  ) {
     return value;
   }
 
@@ -193,6 +217,38 @@ function readNullableString(value: unknown, label: string) {
   }
 
   return value;
+}
+
+function readCategoryReviewStatuses(value: unknown, label: string) {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  const record = expectRecord(value, label);
+  const statuses: NonNullable<ReportReviewAiRequest["categoryReviewStatuses"]> =
+    {};
+
+  for (const [category, status] of Object.entries(record)) {
+    if (category.trim().length === 0) {
+      throw new ReportReviewAiRequestError(
+        `${label} cannot include a blank category.`,
+      );
+    }
+
+    if (
+      status !== "unreviewed" &&
+      status !== "confirmed" &&
+      status !== "needs-review"
+    ) {
+      throw new ReportReviewAiRequestError(
+        `${label}.${category} must be unreviewed, confirmed, or needs-review.`,
+      );
+    }
+
+    statuses[category] = status;
+  }
+
+  return statuses;
 }
 
 function readString(
@@ -213,14 +269,19 @@ function rejectClientSuppliedContext(record: Record<string, unknown>) {
   const blockedFields = [
     "accountHistory",
     "contextPack",
+    "categoryEvidence",
+    "categoryEvidenceRows",
+    "categorySummary",
     "evidenceSources",
     "financialProfile",
     "finding",
     "knowledgeArtifacts",
     "monthly_spending_summary",
     "monthlySpendingSummary",
+    "merchantRows",
     "rawTransactions",
     "spendingSummary",
+    "transactionCategories",
     "transactionSummary",
     "transactionHistory",
   ];

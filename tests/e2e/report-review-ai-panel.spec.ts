@@ -157,6 +157,108 @@ test.describe("private report review AI panel", () => {
     ).toBeVisible();
     await expect(validatedAnswer.getByText("Streamly Premium")).toHaveCount(0);
   });
+
+  test("sends category review status with category evidence request", async ({
+    page,
+  }) => {
+    let requestBody: Record<string, unknown> | null = null;
+
+    await page.route("**/internal/ai/report-review/explain", async (route) => {
+      requestBody = route.request().postDataJSON() as Record<string, unknown>;
+
+      await route.fulfill({
+        contentType: "application/json",
+        json: {
+          answer:
+            "This category evidence answer is limited to bounded merchant-display rows and review status.",
+          answerKind: "validated_answer",
+          evidence: [
+            {
+              id: "charge_inspector_category_evidence",
+              text: "Fees is marked needs-review in the category evidence context.",
+            },
+          ],
+          limitations: [
+            "Uses only bounded category evidence.",
+            "Does not recategorize rows or judge budgets.",
+          ],
+          provider: {
+            id: "fixture",
+            label: "Deterministic fixture provider",
+            mode: "deterministic-fixture",
+          },
+          questionType: "explain_finding",
+          sources: [
+            {
+              id: "coach_context_pack.v0.charge_inspector_category_evidence",
+              title: "Charge Inspector category evidence",
+              type: "context_pack",
+            },
+          ],
+          target: {
+            id: "charge_inspector_category_evidence",
+            title: "Charge Inspector category evidence",
+            type: "category_evidence",
+          },
+          validation: {
+            fallbackUsed: false,
+            reasons: [],
+            status: "passed",
+          },
+          versions: {
+            answerValidator: "ai_answer_validator.v0",
+            categoryEvidenceContext: "category_evidence_ai_context.v0",
+            contextPack: "coach_context_pack.v0",
+            corpus: "knowledge_corpus.fixture.v0",
+            model: "fixture.report-review-ai.v0",
+            prompt: "report_review_explain.v0",
+            sourceMap: "report_review_context_source_map.v0",
+          },
+        },
+        status: 200,
+      });
+    });
+
+    await page.goto(`${reportReviewPath}#charge-inspector`);
+
+    const feesCategory = page
+      .getByTestId("charge-inspector-category-row")
+      .filter({ hasText: "Fees" });
+    await feesCategory.getByRole("radio", { name: "Needs review" }).click();
+
+    const categoryPanel = page.getByTestId(
+      "ai-explanation-panel-charge_inspector_category_evidence",
+    );
+    await expect(categoryPanel).toBeVisible();
+    await categoryPanel
+      .getByRole("button", { name: "Explain categories" })
+      .click();
+
+    const validatedAnswer = categoryPanel.getByTestId(
+      "ai-answer-validated_answer",
+    );
+    await expect(validatedAnswer).toBeVisible();
+    await validatedAnswer.getByText("Version details").click();
+    await expect(
+      validatedAnswer.getByText("Category evidence", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      validatedAnswer.getByText("category_evidence_ai_context.v0"),
+    ).toBeVisible();
+
+    expect(requestBody).toMatchObject({
+      categoryReviewStatuses: {
+        fees: "needs-review",
+      },
+      questionType: "explain_finding",
+      surface: "report_review",
+      targetId: "charge_inspector_category_evidence",
+      targetType: "category_evidence",
+      userMessage: null,
+    });
+    expect(JSON.stringify(requestBody)).not.toContain("rawTransactions");
+    expect(JSON.stringify(requestBody)).not.toContain("original_description");
+  });
 });
 
 async function openFirstAiPanel(page: Page) {
