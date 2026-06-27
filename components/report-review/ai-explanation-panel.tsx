@@ -442,6 +442,12 @@ function AiAnswerResult({ answer }: { answer: ReportReviewAiResponse }) {
               value={answer.versions.categoryEvidenceContext}
             />
           ) : null}
+          {answer.versions.categoryMonthlySummaryContext ? (
+            <VersionItem
+              label="Category monthly"
+              value={answer.versions.categoryMonthlySummaryContext}
+            />
+          ) : null}
           {answer.versions.categoryBudgetComparisonContext ? (
             <VersionItem
               label="Target comparison"

@@ -347,14 +347,15 @@ test.describe("private report review smoke", () => {
       .toBeVisible();
     await expect(page.getByTestId("charge-inspector-category-row"))
       .toHaveCount(11);
-    await expect(page.getByText("Groceries", { exact: true })).toBeVisible();
-    await expect(page.getByText("$130.56")).toBeVisible();
-    await expect(page.getByText("0 confirmed")).toBeVisible();
-    await expect(page.getByText("0 needs review")).toBeVisible();
 
     const groceriesCategory = page
       .getByTestId("charge-inspector-category-row")
       .filter({ hasText: "Groceries" });
+    await expect(groceriesCategory.getByText("Groceries", { exact: true }))
+      .toBeVisible();
+    await expect(groceriesCategory.getByText("$130.56")).toBeVisible();
+    await expect(page.getByText("0 confirmed")).toBeVisible();
+    await expect(page.getByText("0 needs review")).toBeVisible();
     await groceriesCategory
       .getByTestId("charge-inspector-category-budget-target")
       .fill("$100.00");
@@ -480,7 +481,17 @@ test.describe("private report review smoke", () => {
       .toHaveCount(1);
     await expect(page.getByTestId("charge-inspector-category-row"))
       .toHaveCount(1);
-    await expect(page.getByText("Dining", { exact: true })).toBeVisible();
+    await expect(page.getByTestId("charge-inspector-category-monthly-row"))
+      .toHaveCount(1);
+    await expect(
+      page.getByTestId("charge-inspector-category-monthly-summary"),
+    ).toContainText("transaction_category_monthly_summary_v0");
+    await expect(
+      page
+        .getByTestId("charge-inspector-category-row")
+        .filter({ hasText: "Dining" })
+        .getByText("Dining", { exact: true }),
+    ).toBeVisible();
     await expect(page.getByText("0 confirmed")).toBeVisible();
     await expect(page.getByText("0 needs review")).toBeVisible();
     await expect(page.getByText("0 targets")).toBeVisible();
@@ -645,6 +656,25 @@ function uploadedChargeInspectorReview() {
       },
     ],
     categorySummaryVersion: "transaction_category_rules_v0",
+    categoryMonthlySummary: [
+      {
+        category: "dining",
+        creditTotalCents: 0,
+        creditTotalLabel: "$0.00",
+        creditTransactionCount: 0,
+        debitTotalCents: 4250,
+        debitTotalLabel: "$42.50",
+        debitTransactionCount: 2,
+        label: "Dining",
+        limitations: [
+          "Category monthly summary groups deterministic category totals by posted-date month.",
+        ],
+        month: "2026-06",
+        ruleIds: ["category.dining.coffee.v0"],
+        transactionCount: 2,
+      },
+    ],
+    categoryMonthlySummaryVersion: "transaction_category_monthly_summary_v0",
     limitations: [
       "This review uses only the uploaded CSV rows for the current request.",
       "No account connection, continuous monitoring, or stored transaction history is introduced.",

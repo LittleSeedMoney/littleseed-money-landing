@@ -2,6 +2,7 @@ import type { DecimalValue } from "./platform-workspace-response";
 import type {
   PlatformBankFeeCandidate,
   PlatformChargeInspectorReviewResponse,
+  PlatformTransactionCategoryMonthlySummary,
   PlatformTransactionCategorySummary,
   PlatformTransactionCategoryEvidenceRow,
   PlatformMonthlySpendingSummary,
@@ -92,6 +93,21 @@ export type ChargeInspectorCategorySummary = {
   limitations: string[];
 };
 
+export type ChargeInspectorCategoryMonthlySummary = {
+  month: string;
+  category: string;
+  label: string;
+  debitTotalCents: number;
+  debitTotalLabel: string;
+  creditTotalCents: number;
+  creditTotalLabel: string;
+  transactionCount: number;
+  debitTransactionCount: number;
+  creditTransactionCount: number;
+  ruleIds: string[];
+  limitations: string[];
+};
+
 export type ChargeInspectorCategoryBudgetComparisonStatus =
   | "within-target"
   | "over-target";
@@ -122,8 +138,10 @@ export type ChargeInspectorReview = {
   reviewedTransactionCount: number;
   spendingSummaryVersion: string;
   categorySummaryVersion: string;
+  categoryMonthlySummaryVersion: string;
   monthlySpendingSummary: ChargeInspectorMonthlySummary[];
   categorySummary: ChargeInspectorCategorySummary[];
+  categoryMonthlySummary: ChargeInspectorCategoryMonthlySummary[];
   findings: ChargeInspectorFinding[];
   emptyState: ChargeInspectorEmptyState;
   limitations: string[];
@@ -171,6 +189,7 @@ export const chargeInspectorSampleReview: ChargeInspectorReview = {
   reviewedTransactionCount: 18,
   spendingSummaryVersion: "sample_fixture",
   categorySummaryVersion: "sample_fixture",
+  categoryMonthlySummaryVersion: "sample_fixture",
   monthlySpendingSummary: [
     {
       month: "2026-03",
@@ -305,6 +324,59 @@ export const chargeInspectorSampleReview: ChargeInspectorReview = {
       ),
     ]),
     categorySummary("shopping", "Shopping", "18.90", "0", 1, 1, 0),
+  ],
+  categoryMonthlySummary: [
+    categoryMonthlySummary(
+      "2026-03",
+      "subscriptions",
+      "Subscriptions",
+      "15.99",
+      "0",
+      1,
+      1,
+      0,
+    ),
+    categoryMonthlySummary("2026-03", "fitness", "Fitness", "10.00", "0", 1, 1, 0),
+    categoryMonthlySummary(
+      "2026-04",
+      "subscriptions",
+      "Subscriptions",
+      "15.99",
+      "0",
+      1,
+      1,
+      0,
+    ),
+    categoryMonthlySummary("2026-04", "fitness", "Fitness", "10.00", "0", 1, 1, 0),
+    categoryMonthlySummary("2026-05", "income", "Income", "0", "6400.00", 2, 0, 2),
+    categoryMonthlySummary("2026-05", "housing", "Housing", "1500.00", "0", 1, 1, 0),
+    categoryMonthlySummary("2026-05", "groceries", "Groceries", "130.56", "0", 2, 2, 0),
+    categoryMonthlySummary("2026-05", "utilities", "Utilities", "118.20", "0", 1, 1, 0),
+    categoryMonthlySummary(
+      "2026-05",
+      "transportation",
+      "Transportation",
+      "42.10",
+      "0",
+      1,
+      1,
+      0,
+    ),
+    categoryMonthlySummary("2026-05", "health", "Health", "23.15", "0", 1, 1, 0),
+    categoryMonthlySummary("2026-05", "fees", "Fees", "12.00", "0", 1, 1, 0),
+    categoryMonthlySummary(
+      "2026-05",
+      "subscriptions",
+      "Subscriptions",
+      "15.99",
+      "0",
+      1,
+      1,
+      0,
+    ),
+    categoryMonthlySummary("2026-05", "fitness", "Fitness", "12.50", "0", 1, 1, 0),
+    categoryMonthlySummary("2026-05", "dining", "Dining", "16.50", "0", 2, 2, 0),
+    categoryMonthlySummary("2026-05", "shopping", "Shopping", "18.90", "0", 1, 1, 0),
   ],
   findings: [
     {
@@ -475,8 +547,10 @@ export const chargeInspectorEmptyReview: ChargeInspectorReview = {
   reviewedTransactionCount: 0,
   spendingSummaryVersion: "not_applicable",
   categorySummaryVersion: "not_applicable",
+  categoryMonthlySummaryVersion: "not_applicable",
   monthlySpendingSummary: [],
   categorySummary: [],
+  categoryMonthlySummary: [],
   findings: [],
   emptyState: chargeInspectorSampleReview.emptyState,
   limitations: chargeInspectorSampleReview.limitations,
@@ -488,8 +562,10 @@ export const chargeInspectorFallbackReview: ChargeInspectorReview = {
   reviewedTransactionCount: 0,
   spendingSummaryVersion: "not_available",
   categorySummaryVersion: "not_available",
+  categoryMonthlySummaryVersion: "not_available",
   monthlySpendingSummary: [],
   categorySummary: [],
+  categoryMonthlySummary: [],
   findings: [],
   emptyState: {
     title: "Charge Inspector did not load",
@@ -669,10 +745,14 @@ export function mapPlatformChargeInspectorReview(
     reviewedTransactionCount: response.reviewed_transaction_count,
     spendingSummaryVersion: response.spending_summary_version,
     categorySummaryVersion: response.category_summary_version,
+    categoryMonthlySummaryVersion: response.category_monthly_summary_version,
     monthlySpendingSummary: response.monthly_spending_summary.map(
       mapMonthlySpendingSummary,
     ),
     categorySummary: response.category_summary.map(mapCategorySummary),
+    categoryMonthlySummary: response.category_monthly_summary.map(
+      mapCategoryMonthlySummary,
+    ),
     findings: [
       ...response.findings.recurring_charges.map((candidate) =>
         mapRecurringCharge(candidate, evidenceById),
@@ -693,6 +773,25 @@ export function mapPlatformChargeInspectorReview(
       ...parseLimitations,
       `Platform review schema: ${response.schema_version}.`,
     ],
+  };
+}
+
+function mapCategoryMonthlySummary(
+  summary: PlatformTransactionCategoryMonthlySummary,
+): ChargeInspectorCategoryMonthlySummary {
+  return {
+    month: summary.month,
+    category: summary.category,
+    label: summary.label,
+    debitTotalCents: cents(summary.debit_total),
+    debitTotalLabel: money(summary.debit_total),
+    creditTotalCents: cents(summary.credit_total),
+    creditTotalLabel: money(summary.credit_total),
+    transactionCount: summary.transaction_count,
+    debitTransactionCount: summary.debit_transaction_count,
+    creditTransactionCount: summary.credit_transaction_count,
+    ruleIds: summary.rule_ids,
+    limitations: summary.limitations,
   };
 }
 
@@ -800,6 +899,34 @@ function categorySummary(
     evidenceRows,
     limitations: [
       "Category mapping uses deterministic merchant and transaction-type text rules only.",
+    ],
+  };
+}
+
+function categoryMonthlySummary(
+  month: string,
+  category: string,
+  label: string,
+  debitTotal: DecimalValue,
+  creditTotal: DecimalValue,
+  transactionCount: number,
+  debitTransactionCount: number,
+  creditTransactionCount: number,
+): ChargeInspectorCategoryMonthlySummary {
+  return {
+    month,
+    category,
+    label,
+    debitTotalCents: cents(debitTotal),
+    debitTotalLabel: money(debitTotal),
+    creditTotalCents: cents(creditTotal),
+    creditTotalLabel: money(creditTotal),
+    transactionCount,
+    debitTransactionCount,
+    creditTransactionCount,
+    ruleIds: ["sample_fixture"],
+    limitations: [
+      "Category monthly summary groups deterministic category totals by posted-date month.",
     ],
   };
 }

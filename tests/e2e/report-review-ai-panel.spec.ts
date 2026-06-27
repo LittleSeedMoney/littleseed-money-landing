@@ -210,6 +210,8 @@ test.describe("private report review AI panel", () => {
             categoryBudgetComparisonContext:
               "category_budget_comparison_ai_context.v0",
             categoryEvidenceContext: "category_evidence_ai_context.v0",
+            categoryMonthlySummaryContext:
+              "category_monthly_summary_ai_context.v0",
             contextPack: "coach_context_pack.v0",
             corpus: "knowledge_corpus.fixture.v0",
             model: "fixture.report-review-ai.v0",
@@ -253,6 +255,9 @@ test.describe("private report review AI panel", () => {
     await expect(
       validatedAnswer.getByText("category_budget_comparison_ai_context.v0"),
     ).toBeVisible();
+    await expect(
+      validatedAnswer.getByText("category_monthly_summary_ai_context.v0"),
+    ).toBeVisible();
 
     expect(requestBody).toMatchObject({
       categoryBudgetTargets: {
@@ -268,6 +273,7 @@ test.describe("private report review AI panel", () => {
       userMessage: null,
     });
     expect(JSON.stringify(requestBody)).not.toContain("categoryBudgetComparison");
+    expect(JSON.stringify(requestBody)).not.toContain("categoryMonthlySummary");
     expect(JSON.stringify(requestBody)).not.toContain("rawTransactions");
     expect(JSON.stringify(requestBody)).not.toContain("original_description");
   });

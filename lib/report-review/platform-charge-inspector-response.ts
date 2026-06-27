@@ -14,6 +14,7 @@ export type PlatformChargeInspectorReviewResponse = {
   };
   spending_summary_version: string;
   category_summary_version: string;
+  category_monthly_summary_version: string;
   reviewed_transaction_count: number;
   parse_error_count: number;
   findings: {
@@ -24,6 +25,7 @@ export type PlatformChargeInspectorReviewResponse = {
   };
   monthly_spending_summary: PlatformMonthlySpendingSummary[];
   category_summary: PlatformTransactionCategorySummary[];
+  category_monthly_summary: PlatformTransactionCategoryMonthlySummary[];
   evidence_transactions: PlatformNormalizedTransaction[];
   parse_errors: PlatformCsvTransactionValidationError[];
   limitations: string[];
@@ -41,6 +43,21 @@ export type PlatformTransactionCategorySummary = {
   credit_transaction_count: number;
   rule_ids: string[];
   evidence_rows: PlatformTransactionCategoryEvidenceRow[];
+  limitations: string[];
+};
+
+export type PlatformTransactionCategoryMonthlySummary = {
+  schema_version: string;
+  month: string;
+  category: string;
+  label: string;
+  currency: string;
+  debit_total: DecimalValue;
+  credit_total: DecimalValue;
+  transaction_count: number;
+  debit_transaction_count: number;
+  credit_transaction_count: number;
+  rule_ids: string[];
   limitations: string[];
 };
 
@@ -211,6 +228,13 @@ export function parseChargeInspectorReviewResponse(
             response.category_summary_version,
             "charge-inspector response.category_summary_version",
           ),
+    category_monthly_summary_version:
+      response.category_monthly_summary_version == null
+        ? "not_returned"
+        : expectString(
+            response.category_monthly_summary_version,
+            "charge-inspector response.category_monthly_summary_version",
+          ),
     reviewed_transaction_count: expectNumber(
       response.reviewed_transaction_count,
       "charge-inspector response.reviewed_transaction_count",
@@ -256,6 +280,14 @@ export function parseChargeInspectorReviewResponse(
             response.category_summary,
             "charge-inspector response.category_summary",
             parseTransactionCategorySummary,
+          ),
+    category_monthly_summary:
+      response.category_monthly_summary == null
+        ? []
+        : parseArray(
+            response.category_monthly_summary,
+            "charge-inspector response.category_monthly_summary",
+            parseTransactionCategoryMonthlySummary,
           ),
     evidence_transactions: parseArray(
       response.evidence_transactions,
@@ -307,6 +339,36 @@ function parseTransactionCategorySummary(
             `${path}.evidence_rows`,
             parseTransactionCategoryEvidenceRow,
           ),
+    limitations: parseStringArray(summary.limitations, `${path}.limitations`),
+  };
+}
+
+function parseTransactionCategoryMonthlySummary(
+  value: unknown,
+  path: string,
+): PlatformTransactionCategoryMonthlySummary {
+  const summary = expectRecord(value, path);
+  return {
+    schema_version: expectString(summary.schema_version, `${path}.schema_version`),
+    month: expectString(summary.month, `${path}.month`),
+    category: expectString(summary.category, `${path}.category`),
+    label: expectString(summary.label, `${path}.label`),
+    currency: expectString(summary.currency, `${path}.currency`),
+    debit_total: expectDecimalValue(summary.debit_total, `${path}.debit_total`),
+    credit_total: expectDecimalValue(summary.credit_total, `${path}.credit_total`),
+    transaction_count: expectNumber(
+      summary.transaction_count,
+      `${path}.transaction_count`,
+    ),
+    debit_transaction_count: expectNumber(
+      summary.debit_transaction_count,
+      `${path}.debit_transaction_count`,
+    ),
+    credit_transaction_count: expectNumber(
+      summary.credit_transaction_count,
+      `${path}.credit_transaction_count`,
+    ),
+    rule_ids: parseStringArray(summary.rule_ids, `${path}.rule_ids`),
     limitations: parseStringArray(summary.limitations, `${path}.limitations`),
   };
 }
