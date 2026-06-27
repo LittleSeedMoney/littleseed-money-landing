@@ -633,7 +633,7 @@ export function compareCategoryBudgetTarget(
     targetDebitTotalLabel: moneyFromCents(targetDebitTotalCents),
     varianceAmountCents,
     varianceAmountLabel: categoryBudgetVarianceLabel(varianceAmountCents),
-    variancePercentLabel: `${formatPercent(variancePercent)} ${
+    variancePercentLabel: `${formatPercent(variancePercent)}% ${
       varianceAmountCents > 0 ? "over" : "within"
     }`,
     status,

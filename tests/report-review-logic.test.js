@@ -202,6 +202,7 @@ test("report-review AI category evidence context pack stays bounded", () => {
   );
   assert.equal(groceries.budgetComparison.targetDebitTotalLabel, "$100.00");
   assert.equal(groceries.budgetComparison.varianceAmountLabel, "$30.56 over");
+  assert.equal(groceries.budgetComparison.variancePercentLabel, "30.56% over");
   assert.equal(groceries.budgetComparison.status, "over-target");
   assert.equal(fees.budgetComparison.status, "over-target");
   assert.deepEqual(
@@ -253,7 +254,7 @@ test("charge inspector category budget comparison uses user target facts", () =>
   assert.equal(comparison.targetDebitTotalLabel, "$100.00");
   assert.equal(comparison.varianceAmountCents, 3056);
   assert.equal(comparison.varianceAmountLabel, "$30.56 over");
-  assert.equal(comparison.variancePercentLabel, "30.56 over");
+  assert.equal(comparison.variancePercentLabel, "30.56% over");
   assert.equal(comparison.status, "over-target");
   assert.match(comparison.limitations.join(" "), /user-entered target/);
 });
@@ -573,6 +574,10 @@ test("report-review AI explains category evidence without recategorizing", async
     answer.evidence.some((item) =>
       item.text.includes("target $100.00"),
     ),
+    true,
+  );
+  assert.equal(
+    answer.evidence.some((item) => item.text.includes("30.56% over")),
     true,
   );
   assert.equal(

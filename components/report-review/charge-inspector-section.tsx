@@ -533,7 +533,7 @@ function CategorySummaryTable({
           />
           <StatusPill
             label={`${budgetCounts.overTarget.toLocaleString("en-US")} over`}
-            tone="earth"
+            tone={budgetCounts.overTarget > 0 ? "earth" : "stone"}
           />
         </div>
       </div>

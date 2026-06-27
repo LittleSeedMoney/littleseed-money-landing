@@ -405,7 +405,7 @@ function categoryEvidenceText(
         `${category.transactionCount.toLocaleString("en-US")} rows, ` +
         `rules ${category.ruleIds.join(", ") || "none"}`;
       const budgetComparison = category.budgetComparison
-        ? ` User target comparison: actual ${category.budgetComparison.actualDebitTotalLabel}, target ${category.budgetComparison.targetDebitTotalLabel}, difference ${category.budgetComparison.varianceAmountLabel}, status ${category.budgetComparison.statusLabel}.`
+        ? ` User target comparison: actual ${category.budgetComparison.actualDebitTotalLabel}, target ${category.budgetComparison.targetDebitTotalLabel}, difference ${category.budgetComparison.varianceAmountLabel} (${category.budgetComparison.variancePercentLabel}), status ${category.budgetComparison.statusLabel}.`
         : "";
 
       if (category.evidenceRows.length === 0) {
