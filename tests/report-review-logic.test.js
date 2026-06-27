@@ -31,6 +31,7 @@ const {
   compareCategoryMonthlyBudgetTargets,
   isChargeInspectorEmpty,
   mapPlatformChargeInspectorReview,
+  mergeCategoryMonthlyBudgetComparisons,
   parseCategoryBudgetTargetInput,
   recurringPaymentReviewItems,
   summarizeChargeInspectorReview,
@@ -332,6 +333,43 @@ test("charge inspector monthly category budget comparison uses user target facts
   assert.equal(mayGroceries.status, "over-target");
   assert.equal(mayHousing.targetDebitTotalLabel, "No target");
   assert.equal(mayHousing.status, "no-target");
+});
+
+test("charge inspector monthly comparison merge keeps platform target rows", () => {
+  const platformComparisons = compareCategoryMonthlyBudgetTargets(
+    chargeInspectorSampleReview.categoryMonthlySummary,
+    { housing: 120000 },
+  );
+  const localComparisons = compareCategoryMonthlyBudgetTargets(
+    chargeInspectorSampleReview.categoryMonthlySummary,
+    { groceries: 10000 },
+  );
+
+  const merged = mergeCategoryMonthlyBudgetComparisons(
+    platformComparisons,
+    localComparisons,
+  );
+  const mayGroceries = merged.find(
+    (comparison) =>
+      comparison.month === "2026-05" && comparison.category === "groceries",
+  );
+  const mayHousing = merged.find(
+    (comparison) =>
+      comparison.month === "2026-05" && comparison.category === "housing",
+  );
+  const marchHousing = merged.find(
+    (comparison) =>
+      comparison.month === "2026-03" && comparison.category === "housing",
+  );
+
+  assert.equal(merged.length, 19);
+  assert.equal(mayGroceries.targetDebitTotalLabel, "$100.00");
+  assert.equal(mayGroceries.status, "over-target");
+  assert.equal(mayHousing.targetDebitTotalLabel, "$1,200.00");
+  assert.equal(mayHousing.status, "over-target");
+  assert.equal(marchHousing.actualDebitTotalLabel, "$0.00");
+  assert.equal(marchHousing.targetDebitTotalLabel, "$1,200.00");
+  assert.equal(marchHousing.status, "within-target");
 });
 
 test("report-review AI approved corpus loader reads collector-shaped JSONL", () => {

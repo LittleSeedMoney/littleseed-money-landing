@@ -824,6 +824,40 @@ export function compareCategoryMonthlyBudgetTargets(
   });
 }
 
+export function mergeCategoryMonthlyBudgetComparisons(
+  platformComparisons: ChargeInspectorCategoryMonthlyBudgetComparison[],
+  localComparisons: ChargeInspectorCategoryMonthlyBudgetComparison[],
+): ChargeInspectorCategoryMonthlyBudgetComparison[] {
+  if (localComparisons.length === 0) {
+    return platformComparisons;
+  }
+
+  if (platformComparisons.length === 0) {
+    return localComparisons;
+  }
+
+  const mergedByMonthCategory = new Map(
+    platformComparisons.map((comparison) => [
+      categoryMonthlyBudgetComparisonKey(comparison),
+      comparison,
+    ]),
+  );
+
+  for (const comparison of localComparisons) {
+    const key = categoryMonthlyBudgetComparisonKey(comparison);
+    if (
+      comparison.targetDebitTotalCents !== null ||
+      !mergedByMonthCategory.has(key)
+    ) {
+      mergedByMonthCategory.set(key, comparison);
+    }
+  }
+
+  return [...mergedByMonthCategory.values()].sort(
+    compareCategoryMonthlyBudgetComparisonRows,
+  );
+}
+
 export function compareCategoryMonthlyBudgetTarget({
   category,
   month,
@@ -888,6 +922,29 @@ export function compareCategoryMonthlyBudgetTarget({
       "This is not a recommended budget, spending-quality judgment, or required action.",
     ],
   };
+}
+
+function categoryMonthlyBudgetComparisonKey(
+  comparison: ChargeInspectorCategoryMonthlyBudgetComparison,
+) {
+  return `${comparison.month}:${comparison.category}`;
+}
+
+function compareCategoryMonthlyBudgetComparisonRows(
+  left: ChargeInspectorCategoryMonthlyBudgetComparison,
+  right: ChargeInspectorCategoryMonthlyBudgetComparison,
+) {
+  const monthComparison = left.month.localeCompare(right.month);
+  if (monthComparison !== 0) {
+    return monthComparison;
+  }
+
+  const categoryComparison = compareCategoryIds(left.category, right.category);
+  if (categoryComparison !== 0) {
+    return categoryComparison;
+  }
+
+  return left.label.localeCompare(right.label);
 }
 
 export function mapPlatformChargeInspectorReview(

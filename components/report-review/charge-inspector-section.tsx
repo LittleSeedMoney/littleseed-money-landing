@@ -14,6 +14,7 @@ import {
   compareCategoryBudgetTargets,
   compareCategoryMonthlyBudgetTargets,
   isChargeInspectorEmpty,
+  mergeCategoryMonthlyBudgetComparisons,
   parseCategoryBudgetTargetInput,
   recurringPaymentReviewItems,
   summarizeChargeInspectorReview,
@@ -135,6 +136,7 @@ export function ChargeInspectorSection({
         aiEnabled={aiEnabled}
         findings={visibleFindings}
         hiddenCount={hiddenCount}
+        key={categoryReviewKey(activeReview)}
         review={activeReview}
         showSampleAiPanels={showSampleAiPanels}
         summary={summary}
@@ -361,10 +363,6 @@ function ChargeInspectorDashboard({
     () => categoryBudgetTargetsFromInputs(budgetTargetInputs),
     [budgetTargetInputs],
   );
-
-  useEffect(() => {
-    setBudgetTargetInputs({});
-  }, [reviewKey]);
 
   function setBudgetTarget(category: string, value: string) {
     setBudgetTargetInputs((current) => {
@@ -642,10 +640,14 @@ function CategoryMonthlySummaryTable({
       ),
     [budgetTargets, review.categoryMonthlySummary],
   );
-  const budgetComparisons =
-    localBudgetComparisons.length > 0
-      ? localBudgetComparisons
-      : review.categoryMonthlyBudgetComparison;
+  const budgetComparisons = useMemo(
+    () =>
+      mergeCategoryMonthlyBudgetComparisons(
+        review.categoryMonthlyBudgetComparison,
+        localBudgetComparisons,
+      ),
+    [localBudgetComparisons, review.categoryMonthlyBudgetComparison],
+  );
   const budgetCounts = useMemo(
     () => summarizeCategoryMonthlyBudgetComparisons(budgetComparisons),
     [budgetComparisons],
@@ -808,7 +810,7 @@ function CategoryMonthlyBudgetComparisonRow({
       </td>
       <td className="px-3 py-2 text-xs leading-5 text-earth-700">
         {comparison.varianceAmountLabel}
-        {comparison.variancePercentLabel !== "No target" ? (
+        {comparison.status !== "no-target" ? (
           <span className="ml-1 text-earth-500">
             ({comparison.variancePercentLabel})
           </span>
