@@ -1,157 +1,48 @@
-# Claude Code Guidelines — littleseed-money-landing
+# CLAUDE.md — littleseed-money-landing
 
-## Code Review Workflow
+작업 규칙은 [AGENTS.md](./AGENTS.md)를 따른다 (Claude·Codex 공통 정본).
 
-When asked to review a PR, follow this workflow exactly.
+## PR 리뷰
 
-### Step 1: Research
+"PR 리뷰 해줘" 요청 시 공통 워크플로 정본을 그대로 따른다:
+[../littleseed-money-product-docs/docs/PR_REVIEW_PLAYBOOK.md](../littleseed-money-product-docs/docs/PR_REVIEW_PLAYBOOK.md)
 
-1. Fetch PR metadata and diff from GitHub.
-2. Check out the branch locally.
-3. Run `npm test`, `npm run lint` (`tsc --noEmit`), and `npm run build`. Report actual results — do not assume they pass.
+landing 고유 사항만 아래에 둔다.
 
-### Step 2: Top-level structured comment
-
-Post a single top-level comment with all of the following sections in order:
-
-```
-# PR #N 코드 리뷰 — <PR title>
-
-## 무엇이 바뀌었나
-<1-3 sentences on what changed and why it matters>
-
-## 왜 이 방향인가
-<Was this the right architectural choice? Could it have been simpler?>
-
----
-
-## Must (blocking)
-<List issues that MUST be resolved before merge. If none, write "없습니다.">
-
----
-
-## Should (non-blocking)
-<List issues worth fixing but not blockers. Label each clearly.>
-
----
-
-## 나라도 이렇게 짰을까
-<Pick 1-3 specific code decisions. Show actual before/after code blocks.
-If you would have written it the same way, say so and explain why.>
-
----
-
-## 제품 안전 / 로드맵 일관성
-<See "Product Safety Reviewer" section below. Always include this.>
-
----
-
-## 검증 결과
-<Exact output of npm test / npm run lint / npm run build>
-
----
-
-## 최종 판단
-<머지 권장 / 수정 후 머지 / 머지 반대 — one line with reason>
-```
-
-### Step 3: Inline comments
-
-For every must or should issue, also post an inline comment on the specific line(s) in the diff. Use `[must]` or `[should]` prefix. Show before/after code in the comment body.
-
----
-
-## must / should Distinction
-
-- **must**: Causes a real bug, security issue, data loss, phase scope violation, or contract breakage. Block the PR.
-- **should**: Worth fixing — DRY violation, misleading name, missing test path — but not a blocker.
-
----
-
-## 나라도 이렇게 짰을까 Rules
-
-- Always pick at least one decision and evaluate it honestly.
-- If the code is good, say so with a reason — don't manufacture complaints.
-- Show actual code. Generic observations without code are not useful.
-- Compare to a concrete alternative when you think a different approach is better.
-
----
-
-## Product Safety Reviewer
-
-For every PR, include a **"제품 안전 / 로드맵 일관성"** section in the top-level comment. Evaluate these five points:
-
-### 1. Phase scope
-Does this PR stay within the intended phase boundary?
-
-- **Phase 1**: Public marketing/landing pages only. No private routes, no auth, no data collection.
-- **Phase 2**: Private `/private/report-review` surface. Read-only report display. No persistence, no account linking.
-- **Phase 3**: Manual input form at `/private/report-review`. In-session state only. No persistence, no account linking, no dashboard.
-- **Phase 4**: Private/dev guarded AI explanation prototype inside approved report-review surfaces only. Server-owned context packs, approved knowledge corpus, source/evidence/limitation/version display, no saved AI history, no account linking, no raw transaction prompting, no public chatbot.
-- **Future (not yet scoped)**: Persistence, user accounts, saved reports, notifications, billing.
-
-If the PR adds functionality that belongs to a future phase, that is a **must** block.
-
-### 2. Persistence / account linking / security-sensitive behavior
-Does the PR introduce any of the following? Each is a **must** block unless explicitly in scope:
-- Writing to a database or external store
-- Reading/writing user identity tokens or session state
-- Storing PII or financial data beyond in-request scope
-- OAuth, auth cookies, or account linking
-- Hardcoded secrets or credentials
-- Server actions that mutate state across requests
-
-### 3. Financial advice
-Does the PR display content that could be read as personalized financial advice (e.g., "you should invest X", "this is the right decision for you")?
-
-- Displaying computed values from the platform is allowed.
-- Phrasing that advises a specific financial action without a clear disclaimer is a **must** block.
-
-### 4. Schema / contract drift
-Does the PR change or extend a type, API shape, or data contract that other components depend on?
-
-Check:
-- `ManualProfileValues`, `ManualProfileRequest`, `ManualAssetValue`, `ManualDebtValue`
-- Platform API request/response shapes (`platform-workspace-response.ts`, `platform-report.ts`)
-- Route handler request/response shapes
-
-If a change breaks backward compatibility with the platform API contract, it is a **must** block unless the platform PR is confirmed as in sync.
-
-### 5. Test meaningfulness
-Are the new or changed tests actually exercising the behavior being added?
-
-Red flags:
-- Tests that only assert types compile (no runtime assertions)
-- Tests that always pass regardless of logic changes
-- Zero new tests for new validation paths
-- Tests that mock the thing being tested
-
-### Top 5 risks before merge
-
-Always list exactly 5 risks, even if some are low. Format:
-
-```
-1. [severity: high/medium/low] <risk description>
-2. ...
-```
-
-If 2+ risks are high, add a recommendation to address them before merge. If a scope violation is present, set the PR verdict to **머지 반대** and explain why.
-
----
-
-## Local development
+### 검증 명령 (Step 1 · 검증 결과 섹션)
 
 ```bash
-npm test          # node --test (auto-discovery, NOT node --test tests)
+npm test          # node --test (auto-discovery, NOT `node --test tests`)
 npm run lint      # tsc --noEmit
 npm run build     # next build
 ```
 
-- Node version: 22.22.2
-- Test runner: `node --test` with `sucrase/register/ts` for TypeScript
-- `@/` path alias works in Next.js but not in the test runner — use relative imports in files loaded by tests
+- Node 22.22.2. 테스트 러너는 `node --test` + `sucrase/register/ts`.
+- `@/` alias는 Next.js에선 되지만 테스트 러너에선 안 됨 — 테스트가 로드하는
+  파일은 상대 경로로 import.
 
-## Color palette
+### 확인할 계약 (제품안전 4번 — schema/contract drift)
+
+- `ManualProfileValues`, `ManualProfileRequest`, `ManualAssetValue`,
+  `ManualDebtValue`
+- 플랫폼 API 요청/응답 (`platform-workspace-response.ts`,
+  `platform-report.ts`)
+- 라우트 핸들러 요청/응답 형태
+- 플랫폼 계약과 backward-incompatible 변경은 매칭 플랫폼 PR이 sync 확인되지 않는
+  한 must block.
+
+### Phase 범위
+
+landing 표면별 phase 매핑을 이 파일에 하드코딩하지 않는다. 정본은
+[../littleseed-money-product-docs/docs/PHASE_SCOPE_LOCK.md](../littleseed-money-product-docs/docs/PHASE_SCOPE_LOCK.md)이며,
+phase scope 판단은 항상 그 문서를 읽어서 한다.
+
+### report-review 규칙
+
+`/private/report-review`는 검증 워크스페이스이지 공개 약속이 아니다. 상세 규칙은
+[AGENTS.md](./AGENTS.md)의 "Report-Review Rules" 참조.
+
+### 색상 팔레트
 
 - `seed-*`: 50–950 (full range)
-- `earth-*`: 50–900 only — **no `earth-950`**, use `seed-950` instead
+- `earth-*`: 50–900 only — **earth-950 없음**, `seed-950` 사용.
