@@ -7,6 +7,7 @@ import type {
   ChargeInspectorCategoryBudgetComparison,
   ChargeInspectorCategoryBudgetTargetAmounts,
   ChargeInspectorCategoryMonthlyBudgetComparison,
+  ChargeInspectorCategoryMonthlyTargetStatus,
   ChargeInspectorCategoryMonthlySummary,
   ChargeInspectorCategoryReviewStatus,
   ChargeInspectorMonthlySummary,
@@ -95,14 +96,17 @@ export type CategoryEvidenceContext = {
   budgetComparisonVersion?: "category_budget_comparison_ai_context.v0";
   categoryMonthlySummaryVersion?: "category_monthly_summary_ai_context.v0";
   categoryMonthlyBudgetComparisonVersion?: "category_monthly_budget_comparison_ai_context.v0";
+  categoryMonthlyTargetStatusVersion?: "category_monthly_target_status_ai_context.v0";
   sourceLabel: string;
   reviewedTransactionCount: number;
   categorySummaryContractVersion: string;
   categoryMonthlySummaryContractVersion: string;
   categoryMonthlyBudgetComparisonContractVersion: string;
+  categoryMonthlyTargetStatusContractVersion: string;
   categories: CategoryEvidenceContextCategory[];
   categoryMonthlySummaryRows: ChargeInspectorCategoryMonthlySummary[];
   categoryMonthlyBudgetComparisons: ChargeInspectorCategoryMonthlyBudgetComparison[];
+  categoryMonthlyTargetStatuses: ChargeInspectorCategoryMonthlyTargetStatus[];
   limitations: string[];
   excludedFields: string[];
 };
@@ -157,6 +161,7 @@ export type ReportReviewAiVersions = {
   corpus: "knowledge_corpus.fixture.v0";
   categoryBudgetComparisonContext?: "category_budget_comparison_ai_context.v0";
   categoryMonthlyBudgetComparisonContext?: "category_monthly_budget_comparison_ai_context.v0";
+  categoryMonthlyTargetStatusContext?: "category_monthly_target_status_ai_context.v0";
   categoryMonthlySummaryContext?: "category_monthly_summary_ai_context.v0";
   categoryEvidenceContext?: "category_evidence_ai_context.v0";
   monthlySpendingContext?: "monthly_spending_ai_context.v0";

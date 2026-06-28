@@ -460,6 +460,12 @@ function AiAnswerResult({ answer }: { answer: ReportReviewAiResponse }) {
               value={answer.versions.categoryMonthlyBudgetComparisonContext}
             />
           ) : null}
+          {answer.versions.categoryMonthlyTargetStatusContext ? (
+            <VersionItem
+              label="Target status"
+              value={answer.versions.categoryMonthlyTargetStatusContext}
+            />
+          ) : null}
           <VersionItem label="Corpus" value={answer.versions.corpus} />
           <VersionItem label="Source map" value={answer.versions.sourceMap} />
           <VersionItem

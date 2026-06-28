@@ -2,6 +2,7 @@ import { reportReviewSample } from "@/data/report-review-sample";
 import {
   compareCategoryBudgetTargets,
   compareCategoryMonthlyBudgetTargets,
+  deriveCategoryMonthlyTargetStatuses,
   type ChargeInspectorCategoryBudgetTargetAmounts,
 } from "@/lib/report-review/charge-inspector";
 
@@ -148,7 +149,7 @@ export function buildMonthlySpendingSummaryContextPack({
         "account identifiers",
         "full account history",
         "category judgments",
-        "budget variance judgments",
+        "budget variance assessments",
         "action ranking",
       ],
     },
@@ -166,7 +167,7 @@ export function buildMonthlySpendingSummaryContextPack({
       "saved AI conversation history",
       "long-term memory",
       "category judgments",
-      "budget variance judgments",
+      "budget variance assessments",
       "action ranking",
       "unapproved third-party retrieval content",
     ],
@@ -230,6 +231,10 @@ export function buildCategoryEvidenceContextPack({
     chargeInspector.categoryMonthlySummary,
     categoryBudgetTargets,
   );
+  const monthlyTargetStatuses = deriveCategoryMonthlyTargetStatuses(
+    monthlyBudgetComparisons,
+    chargeInspector.categoryMonthlySummary,
+  );
   const budgetComparisonByCategory = new Map(
     budgetComparisons.map((comparison) => [
       comparison.category,
@@ -268,6 +273,12 @@ export function buildCategoryEvidenceContextPack({
               "category_monthly_budget_comparison_ai_context.v0" as const,
           }
         : {}),
+      ...(monthlyTargetStatuses.length > 0
+        ? {
+            categoryMonthlyTargetStatusVersion:
+              "category_monthly_target_status_ai_context.v0" as const,
+          }
+        : {}),
       sourceLabel: chargeInspector.sourceLabel,
       reviewedTransactionCount: chargeInspector.reviewedTransactionCount,
       categorySummaryContractVersion: chargeInspector.categorySummaryVersion,
@@ -275,6 +286,8 @@ export function buildCategoryEvidenceContextPack({
         chargeInspector.categoryMonthlySummaryVersion,
       categoryMonthlyBudgetComparisonContractVersion:
         chargeInspector.categoryMonthlyBudgetComparisonVersion,
+      categoryMonthlyTargetStatusContractVersion:
+        chargeInspector.categoryMonthlyTargetStatusVersion,
       categories: chargeInspector.categorySummary.map((category) => {
         const budgetComparison = budgetComparisonByCategory.get(
           category.category,
@@ -298,14 +311,16 @@ export function buildCategoryEvidenceContextPack({
       }),
       categoryMonthlySummaryRows: chargeInspector.categoryMonthlySummary,
       categoryMonthlyBudgetComparisons: monthlyBudgetComparisons,
+      categoryMonthlyTargetStatuses: monthlyTargetStatuses,
       limitations: [
         "Category evidence is deterministic rule output, not an AI categorization decision.",
         "Category monthly summary rows are aggregate posted-date-month totals only, not monthly budgets.",
         "Merchant names are bounded display labels from the current review, not full transaction descriptions.",
         "Budget comparison facts use only user-entered in-session targets and deterministic current-review category totals.",
         "Monthly budget comparison facts use only user-entered in-session targets and deterministic posted-date-month category debit totals.",
+        "Monthly target status facts use only already-calculated monthly target comparison facts.",
         "This context does not include raw CSV rows, balances, check numbers, account identifiers, or full transaction history.",
-        "The AI explanation cannot create budget targets, recategorize rows, judge spending quality, rank actions, or tell the user what to change.",
+        "The AI explanation cannot create budget targets, recategorize rows, score spending quality, rank actions, or tell the user what to change.",
         ...chargeInspector.limitations,
       ],
       excludedFields: [
@@ -317,7 +332,8 @@ export function buildCategoryEvidenceContextPack({
         "full account history",
         "automatic recategorization",
         "inferred budget targets",
-        "budget variance judgments",
+        "budget variance assessments",
+        "client-supplied monthly target status results",
         "client-supplied monthly budget comparison results",
         "saved budget targets",
         "merchant actions",
@@ -341,12 +357,13 @@ export function buildCategoryEvidenceContextPack({
       "saved AI conversation history",
       "long-term memory",
       "automatic recategorization",
-        "inferred budget targets",
-        "budget variance judgments",
-        "client-supplied monthly budget comparison results",
-        "saved budget targets",
-        "merchant actions",
-        "action ranking",
+      "inferred budget targets",
+      "budget variance assessments",
+      "client-supplied monthly target status results",
+      "client-supplied monthly budget comparison results",
+      "saved budget targets",
+      "merchant actions",
+      "action ranking",
       "unapproved third-party retrieval content",
     ],
     versions: {
