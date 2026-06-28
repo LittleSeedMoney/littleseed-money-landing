@@ -1214,6 +1214,23 @@ test("charge inspector platform parser accepts the review contract", () => {
   assert.equal(parsed.evidence_transactions.length, 8);
 });
 
+test("charge inspector platform parser tolerates missing monthly comparison row counts", () => {
+  const payload = chargeInspectorPlatformPayload();
+  delete payload.category_monthly_budget_comparison[0].debit_transaction_count;
+
+  const parsed = parseChargeInspectorReviewResponse(payload);
+  const review = mapPlatformChargeInspectorReview(parsed);
+
+  assert.equal(
+    parsed.category_monthly_budget_comparison[0].debit_transaction_count,
+    0,
+  );
+  assert.equal(
+    review.categoryMonthlyBudgetComparison[0].debitTransactionCount,
+    0,
+  );
+});
+
 test("charge inspector platform parser falls back without monthly summary fields", () => {
   const payload = chargeInspectorPlatformPayload();
   delete payload.spending_summary_version;

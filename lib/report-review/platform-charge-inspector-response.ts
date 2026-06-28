@@ -420,10 +420,13 @@ function parseTransactionCategoryMonthlyBudgetComparison(
       comparison.actual_debit_total,
       `${path}.actual_debit_total`,
     ),
-    debit_transaction_count: expectNumber(
-      comparison.debit_transaction_count,
-      `${path}.debit_transaction_count`,
-    ),
+    debit_transaction_count:
+      comparison.debit_transaction_count == null
+        ? 0
+        : expectNumber(
+            comparison.debit_transaction_count,
+            `${path}.debit_transaction_count`,
+          ),
     target_debit_total:
       comparison.target_debit_total == null
         ? null
