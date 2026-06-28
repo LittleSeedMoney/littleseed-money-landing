@@ -212,8 +212,6 @@ test.describe("private report review AI panel", () => {
             categoryEvidenceContext: "category_evidence_ai_context.v0",
             categoryMonthlyBudgetComparisonContext:
               "category_monthly_budget_comparison_ai_context.v0",
-            categoryMonthlyTargetStatusContext:
-              "category_monthly_target_status_ai_context.v0",
             categoryMonthlySummaryContext:
               "category_monthly_summary_ai_context.v0",
             contextPack: "coach_context_pack.v0",
@@ -262,11 +260,6 @@ test.describe("private report review AI panel", () => {
     await expect(
       validatedAnswer.getByText(
         "category_monthly_budget_comparison_ai_context.v0",
-      ),
-    ).toBeVisible();
-    await expect(
-      validatedAnswer.getByText(
-        "category_monthly_target_status_ai_context.v0",
       ),
     ).toBeVisible();
     await expect(

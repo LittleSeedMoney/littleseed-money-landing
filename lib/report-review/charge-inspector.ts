@@ -3,7 +3,6 @@ import type {
   PlatformBankFeeCandidate,
   PlatformChargeInspectorReviewResponse,
   PlatformTransactionCategoryMonthlyBudgetComparison,
-  PlatformTransactionCategoryMonthlyTargetStatus,
   PlatformTransactionCategoryMonthlySummary,
   PlatformTransactionCategorySummary,
   PlatformTransactionCategoryEvidenceRow,
@@ -121,6 +120,7 @@ export type ChargeInspectorCategoryMonthlyBudgetComparison = {
   label: string;
   actualDebitTotalCents: number;
   actualDebitTotalLabel: string;
+  debitTransactionCount: number;
   targetDebitTotalCents: number | null;
   targetDebitTotalLabel: string;
   varianceAmountCents: number | null;
@@ -128,28 +128,6 @@ export type ChargeInspectorCategoryMonthlyBudgetComparison = {
   variancePercentLabel: string;
   status: ChargeInspectorCategoryMonthlyBudgetComparisonStatus;
   statusLabel: string;
-  limitations: string[];
-};
-
-export type ChargeInspectorCategoryMonthlyTargetStatusValue =
-  | "over-user-target"
-  | "within-user-target"
-  | "no-user-target";
-
-export type ChargeInspectorCategoryMonthlyTargetStatus = {
-  month: string;
-  category: string;
-  label: string;
-  actualDebitTotalCents: number;
-  actualDebitTotalLabel: string;
-  targetDebitTotalCents: number | null;
-  targetDebitTotalLabel: string;
-  varianceAmountCents: number | null;
-  varianceAmountLabel: string;
-  evidenceRowCount: number;
-  targetStatus: ChargeInspectorCategoryMonthlyTargetStatusValue;
-  targetStatusLabel: string;
-  sourceComparisonVersion: string;
   limitations: string[];
 };
 
@@ -185,12 +163,10 @@ export type ChargeInspectorReview = {
   categorySummaryVersion: string;
   categoryMonthlySummaryVersion: string;
   categoryMonthlyBudgetComparisonVersion: string;
-  categoryMonthlyTargetStatusVersion: string;
   monthlySpendingSummary: ChargeInspectorMonthlySummary[];
   categorySummary: ChargeInspectorCategorySummary[];
   categoryMonthlySummary: ChargeInspectorCategoryMonthlySummary[];
   categoryMonthlyBudgetComparison: ChargeInspectorCategoryMonthlyBudgetComparison[];
-  categoryMonthlyTargetStatus: ChargeInspectorCategoryMonthlyTargetStatus[];
   findings: ChargeInspectorFinding[];
   emptyState: ChargeInspectorEmptyState;
   limitations: string[];
@@ -273,7 +249,6 @@ export const chargeInspectorSampleReview: ChargeInspectorReview = {
   categorySummaryVersion: "sample_fixture",
   categoryMonthlySummaryVersion: "sample_fixture",
   categoryMonthlyBudgetComparisonVersion: "sample_fixture",
-  categoryMonthlyTargetStatusVersion: "sample_fixture",
   monthlySpendingSummary: [
     {
       month: "2026-03",
@@ -463,7 +438,6 @@ export const chargeInspectorSampleReview: ChargeInspectorReview = {
     categoryMonthlySummary("2026-05", "shopping", "Shopping", "18.90", "0", 1, 1, 0),
   ],
   categoryMonthlyBudgetComparison: [],
-  categoryMonthlyTargetStatus: [],
   findings: [
     {
       id: "sample-recurring-streaming",
@@ -635,12 +609,10 @@ export const chargeInspectorEmptyReview: ChargeInspectorReview = {
   categorySummaryVersion: "not_applicable",
   categoryMonthlySummaryVersion: "not_applicable",
   categoryMonthlyBudgetComparisonVersion: "not_applicable",
-  categoryMonthlyTargetStatusVersion: "not_applicable",
   monthlySpendingSummary: [],
   categorySummary: [],
   categoryMonthlySummary: [],
   categoryMonthlyBudgetComparison: [],
-  categoryMonthlyTargetStatus: [],
   findings: [],
   emptyState: chargeInspectorSampleReview.emptyState,
   limitations: chargeInspectorSampleReview.limitations,
@@ -654,12 +626,10 @@ export const chargeInspectorFallbackReview: ChargeInspectorReview = {
   categorySummaryVersion: "not_available",
   categoryMonthlySummaryVersion: "not_available",
   categoryMonthlyBudgetComparisonVersion: "not_available",
-  categoryMonthlyTargetStatusVersion: "not_available",
   monthlySpendingSummary: [],
   categorySummary: [],
   categoryMonthlySummary: [],
   categoryMonthlyBudgetComparison: [],
-  categoryMonthlyTargetStatus: [],
   findings: [],
   emptyState: {
     title: "Charge Inspector did not load",
@@ -889,103 +859,6 @@ export function mergeCategoryMonthlyBudgetComparisons(
   );
 }
 
-export function deriveCategoryMonthlyTargetStatuses(
-  comparisons: ChargeInspectorCategoryMonthlyBudgetComparison[],
-  rows: ChargeInspectorCategoryMonthlySummary[],
-): ChargeInspectorCategoryMonthlyTargetStatus[] {
-  const rowsByMonthCategory = new Map(
-    rows.map((row) => [`${row.month}:${row.category}`, row]),
-  );
-
-  return comparisons.map((comparison) =>
-    categoryMonthlyTargetStatus({
-      comparison,
-      row:
-        rowsByMonthCategory.get(
-          categoryMonthlyBudgetComparisonKey(comparison),
-        ) ?? null,
-    }),
-  );
-}
-
-export function mergeCategoryMonthlyTargetStatuses(
-  platformTargetStatuses: ChargeInspectorCategoryMonthlyTargetStatus[],
-  localTargetStatuses: ChargeInspectorCategoryMonthlyTargetStatus[],
-): ChargeInspectorCategoryMonthlyTargetStatus[] {
-  if (localTargetStatuses.length === 0) {
-    return platformTargetStatuses;
-  }
-
-  if (platformTargetStatuses.length === 0) {
-    return localTargetStatuses;
-  }
-
-  const mergedByMonthCategory = new Map(
-    platformTargetStatuses.map((targetStatus) => [
-      categoryMonthlyTargetStatusKey(targetStatus),
-      targetStatus,
-    ]),
-  );
-
-  for (const targetStatus of localTargetStatuses) {
-    const key = categoryMonthlyTargetStatusKey(targetStatus);
-    if (
-      targetStatus.targetDebitTotalCents !== null ||
-      !mergedByMonthCategory.has(key)
-    ) {
-      mergedByMonthCategory.set(key, targetStatus);
-    }
-  }
-
-  return [...mergedByMonthCategory.values()].sort(
-    compareCategoryMonthlyTargetStatusRows,
-  );
-}
-
-function categoryMonthlyTargetStatus({
-  comparison,
-  row,
-}: {
-  comparison: ChargeInspectorCategoryMonthlyBudgetComparison;
-  row: ChargeInspectorCategoryMonthlySummary | null;
-}): ChargeInspectorCategoryMonthlyTargetStatus {
-  const targetStatus = categoryMonthlyTargetStatusValue(comparison.status);
-
-  return {
-    month: comparison.month,
-    category: comparison.category,
-    label: comparison.label,
-    actualDebitTotalCents: comparison.actualDebitTotalCents,
-    actualDebitTotalLabel: comparison.actualDebitTotalLabel,
-    targetDebitTotalCents: comparison.targetDebitTotalCents,
-    targetDebitTotalLabel: comparison.targetDebitTotalLabel,
-    varianceAmountCents: comparison.varianceAmountCents,
-    varianceAmountLabel: comparison.varianceAmountLabel,
-    evidenceRowCount: row?.debitTransactionCount ?? 0,
-    targetStatus,
-    targetStatusLabel: categoryMonthlyTargetStatusLabel(targetStatus),
-    sourceComparisonVersion: "transaction_category_monthly_budget_comparison_v0",
-    limitations: [
-      "Target status uses only already-calculated monthly target comparison facts.",
-      "This is not spending advice, category ranking, merchant action, or an automation decision.",
-    ],
-  };
-}
-
-function categoryMonthlyTargetStatusValue(
-  status: ChargeInspectorCategoryMonthlyBudgetComparisonStatus,
-): ChargeInspectorCategoryMonthlyTargetStatusValue {
-  if (status === "over-target") {
-    return "over-user-target";
-  }
-
-  if (status === "within-target") {
-    return "within-user-target";
-  }
-
-  return "no-user-target";
-}
-
 export function compareCategoryMonthlyBudgetTarget({
   category,
   month,
@@ -998,6 +871,7 @@ export function compareCategoryMonthlyBudgetTarget({
   targetDebitTotalCents: number | null;
 }): ChargeInspectorCategoryMonthlyBudgetComparison {
   const actualDebitTotalCents = row?.debitTotalCents ?? 0;
+  const debitTransactionCount = row?.debitTransactionCount ?? 0;
   const label = row?.label ?? titleCase(category);
 
   if (targetDebitTotalCents === null) {
@@ -1007,6 +881,7 @@ export function compareCategoryMonthlyBudgetTarget({
       label,
       actualDebitTotalCents,
       actualDebitTotalLabel: moneyFromCents(actualDebitTotalCents),
+      debitTransactionCount,
       targetDebitTotalCents: null,
       targetDebitTotalLabel: "No target",
       varianceAmountCents: null,
@@ -1036,6 +911,7 @@ export function compareCategoryMonthlyBudgetTarget({
     label,
     actualDebitTotalCents,
     actualDebitTotalLabel: moneyFromCents(actualDebitTotalCents),
+    debitTransactionCount,
     targetDebitTotalCents,
     targetDebitTotalLabel: moneyFromCents(targetDebitTotalCents),
     varianceAmountCents,
@@ -1058,32 +934,9 @@ function categoryMonthlyBudgetComparisonKey(
   return `${comparison.month}:${comparison.category}`;
 }
 
-function categoryMonthlyTargetStatusKey(
-  targetStatus: ChargeInspectorCategoryMonthlyTargetStatus,
-) {
-  return `${targetStatus.month}:${targetStatus.category}`;
-}
-
 function compareCategoryMonthlyBudgetComparisonRows(
   left: ChargeInspectorCategoryMonthlyBudgetComparison,
   right: ChargeInspectorCategoryMonthlyBudgetComparison,
-) {
-  const monthComparison = left.month.localeCompare(right.month);
-  if (monthComparison !== 0) {
-    return monthComparison;
-  }
-
-  const categoryComparison = compareCategoryIds(left.category, right.category);
-  if (categoryComparison !== 0) {
-    return categoryComparison;
-  }
-
-  return left.label.localeCompare(right.label);
-}
-
-function compareCategoryMonthlyTargetStatusRows(
-  left: ChargeInspectorCategoryMonthlyTargetStatus,
-  right: ChargeInspectorCategoryMonthlyTargetStatus,
 ) {
   const monthComparison = left.month.localeCompare(right.month);
   if (monthComparison !== 0) {
@@ -1125,8 +978,6 @@ export function mapPlatformChargeInspectorReview(
     categoryMonthlySummaryVersion: response.category_monthly_summary_version,
     categoryMonthlyBudgetComparisonVersion:
       response.category_monthly_budget_comparison_version,
-    categoryMonthlyTargetStatusVersion:
-      response.category_monthly_target_status_version,
     monthlySpendingSummary: response.monthly_spending_summary.map(
       mapMonthlySpendingSummary,
     ),
@@ -1137,10 +988,6 @@ export function mapPlatformChargeInspectorReview(
     categoryMonthlyBudgetComparison:
       response.category_monthly_budget_comparison.map(
         mapCategoryMonthlyBudgetComparison,
-      ),
-    categoryMonthlyTargetStatus:
-      response.category_monthly_target_status.map(
-        mapCategoryMonthlyTargetStatus,
       ),
     findings: [
       ...response.findings.recurring_charges.map((candidate) =>
@@ -1205,6 +1052,7 @@ function mapCategoryMonthlyBudgetComparison(
     label: comparison.label,
     actualDebitTotalCents: cents(comparison.actual_debit_total),
     actualDebitTotalLabel: money(comparison.actual_debit_total),
+    debitTransactionCount: comparison.debit_transaction_count,
     targetDebitTotalCents,
     targetDebitTotalLabel:
       targetDebitTotalCents === null
@@ -1227,43 +1075,6 @@ function mapCategoryMonthlyBudgetComparison(
   };
 }
 
-function mapCategoryMonthlyTargetStatus(
-  targetStatus: PlatformTransactionCategoryMonthlyTargetStatus,
-): ChargeInspectorCategoryMonthlyTargetStatus {
-  const targetDebitTotalCents =
-    targetStatus.target_debit_total === null
-      ? null
-      : cents(targetStatus.target_debit_total);
-  const varianceAmountCents =
-    targetStatus.variance_amount === null
-      ? null
-      : cents(targetStatus.variance_amount);
-  const status = mapCategoryMonthlyTargetStatusValue(targetStatus.target_status);
-
-  return {
-    month: targetStatus.month,
-    category: targetStatus.category,
-    label: targetStatus.label,
-    actualDebitTotalCents: cents(targetStatus.actual_debit_total),
-    actualDebitTotalLabel: money(targetStatus.actual_debit_total),
-    targetDebitTotalCents,
-    targetDebitTotalLabel:
-      targetDebitTotalCents === null
-        ? "No target"
-        : moneyFromCents(targetDebitTotalCents),
-    varianceAmountCents,
-    varianceAmountLabel:
-      varianceAmountCents === null
-        ? "No target"
-        : categoryBudgetVarianceLabel(varianceAmountCents),
-    evidenceRowCount: targetStatus.evidence_row_count,
-    targetStatus: status,
-    targetStatusLabel: categoryMonthlyTargetStatusLabel(status),
-    sourceComparisonVersion: targetStatus.source_comparison_version,
-    limitations: targetStatus.limitations,
-  };
-}
-
 function mapCategoryMonthlyBudgetComparisonStatus(
   status: string,
 ): ChargeInspectorCategoryMonthlyBudgetComparisonStatus {
@@ -1278,24 +1089,6 @@ function mapCategoryMonthlyBudgetComparisonStatus(
   return "no-target";
 }
 
-function mapCategoryMonthlyTargetStatusValue(
-  status: string,
-): ChargeInspectorCategoryMonthlyTargetStatusValue {
-  if (status === "over_user_target") {
-    return "over-user-target";
-  }
-
-  if (status === "within_user_target") {
-    return "within-user-target";
-  }
-
-  if (status === "no_user_target") {
-    return "no-user-target";
-  }
-
-  throw new Error(`Unsupported monthly target status: ${status}`);
-}
-
 function categoryMonthlyBudgetComparisonStatusLabel(
   status: ChargeInspectorCategoryMonthlyBudgetComparisonStatus,
 ) {
@@ -1308,20 +1101,6 @@ function categoryMonthlyBudgetComparisonStatusLabel(
   }
 
   return "No target";
-}
-
-function categoryMonthlyTargetStatusLabel(
-  status: ChargeInspectorCategoryMonthlyTargetStatusValue,
-) {
-  if (status === "over-user-target") {
-    return "Over user target";
-  }
-
-  if (status === "within-user-target") {
-    return "Within user target";
-  }
-
-  return "No user target";
 }
 
 function mapCategorySummary(
