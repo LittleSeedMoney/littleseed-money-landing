@@ -194,6 +194,31 @@ export type RecurringPaymentReviewItem = {
 
 export type ChargeInspectorCategoryBudgetTargetAmounts = Record<string, number>;
 
+export type ChargeInspectorWindowPolicy = {
+  recentMonths: number;
+  rowCap: number;
+};
+
+export type WindowedRows<T> = {
+  kept: T[];
+  totalCount: number;
+  includedCount: number;
+  omittedCount: number;
+  window: ChargeInspectorWindowPolicy;
+};
+
+type ChargeInspectorWindowableRow = {
+  month: string;
+  category: string;
+  label: string;
+};
+
+export const chargeInspectorMonthlyRowWindowPolicy: ChargeInspectorWindowPolicy =
+  {
+    recentMonths: 12,
+    rowCap: 80,
+  };
+
 export const chargeInspectorCategoryOrder = [
   "income",
   "housing",
@@ -221,6 +246,78 @@ function compareCategoryIds(left: string, right: string) {
   }
 
   return left.localeCompare(right);
+}
+
+export function windowChargeInspectorRows<T extends ChargeInspectorWindowableRow>(
+  rows: T[],
+  {
+    isPriorityRow = () => false,
+    policy = chargeInspectorMonthlyRowWindowPolicy,
+  }: {
+    isPriorityRow?: (row: T) => boolean;
+    policy?: ChargeInspectorWindowPolicy;
+  } = {},
+): WindowedRows<T> {
+  const recentMonths = Math.max(0, Math.floor(policy.recentMonths));
+  const rowCap = Math.max(0, Math.floor(policy.rowCap));
+  const months = [...new Set(rows.map((row) => row.month))].sort();
+  const includedMonths = new Set(
+    recentMonths === 0 ? [] : months.slice(-recentMonths),
+  );
+  const rowsInWindow = rows.filter((row) => includedMonths.has(row.month));
+  const capSurvivors = [...rowsInWindow]
+    .sort((left, right) =>
+      compareWindowRetentionRows(left, right, isPriorityRow),
+    )
+    .slice(0, rowCap);
+  const kept = capSurvivors.sort(compareWindowDisplayRows);
+
+  return {
+    kept,
+    totalCount: rows.length,
+    includedCount: kept.length,
+    omittedCount: Math.max(0, rows.length - kept.length),
+    window: {
+      recentMonths,
+      rowCap,
+    },
+  };
+}
+
+function compareWindowRetentionRows<T extends ChargeInspectorWindowableRow>(
+  left: T,
+  right: T,
+  isPriorityRow: (row: T) => boolean,
+) {
+  const priorityComparison =
+    Number(isPriorityRow(right)) - Number(isPriorityRow(left));
+  if (priorityComparison !== 0) {
+    return priorityComparison;
+  }
+
+  const monthComparison = right.month.localeCompare(left.month);
+  if (monthComparison !== 0) {
+    return monthComparison;
+  }
+
+  return compareWindowDisplayRows(left, right);
+}
+
+function compareWindowDisplayRows<T extends ChargeInspectorWindowableRow>(
+  left: T,
+  right: T,
+) {
+  const monthComparison = left.month.localeCompare(right.month);
+  if (monthComparison !== 0) {
+    return monthComparison;
+  }
+
+  const categoryComparison = compareCategoryIds(left.category, right.category);
+  if (categoryComparison !== 0) {
+    return categoryComparison;
+  }
+
+  return left.label.localeCompare(right.label);
 }
 
 function categorySortIndex(category: string) {

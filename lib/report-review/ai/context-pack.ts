@@ -2,7 +2,10 @@ import { reportReviewSample } from "@/data/report-review-sample";
 import {
   compareCategoryBudgetTargets,
   compareCategoryMonthlyBudgetTargets,
+  windowChargeInspectorRows,
   type ChargeInspectorCategoryBudgetTargetAmounts,
+  type ChargeInspectorWindowPolicy,
+  type WindowedRows,
 } from "@/lib/report-review/charge-inspector";
 
 import { approvedKnowledgeArtifacts } from "./knowledge-artifacts";
@@ -179,10 +182,12 @@ export function buildMonthlySpendingSummaryContextPack({
 
 export function buildCategoryEvidenceContextPack({
   categoryBudgetTargets = {},
+  categoryMonthlyWindowPolicy,
   categoryReviewStatuses = {},
   targetId,
 }: {
   categoryBudgetTargets?: ChargeInspectorCategoryBudgetTargetAmounts;
+  categoryMonthlyWindowPolicy?: ChargeInspectorWindowPolicy;
   categoryReviewStatuses?: Record<
     string,
     CategoryEvidenceContext["categories"][number]["reviewStatus"]
@@ -229,6 +234,17 @@ export function buildCategoryEvidenceContextPack({
   const monthlyBudgetComparisons = compareCategoryMonthlyBudgetTargets(
     chargeInspector.categoryMonthlySummary,
     categoryBudgetTargets,
+  );
+  const categoryMonthlySummaryWindow = windowChargeInspectorRows(
+    chargeInspector.categoryMonthlySummary,
+    { policy: categoryMonthlyWindowPolicy },
+  );
+  const categoryMonthlyBudgetComparisonWindow = windowChargeInspectorRows(
+    monthlyBudgetComparisons,
+    {
+      isPriorityRow: (comparison) => comparison.targetDebitTotalCents !== null,
+      policy: categoryMonthlyWindowPolicy,
+    },
   );
   const budgetComparisonByCategory = new Map(
     budgetComparisons.map((comparison) => [
@@ -296,8 +312,13 @@ export function buildCategoryEvidenceContextPack({
           limitations: category.limitations,
         };
       }),
-      categoryMonthlySummaryRows: chargeInspector.categoryMonthlySummary,
-      categoryMonthlyBudgetComparisons: monthlyBudgetComparisons,
+      categoryMonthlySummaryWindow: windowMetadata(categoryMonthlySummaryWindow),
+      categoryMonthlySummaryRows: categoryMonthlySummaryWindow.kept,
+      categoryMonthlyBudgetComparisonWindow: windowMetadata(
+        categoryMonthlyBudgetComparisonWindow,
+      ),
+      categoryMonthlyBudgetComparisons:
+        categoryMonthlyBudgetComparisonWindow.kept,
       limitations: [
         "Category evidence is deterministic rule output, not an AI categorization decision.",
         "Category monthly summary rows are aggregate posted-date-month totals only, not monthly budgets.",
@@ -305,6 +326,14 @@ export function buildCategoryEvidenceContextPack({
         "Budget comparison facts use only user-entered in-session targets and deterministic current-review category totals.",
         "Monthly budget comparison facts use only user-entered in-session targets and deterministic posted-date-month category debit totals.",
         "Monthly comparison status labels come from already-calculated monthly target comparison facts.",
+        ...windowLimitations(
+          categoryMonthlySummaryWindow,
+          "category-by-month summary rows",
+        ),
+        ...windowLimitations(
+          categoryMonthlyBudgetComparisonWindow,
+          "monthly target comparison rows",
+        ),
         "This context does not include raw CSV rows, balances, check numbers, account identifiers, or full transaction history.",
         "The AI explanation cannot create budget targets, recategorize rows, score spending quality, rank actions, or tell the user what to change.",
         ...chargeInspector.limitations,
@@ -357,6 +386,25 @@ export function buildCategoryEvidenceContextPack({
       sourceMap: REPORT_REVIEW_CONTEXT_SOURCE_MAP_VERSION,
     },
   };
+}
+
+function windowMetadata<T>(windowedRows: WindowedRows<T>) {
+  return {
+    totalCount: windowedRows.totalCount,
+    includedCount: windowedRows.includedCount,
+    omittedCount: windowedRows.omittedCount,
+    window: windowedRows.window,
+  };
+}
+
+function windowLimitations<T>(windowedRows: WindowedRows<T>, label: string) {
+  if (windowedRows.omittedCount === 0) {
+    return [];
+  }
+
+  return [
+    `${windowedRows.omittedCount.toLocaleString("en-US")} ${label} omitted by the recent ${windowedRows.window.recentMonths.toLocaleString("en-US")}-month / ${windowedRows.window.rowCap.toLocaleString("en-US")}-row context window.`,
+  ];
 }
 
 export function buildReportReviewContextPack({

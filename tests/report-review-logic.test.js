@@ -36,6 +36,7 @@ const {
   recurringPaymentReviewItems,
   summarizeChargeInspectorReview,
   visibleChargeInspectorFindings,
+  windowChargeInspectorRows,
 } = require("../lib/report-review/charge-inspector.ts");
 const {
   chargeInspectorSampleCsv,
@@ -262,6 +263,46 @@ test("report-review AI category evidence context pack stays bounded", () => {
   assert.equal(renderedContext.includes("Balance"), false);
 });
 
+test("report-review AI category evidence context records row window omissions", () => {
+  const contextPack = buildCategoryEvidenceContextPack({
+    categoryBudgetTargets: {
+      fees: 1000,
+      groceries: 10000,
+    },
+    categoryMonthlyWindowPolicy: {
+      recentMonths: 1,
+      rowCap: 2,
+    },
+    targetId: "charge_inspector_category_evidence",
+  });
+
+  assert.deepEqual(contextPack.categoryEvidence.categoryMonthlySummaryWindow, {
+    totalCount: 15,
+    includedCount: 2,
+    omittedCount: 13,
+    window: { recentMonths: 1, rowCap: 2 },
+  });
+  assert.deepEqual(
+    contextPack.categoryEvidence.categoryMonthlyBudgetComparisonWindow,
+    {
+      totalCount: 19,
+      includedCount: 2,
+      omittedCount: 17,
+      window: { recentMonths: 1, rowCap: 2 },
+    },
+  );
+  assert.deepEqual(
+    contextPack.categoryEvidence.categoryMonthlyBudgetComparisons.map(
+      (row) => `${row.month}:${row.category}`,
+    ),
+    ["2026-05:groceries", "2026-05:fees"],
+  );
+  assert.match(
+    contextPack.categoryEvidence.limitations.join(" "),
+    /omitted by the recent 1-month \/ 2-row context window/,
+  );
+});
+
 test("charge inspector category budget target parser keeps deterministic cents", () => {
   assert.deepEqual(parseCategoryBudgetTargetInput(""), {
     amountCents: null,
@@ -377,6 +418,60 @@ test("charge inspector monthly comparison merge keeps platform target rows", () 
   assert.equal(marchHousing.actualDebitTotalLabel, "$0.00");
   assert.equal(marchHousing.targetDebitTotalLabel, "$1,200.00");
   assert.equal(marchHousing.status, "within-target");
+});
+
+test("charge inspector monthly row window keeps recent months before target priority", () => {
+  const rows = [
+    {
+      id: "old-target",
+      month: "2025-01",
+      category: "groceries",
+      label: "Groceries",
+      targetDebitTotalCents: 10000,
+    },
+    {
+      id: "recent-housing",
+      month: "2026-04",
+      category: "housing",
+      label: "Housing",
+      targetDebitTotalCents: null,
+    },
+    {
+      id: "recent-shopping",
+      month: "2026-05",
+      category: "shopping",
+      label: "Shopping",
+      targetDebitTotalCents: null,
+    },
+    {
+      id: "recent-groceries-target",
+      month: "2026-05",
+      category: "groceries",
+      label: "Groceries",
+      targetDebitTotalCents: 10000,
+    },
+    {
+      id: "recent-fees-target",
+      month: "2026-05",
+      category: "fees",
+      label: "Fees",
+      targetDebitTotalCents: 1000,
+    },
+  ];
+
+  const windowedRows = windowChargeInspectorRows(rows, {
+    isPriorityRow: (row) => row.targetDebitTotalCents !== null,
+    policy: { recentMonths: 2, rowCap: 3 },
+  });
+
+  assert.deepEqual(
+    windowedRows.kept.map((row) => row.id),
+    ["recent-groceries-target", "recent-fees-target", "recent-shopping"],
+  );
+  assert.equal(windowedRows.totalCount, 5);
+  assert.equal(windowedRows.includedCount, 3);
+  assert.equal(windowedRows.omittedCount, 2);
+  assert.deepEqual(windowedRows.window, { recentMonths: 2, rowCap: 3 });
 });
 
 test("report-review AI approved corpus loader reads collector-shaped JSONL", () => {

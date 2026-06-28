@@ -10,7 +10,6 @@ import {
 
 import {
   categoryBudgetTargetsFromInputs,
-  chargeInspectorCategoryOrder,
   compareCategoryBudgetTargets,
   compareCategoryMonthlyBudgetTargets,
   isChargeInspectorEmpty,
@@ -19,6 +18,7 @@ import {
   recurringPaymentReviewItems,
   summarizeChargeInspectorReview,
   visibleChargeInspectorFindings,
+  windowChargeInspectorRows,
   type ChargeInspectorCategoryBudgetComparison,
   type ChargeInspectorCategoryBudgetTargetAmounts,
   type ChargeInspectorCategoryMonthlyBudgetComparison,
@@ -59,10 +59,6 @@ const CATEGORY_REVIEW_OPTIONS: {
   { label: "Confirm", status: "confirmed" },
   { label: "Needs review", status: "needs-review" },
 ];
-const CATEGORY_DISPLAY_INDEX = new Map(
-  chargeInspectorCategoryOrder.map((category, index) => [category, index]),
-);
-
 export function ChargeInspectorSection({
   aiEnabled,
   review,
@@ -626,11 +622,9 @@ function CategoryMonthlySummaryTable({
   budgetTargets: ChargeInspectorCategoryBudgetTargetAmounts;
   review: ChargeInspectorReview;
 }) {
-  const monthCount = new Set(
-    review.categoryMonthlySummary.map((row) => row.month),
-  ).size;
-  const sortedRows = [...review.categoryMonthlySummary].sort(
-    compareCategoryMonthlySummaryRows,
+  const monthlySummaryWindow = useMemo(
+    () => windowChargeInspectorRows(review.categoryMonthlySummary),
+    [review.categoryMonthlySummary],
   );
   const localBudgetComparisons = useMemo(
     () =>
@@ -648,11 +642,27 @@ function CategoryMonthlySummaryTable({
       ),
     [localBudgetComparisons, review.categoryMonthlyBudgetComparison],
   );
-  const budgetCounts = useMemo(
-    () => summarizeCategoryMonthlyBudgetComparisons(budgetComparisons),
+  const budgetComparisonWindow = useMemo(
+    () =>
+      windowChargeInspectorRows(budgetComparisons, {
+        isPriorityRow: (comparison) =>
+          comparison.targetDebitTotalCents !== null,
+      }),
     [budgetComparisons],
   );
+  const visibleBudgetComparisons = budgetComparisonWindow.kept;
+  const budgetCounts = useMemo(
+    () => summarizeCategoryMonthlyBudgetComparisons(visibleBudgetComparisons),
+    [visibleBudgetComparisons],
+  );
   const showBudgetComparison = budgetComparisons.length > 0;
+  const activeWindow = showBudgetComparison
+    ? budgetComparisonWindow
+    : monthlySummaryWindow;
+  const hasWindowOmissions = activeWindow.omittedCount > 0;
+  const visibleMonthCount = new Set(
+    activeWindow.kept.map((row) => row.month),
+  ).size;
 
   return (
     <div
@@ -669,17 +679,27 @@ function CategoryMonthlySummaryTable({
             tone="stone"
           />
           <StatusPill
-            label={`${monthCount.toLocaleString("en-US")} months`}
+            label={`${visibleMonthCount.toLocaleString("en-US")} visible months`}
             tone="stone"
           />
+          <StatusPill
+            label={`recent ${activeWindow.window.recentMonths.toLocaleString("en-US")} months / ${activeWindow.window.rowCap.toLocaleString("en-US")} row cap`}
+            tone="stone"
+          />
+          {hasWindowOmissions ? (
+            <StatusPill
+              label={`${activeWindow.omittedCount.toLocaleString("en-US")} older or overflow rows hidden`}
+              tone="earth"
+            />
+          ) : null}
           {showBudgetComparison ? (
             <>
               <StatusPill
-                label={`${budgetCounts.targetRows.toLocaleString("en-US")} monthly target rows`}
+                label={`${budgetCounts.targetRows.toLocaleString("en-US")} visible monthly target rows`}
                 tone="stone"
               />
               <StatusPill
-                label={`${budgetCounts.overTarget.toLocaleString("en-US")} monthly over`}
+                label={`${budgetCounts.overTarget.toLocaleString("en-US")} visible monthly over`}
                 tone={budgetCounts.overTarget > 0 ? "earth" : "stone"}
               />
             </>
@@ -717,13 +737,13 @@ function CategoryMonthlySummaryTable({
           </thead>
           <tbody className="divide-y divide-stone-100">
             {showBudgetComparison
-              ? budgetComparisons.map((comparison) => (
+              ? visibleBudgetComparisons.map((comparison) => (
                   <CategoryMonthlyBudgetComparisonRow
                     comparison={comparison}
                     key={`${comparison.month}:${comparison.category}`}
                   />
                 ))
-              : sortedRows.map((row) => (
+              : monthlySummaryWindow.kept.map((row) => (
                   <CategoryMonthlySummaryRow
                     key={`${row.month}:${row.category}`}
                     row={row}
@@ -739,32 +759,15 @@ function CategoryMonthlySummaryTable({
         category memory. Monthly target comparison appears only when a
         user-entered target is available and uses posted-date-month category
         debit totals. Target result badges are factual states against user-entered
-        targets, not category rankings or spending instructions.
+        targets, not category rankings or spending instructions. The row window
+        keeps recent posted-date months first and uses target rows only as a cap
+        survival rule inside that recent window.
+        {hasWindowOmissions
+          ? ` Showing ${activeWindow.includedCount.toLocaleString("en-US")} of ${activeWindow.totalCount.toLocaleString("en-US")} rows; ${activeWindow.omittedCount.toLocaleString("en-US")} older or overflow rows are hidden by the display cap.`
+          : ""}
       </p>
     </div>
   );
-}
-
-function compareCategoryMonthlySummaryRows(
-  left: ChargeInspectorCategoryMonthlySummary,
-  right: ChargeInspectorCategoryMonthlySummary,
-) {
-  const monthComparison = left.month.localeCompare(right.month);
-  if (monthComparison !== 0) {
-    return monthComparison;
-  }
-
-  const categoryComparison =
-    categoryDisplayIndex(left.category) - categoryDisplayIndex(right.category);
-  if (categoryComparison !== 0) {
-    return categoryComparison;
-  }
-
-  return left.label.localeCompare(right.label);
-}
-
-function categoryDisplayIndex(category: string) {
-  return CATEGORY_DISPLAY_INDEX.get(category) ?? Number.MAX_SAFE_INTEGER;
 }
 
 function CategoryMonthlySummaryRow({
