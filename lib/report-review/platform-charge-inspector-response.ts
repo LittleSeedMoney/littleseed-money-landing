@@ -16,7 +16,6 @@ export type PlatformChargeInspectorReviewResponse = {
   category_summary_version: string;
   category_monthly_summary_version: string;
   category_monthly_budget_comparison_version: string;
-  category_monthly_target_status_version: string;
   reviewed_transaction_count: number;
   parse_error_count: number;
   findings: {
@@ -29,7 +28,6 @@ export type PlatformChargeInspectorReviewResponse = {
   category_summary: PlatformTransactionCategorySummary[];
   category_monthly_summary: PlatformTransactionCategoryMonthlySummary[];
   category_monthly_budget_comparison: PlatformTransactionCategoryMonthlyBudgetComparison[];
-  category_monthly_target_status: PlatformTransactionCategoryMonthlyTargetStatus[];
   evidence_transactions: PlatformNormalizedTransaction[];
   parse_errors: PlatformCsvTransactionValidationError[];
   limitations: string[];
@@ -72,25 +70,11 @@ export type PlatformTransactionCategoryMonthlyBudgetComparison = {
   label: string;
   currency: string;
   actual_debit_total: DecimalValue;
+  debit_transaction_count: number;
   target_debit_total: DecimalValue | null;
   variance_amount: DecimalValue | null;
   variance_percent: DecimalValue | null;
   status: string;
-  limitations: string[];
-};
-
-export type PlatformTransactionCategoryMonthlyTargetStatus = {
-  schema_version: string;
-  month: string;
-  category: string;
-  label: string;
-  currency: string;
-  target_status: string;
-  actual_debit_total: DecimalValue;
-  target_debit_total: DecimalValue | null;
-  variance_amount: DecimalValue | null;
-  evidence_row_count: number;
-  source_comparison_version: string;
   limitations: string[];
 };
 
@@ -275,13 +259,6 @@ export function parseChargeInspectorReviewResponse(
             response.category_monthly_budget_comparison_version,
             "charge-inspector response.category_monthly_budget_comparison_version",
           ),
-    category_monthly_target_status_version:
-      response.category_monthly_target_status_version == null
-        ? "not_returned"
-        : expectString(
-            response.category_monthly_target_status_version,
-            "charge-inspector response.category_monthly_target_status_version",
-          ),
     reviewed_transaction_count: expectNumber(
       response.reviewed_transaction_count,
       "charge-inspector response.reviewed_transaction_count",
@@ -343,14 +320,6 @@ export function parseChargeInspectorReviewResponse(
             response.category_monthly_budget_comparison,
             "charge-inspector response.category_monthly_budget_comparison",
             parseTransactionCategoryMonthlyBudgetComparison,
-          ),
-    category_monthly_target_status:
-      response.category_monthly_target_status == null
-        ? []
-        : parseArray(
-            response.category_monthly_target_status,
-            "charge-inspector response.category_monthly_target_status",
-            parseTransactionCategoryMonthlyTargetStatus,
           ),
     evidence_transactions: parseArray(
       response.evidence_transactions,
@@ -451,6 +420,10 @@ function parseTransactionCategoryMonthlyBudgetComparison(
       comparison.actual_debit_total,
       `${path}.actual_debit_total`,
     ),
+    debit_transaction_count: expectNumber(
+      comparison.debit_transaction_count,
+      `${path}.debit_transaction_count`,
+    ),
     target_debit_total:
       comparison.target_debit_total == null
         ? null
@@ -471,45 +444,6 @@ function parseTransactionCategoryMonthlyBudgetComparison(
           ),
     status: expectString(comparison.status, `${path}.status`),
     limitations: parseStringArray(comparison.limitations, `${path}.limitations`),
-  };
-}
-
-function parseTransactionCategoryMonthlyTargetStatus(
-  value: unknown,
-  path: string,
-): PlatformTransactionCategoryMonthlyTargetStatus {
-  const targetStatus = expectRecord(value, path);
-  return {
-    schema_version: expectString(targetStatus.schema_version, `${path}.schema_version`),
-    month: expectString(targetStatus.month, `${path}.month`),
-    category: expectString(targetStatus.category, `${path}.category`),
-    label: expectString(targetStatus.label, `${path}.label`),
-    currency: expectString(targetStatus.currency, `${path}.currency`),
-    target_status: expectString(targetStatus.target_status, `${path}.target_status`),
-    actual_debit_total: expectDecimalValue(
-      targetStatus.actual_debit_total,
-      `${path}.actual_debit_total`,
-    ),
-    target_debit_total:
-      targetStatus.target_debit_total == null
-        ? null
-        : expectDecimalValue(
-            targetStatus.target_debit_total,
-            `${path}.target_debit_total`,
-          ),
-    variance_amount:
-      targetStatus.variance_amount == null
-        ? null
-        : expectDecimalValue(targetStatus.variance_amount, `${path}.variance_amount`),
-    evidence_row_count: expectNumber(
-      targetStatus.evidence_row_count,
-      `${path}.evidence_row_count`,
-    ),
-    source_comparison_version: expectString(
-      targetStatus.source_comparison_version,
-      `${path}.source_comparison_version`,
-    ),
-    limitations: parseStringArray(targetStatus.limitations, `${path}.limitations`),
   };
 }
 

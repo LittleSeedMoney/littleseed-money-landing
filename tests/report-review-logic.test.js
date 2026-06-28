@@ -30,10 +30,8 @@ const {
   compareCategoryBudgetTarget,
   compareCategoryMonthlyBudgetTargets,
   isChargeInspectorEmpty,
-  deriveCategoryMonthlyTargetStatuses,
   mapPlatformChargeInspectorReview,
   mergeCategoryMonthlyBudgetComparisons,
-  mergeCategoryMonthlyTargetStatuses,
   parseCategoryBudgetTargetInput,
   recurringPaymentReviewItems,
   summarizeChargeInspectorReview,
@@ -217,19 +215,11 @@ test("report-review AI category evidence context pack stays bounded", () => {
     "category_monthly_budget_comparison_ai_context.v0",
   );
   assert.equal(
-    contextPack.categoryEvidence.categoryMonthlyTargetStatusVersion,
-    "category_monthly_target_status_ai_context.v0",
-  );
-  assert.equal(
     contextPack.categoryEvidence.categoryMonthlySummaryContractVersion,
     "sample_fixture",
   );
   assert.equal(
     contextPack.categoryEvidence.categoryMonthlyBudgetComparisonContractVersion,
-    "sample_fixture",
-  );
-  assert.equal(
-    contextPack.categoryEvidence.categoryMonthlyTargetStatusContractVersion,
     "sample_fixture",
   );
   assert.equal(
@@ -241,8 +231,8 @@ test("report-review AI category evidence context pack stays bounded", () => {
   assert.equal(
     contextPack.categoryEvidence.categoryMonthlyBudgetComparisons.find(
       (row) => row.month === "2026-05" && row.category === "groceries",
-    ).varianceAmountLabel,
-    "$30.56 over",
+    ).statusLabel,
+    "Over target",
   );
   assert.equal(
     contextPack.categoryEvidence.categoryMonthlyBudgetComparisons.find(
@@ -251,15 +241,9 @@ test("report-review AI category evidence context pack stays bounded", () => {
     "$0.00",
   );
   assert.equal(
-    contextPack.categoryEvidence.categoryMonthlyTargetStatuses.find(
+    contextPack.categoryEvidence.categoryMonthlyBudgetComparisons.find(
       (row) => row.month === "2026-05" && row.category === "groceries",
-    ).targetStatusLabel,
-    "Over user target",
-  );
-  assert.equal(
-    contextPack.categoryEvidence.categoryMonthlyTargetStatuses.find(
-      (row) => row.month === "2026-05" && row.category === "groceries",
-    ).evidenceRowCount,
+    ).debitTransactionCount,
     2,
   );
   assert.equal(groceries.budgetComparison.targetDebitTotalLabel, "$100.00");
@@ -357,39 +341,6 @@ test("charge inspector monthly category budget comparison uses user target facts
   assert.equal(mayHousing.status, "no-target");
 });
 
-test("charge inspector monthly category target status uses comparison facts", () => {
-  const comparisons = compareCategoryMonthlyBudgetTargets(
-    chargeInspectorSampleReview.categoryMonthlySummary,
-    { groceries: 10000 },
-  );
-
-  const targetStatuses = deriveCategoryMonthlyTargetStatuses(
-    comparisons,
-    chargeInspectorSampleReview.categoryMonthlySummary,
-  );
-  const marchGroceries = targetStatuses.find(
-    (targetStatus) =>
-      targetStatus.month === "2026-03" && targetStatus.category === "groceries",
-  );
-  const mayGroceries = targetStatuses.find(
-    (targetStatus) =>
-      targetStatus.month === "2026-05" && targetStatus.category === "groceries",
-  );
-  const mayHousing = targetStatuses.find(
-    (targetStatus) =>
-      targetStatus.month === "2026-05" && targetStatus.category === "housing",
-  );
-
-  assert.equal(marchGroceries.targetStatus, "within-user-target");
-  assert.equal(marchGroceries.evidenceRowCount, 0);
-  assert.equal(mayGroceries.targetStatus, "over-user-target");
-  assert.equal(mayGroceries.targetStatusLabel, "Over user target");
-  assert.equal(mayGroceries.varianceAmountLabel, "$30.56 over");
-  assert.equal(mayGroceries.evidenceRowCount, 2);
-  assert.equal(mayHousing.targetStatus, "no-user-target");
-  assert.equal(mayHousing.targetDebitTotalLabel, "No target");
-});
-
 test("charge inspector monthly comparison merge keeps platform target rows", () => {
   const platformComparisons = compareCategoryMonthlyBudgetTargets(
     chargeInspectorSampleReview.categoryMonthlySummary,
@@ -420,55 +371,12 @@ test("charge inspector monthly comparison merge keeps platform target rows", () 
   assert.equal(merged.length, 19);
   assert.equal(mayGroceries.targetDebitTotalLabel, "$100.00");
   assert.equal(mayGroceries.status, "over-target");
+  assert.equal(mayGroceries.debitTransactionCount, 2);
   assert.equal(mayHousing.targetDebitTotalLabel, "$1,200.00");
   assert.equal(mayHousing.status, "over-target");
   assert.equal(marchHousing.actualDebitTotalLabel, "$0.00");
   assert.equal(marchHousing.targetDebitTotalLabel, "$1,200.00");
   assert.equal(marchHousing.status, "within-target");
-});
-
-test("charge inspector monthly target status merge keeps platform target rows", () => {
-  const platformComparisons = compareCategoryMonthlyBudgetTargets(
-    chargeInspectorSampleReview.categoryMonthlySummary,
-    { housing: 120000 },
-  );
-  const localComparisons = compareCategoryMonthlyBudgetTargets(
-    chargeInspectorSampleReview.categoryMonthlySummary,
-    { groceries: 10000 },
-  );
-  const platformTargetStatuses = deriveCategoryMonthlyTargetStatuses(
-    platformComparisons,
-    chargeInspectorSampleReview.categoryMonthlySummary,
-  );
-  const localTargetStatuses = deriveCategoryMonthlyTargetStatuses(
-    localComparisons,
-    chargeInspectorSampleReview.categoryMonthlySummary,
-  );
-
-  const merged = mergeCategoryMonthlyTargetStatuses(
-    platformTargetStatuses,
-    localTargetStatuses,
-  );
-  const mayGroceries = merged.find(
-    (targetStatus) =>
-      targetStatus.month === "2026-05" && targetStatus.category === "groceries",
-  );
-  const mayHousing = merged.find(
-    (targetStatus) =>
-      targetStatus.month === "2026-05" && targetStatus.category === "housing",
-  );
-  const marchHousing = merged.find(
-    (targetStatus) =>
-      targetStatus.month === "2026-03" && targetStatus.category === "housing",
-  );
-
-  assert.equal(merged.length, 19);
-  assert.equal(mayGroceries.targetStatus, "over-user-target");
-  assert.equal(mayGroceries.targetDebitTotalLabel, "$100.00");
-  assert.equal(mayHousing.targetStatus, "over-user-target");
-  assert.equal(mayHousing.targetDebitTotalLabel, "$1,200.00");
-  assert.equal(marchHousing.targetStatus, "within-user-target");
-  assert.equal(marchHousing.actualDebitTotalLabel, "$0.00");
 });
 
 test("report-review AI approved corpus loader reads collector-shaped JSONL", () => {
@@ -830,10 +738,6 @@ test("report-review AI explains category evidence without recategorizing", async
     "category_monthly_budget_comparison_ai_context.v0",
   );
   assert.equal(
-    answer.versions.categoryMonthlyTargetStatusContext,
-    "category_monthly_target_status_ai_context.v0",
-  );
-  assert.equal(
     answer.versions.categoryMonthlySummaryContext,
     "category_monthly_summary_ai_context.v0",
   );
@@ -867,7 +771,7 @@ test("report-review AI explains category evidence without recategorizing", async
   );
   assert.equal(
     answer.evidence.some((item) =>
-      item.text.includes("2026-05 Groceries: Over user target"),
+      item.text.includes("status Over target, debit rows 2"),
     ),
     true,
   );
@@ -1279,11 +1183,7 @@ test("charge inspector platform parser accepts the review contract", () => {
   );
   assert.equal(
     parsed.category_monthly_budget_comparison_version,
-    "transaction_category_monthly_budget_comparison_v0",
-  );
-  assert.equal(
-    parsed.category_monthly_target_status_version,
-    "transaction_category_monthly_target_status_v0",
+    "transaction_category_monthly_budget_comparison_v1",
   );
   assert.equal(parsed.monthly_spending_summary[2].debit_total, "1889.90");
   assert.equal(parsed.category_summary[2].category, "groceries");
@@ -1300,11 +1200,7 @@ test("charge inspector platform parser accepts the review contract", () => {
     "30.56",
   );
   assert.equal(
-    parsed.category_monthly_target_status[0].target_status,
-    "over_user_target",
-  );
-  assert.equal(
-    parsed.category_monthly_target_status[0].evidence_row_count,
+    parsed.category_monthly_budget_comparison[0].debit_transaction_count,
     2,
   );
   assert.deepEqual(
@@ -1328,8 +1224,6 @@ test("charge inspector platform parser falls back without monthly summary fields
   delete payload.category_monthly_summary;
   delete payload.category_monthly_budget_comparison_version;
   delete payload.category_monthly_budget_comparison;
-  delete payload.category_monthly_target_status_version;
-  delete payload.category_monthly_target_status;
 
   const parsed = parseChargeInspectorReviewResponse(payload);
   const review = mapPlatformChargeInspectorReview(parsed);
@@ -1345,11 +1239,6 @@ test("charge inspector platform parser falls back without monthly summary fields
     "not_returned",
   );
   assert.deepEqual(parsed.category_monthly_budget_comparison, []);
-  assert.equal(
-    parsed.category_monthly_target_status_version,
-    "not_returned",
-  );
-  assert.deepEqual(parsed.category_monthly_target_status, []);
   assert.equal(review.spendingSummaryVersion, "not_returned");
   assert.deepEqual(review.monthlySpendingSummary, []);
   assert.equal(review.categorySummaryVersion, "not_returned");
@@ -1358,8 +1247,6 @@ test("charge inspector platform parser falls back without monthly summary fields
   assert.deepEqual(review.categoryMonthlySummary, []);
   assert.equal(review.categoryMonthlyBudgetComparisonVersion, "not_returned");
   assert.deepEqual(review.categoryMonthlyBudgetComparison, []);
-  assert.equal(review.categoryMonthlyTargetStatusVersion, "not_returned");
-  assert.deepEqual(review.categoryMonthlyTargetStatus, []);
 });
 
 test("charge inspector platform mapper builds UI findings from contract evidence", () => {
@@ -1407,7 +1294,7 @@ test("charge inspector platform mapper builds UI findings from contract evidence
   assert.equal(review.categoryMonthlySummary[2].debitTotalLabel, "$130.56");
   assert.equal(
     review.categoryMonthlyBudgetComparisonVersion,
-    "transaction_category_monthly_budget_comparison_v0",
+    "transaction_category_monthly_budget_comparison_v1",
   );
   assert.equal(review.categoryMonthlyBudgetComparison[0].label, "Groceries");
   assert.equal(
@@ -1415,19 +1302,7 @@ test("charge inspector platform mapper builds UI findings from contract evidence
     "$30.56 over",
   );
   assert.equal(review.categoryMonthlyBudgetComparison[0].status, "over-target");
-  assert.equal(
-    review.categoryMonthlyTargetStatusVersion,
-    "transaction_category_monthly_target_status_v0",
-  );
-  assert.equal(
-    review.categoryMonthlyTargetStatus[0].targetStatus,
-    "over-user-target",
-  );
-  assert.equal(
-    review.categoryMonthlyTargetStatus[0].targetStatusLabel,
-    "Over user target",
-  );
-  assert.equal(review.categoryMonthlyTargetStatus[0].evidenceRowCount, 2);
+  assert.equal(review.categoryMonthlyBudgetComparison[0].debitTransactionCount, 2);
   assert.deepEqual(review.categorySummary[2].ruleIds, [
     "category.groceries.grocer_text.v0",
   ]);
@@ -2625,9 +2500,7 @@ function chargeInspectorPlatformPayload() {
     category_summary_version: "transaction_category_rules_v0",
     category_monthly_summary_version: "transaction_category_monthly_summary_v0",
     category_monthly_budget_comparison_version:
-      "transaction_category_monthly_budget_comparison_v0",
-    category_monthly_target_status_version:
-      "transaction_category_monthly_target_status_v0",
+      "transaction_category_monthly_budget_comparison_v1",
     reviewed_transaction_count: 18,
     parse_error_count: 0,
     findings: {
@@ -2788,6 +2661,7 @@ function chargeInspectorPlatformPayload() {
         "groceries",
         "Groceries",
         "130.56",
+        2,
         "100.00",
         "30.56",
         "30.56",
@@ -2798,32 +2672,11 @@ function chargeInspectorPlatformPayload() {
         "housing",
         "Housing",
         "1500.00",
+        1,
         null,
         null,
         null,
         "no_target",
-      ),
-    ],
-    category_monthly_target_status: [
-      categoryMonthlyTargetStatusPayload(
-        "2026-05",
-        "groceries",
-        "Groceries",
-        "over_user_target",
-        "130.56",
-        "100.00",
-        "30.56",
-        2,
-      ),
-      categoryMonthlyTargetStatusPayload(
-        "2026-05",
-        "housing",
-        "Housing",
-        "no_user_target",
-        "1500.00",
-        null,
-        null,
-        1,
       ),
     ],
     evidence_transactions: evidence,
@@ -2898,53 +2751,26 @@ function categoryMonthlyBudgetComparisonPayload(
   category,
   label,
   actualDebitTotal,
+  debitTransactionCount,
   targetDebitTotal,
   varianceAmount,
   variancePercent,
   status,
 ) {
   return {
-    schema_version: "transaction_category_monthly_budget_comparison_v0",
+    schema_version: "transaction_category_monthly_budget_comparison_v1",
     month,
     category,
     label,
     currency: "USD",
     actual_debit_total: actualDebitTotal,
+    debit_transaction_count: debitTransactionCount,
     target_debit_total: targetDebitTotal,
     variance_amount: varianceAmount,
     variance_percent: variancePercent,
     status,
     limitations: [
       "Category monthly budget comparison uses only user-provided monthly targets and posted-date-month category debit totals.",
-    ],
-  };
-}
-
-function categoryMonthlyTargetStatusPayload(
-  month,
-  category,
-  label,
-  targetStatus,
-  actualDebitTotal,
-  targetDebitTotal,
-  varianceAmount,
-  evidenceRowCount,
-) {
-  return {
-    schema_version: "transaction_category_monthly_target_status_v0",
-    month,
-    category,
-    label,
-    currency: "USD",
-    target_status: targetStatus,
-    actual_debit_total: actualDebitTotal,
-    target_debit_total: targetDebitTotal,
-    variance_amount: varianceAmount,
-    evidence_row_count: evidenceRowCount,
-    source_comparison_version:
-      "transaction_category_monthly_budget_comparison_v0",
-    limitations: [
-      "Category monthly target status uses only already-calculated monthly target comparison facts.",
     ],
   };
 }

@@ -66,8 +66,6 @@ export async function explainReportReviewFinding(
       contextPack.categoryEvidence?.budgetComparisonVersion,
     categoryMonthlyBudgetComparisonContext:
       contextPack.categoryEvidence?.categoryMonthlyBudgetComparisonVersion,
-    categoryMonthlyTargetStatusContext:
-      contextPack.categoryEvidence?.categoryMonthlyTargetStatusVersion,
     categoryMonthlySummaryContext:
       contextPack.categoryEvidence?.categoryMonthlySummaryVersion,
     categoryEvidenceContext: contextPack.categoryEvidence?.version,

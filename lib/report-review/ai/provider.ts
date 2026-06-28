@@ -312,10 +312,8 @@ function explainAnswer(contextPack: CoachContextPack) {
       contextPack.categoryEvidence.categoryMonthlySummaryRows.length;
     const monthlyTargetComparisonCount =
       contextPack.categoryEvidence.categoryMonthlyBudgetComparisons.length;
-    const monthlyTargetStatusCount =
-      contextPack.categoryEvidence.categoryMonthlyTargetStatuses.length;
 
-    return `This category evidence summary shows deterministic rule output for ${contextPack.categoryEvidence.categories.length.toLocaleString("en-US")} categor${contextPack.categoryEvidence.categories.length === 1 ? "y" : "ies"}, ${visibleEvidenceCount.toLocaleString("en-US")} bounded merchant-display evidence row${visibleEvidenceCount === 1 ? "" : "s"}, ${monthlyCategoryRowCount.toLocaleString("en-US")} aggregate category-by-month row${monthlyCategoryRowCount === 1 ? "" : "s"}, ${targetComparisonCount.toLocaleString("en-US")} user-entered target comparison${targetComparisonCount === 1 ? "" : "s"}, ${monthlyTargetComparisonCount.toLocaleString("en-US")} monthly target comparison row${monthlyTargetComparisonCount === 1 ? "" : "s"}, and ${monthlyTargetStatusCount.toLocaleString("en-US")} monthly target status row${monthlyTargetStatusCount === 1 ? "" : "s"}. It can explain which visible rows are attached to a category, what review status is selected, category-by-month aggregate facts, and any already-calculated target comparison or target status facts, but it cannot create targets, recategorize rows, score spending quality, recommend changes, or rank actions.`;
+    return `This category evidence summary shows deterministic rule output for ${contextPack.categoryEvidence.categories.length.toLocaleString("en-US")} categor${contextPack.categoryEvidence.categories.length === 1 ? "y" : "ies"}, ${visibleEvidenceCount.toLocaleString("en-US")} bounded merchant-display evidence row${visibleEvidenceCount === 1 ? "" : "s"}, ${monthlyCategoryRowCount.toLocaleString("en-US")} aggregate category-by-month row${monthlyCategoryRowCount === 1 ? "" : "s"}, ${targetComparisonCount.toLocaleString("en-US")} user-entered target comparison${targetComparisonCount === 1 ? "" : "s"}, and ${monthlyTargetComparisonCount.toLocaleString("en-US")} monthly target comparison row${monthlyTargetComparisonCount === 1 ? "" : "s"}. It can explain which visible rows are attached to a category, what review status is selected, category-by-month aggregate facts, and any already-calculated target comparison facts, but it cannot create targets, recategorize rows, score spending quality, recommend changes, or rank actions.`;
   }
 
   return "This context pack does not include enough supported detail to explain.";
@@ -445,21 +443,12 @@ function categoryEvidenceText(
       ? ` Monthly target comparison rows: ${categoryEvidence.categoryMonthlyBudgetComparisons
           .map(
             (comparison) =>
-              `${comparison.month} ${comparison.label}: actual ${comparison.actualDebitTotalLabel}, target ${comparison.targetDebitTotalLabel}, difference ${comparison.varianceAmountLabel} (${comparison.variancePercentLabel}), status ${comparison.statusLabel}`,
+              `${comparison.month} ${comparison.label}: actual ${comparison.actualDebitTotalLabel}, target ${comparison.targetDebitTotalLabel}, difference ${comparison.varianceAmountLabel} (${comparison.variancePercentLabel}), status ${comparison.statusLabel}, debit rows ${comparison.debitTransactionCount.toLocaleString("en-US")}`,
           )
           .join("; ")}.`
       : " No monthly target comparison rows are available.";
-  const monthlyTargetStatusRows =
-    categoryEvidence.categoryMonthlyTargetStatuses.length > 0
-      ? ` Monthly target status rows: ${categoryEvidence.categoryMonthlyTargetStatuses
-          .map(
-            (targetStatus) =>
-              `${targetStatus.month} ${targetStatus.label}: ${targetStatus.targetStatusLabel}, actual ${targetStatus.actualDebitTotalLabel}, target ${targetStatus.targetDebitTotalLabel}, difference ${targetStatus.varianceAmountLabel}, evidence rows ${targetStatus.evidenceRowCount.toLocaleString("en-US")}`,
-          )
-          .join("; ")}.`
-      : " No monthly target status rows are available.";
 
-  return `${categoryRows}${monthlyRows}${monthlyBudgetRows}${monthlyTargetStatusRows}`;
+  return `${categoryRows}${monthlyRows}${monthlyBudgetRows}`;
 }
 
 function defaultLimitations(contextPack: CoachContextPack) {
