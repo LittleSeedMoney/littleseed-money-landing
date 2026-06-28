@@ -16,7 +16,7 @@ export type PlatformChargeInspectorReviewResponse = {
   category_summary_version: string;
   category_monthly_summary_version: string;
   category_monthly_budget_comparison_version: string;
-  category_monthly_budget_judgement_version: string;
+  category_monthly_target_status_version: string;
   reviewed_transaction_count: number;
   parse_error_count: number;
   findings: {
@@ -29,7 +29,7 @@ export type PlatformChargeInspectorReviewResponse = {
   category_summary: PlatformTransactionCategorySummary[];
   category_monthly_summary: PlatformTransactionCategoryMonthlySummary[];
   category_monthly_budget_comparison: PlatformTransactionCategoryMonthlyBudgetComparison[];
-  category_monthly_budget_judgement: PlatformTransactionCategoryMonthlyBudgetJudgement[];
+  category_monthly_target_status: PlatformTransactionCategoryMonthlyTargetStatus[];
   evidence_transactions: PlatformNormalizedTransaction[];
   parse_errors: PlatformCsvTransactionValidationError[];
   limitations: string[];
@@ -79,13 +79,13 @@ export type PlatformTransactionCategoryMonthlyBudgetComparison = {
   limitations: string[];
 };
 
-export type PlatformTransactionCategoryMonthlyBudgetJudgement = {
+export type PlatformTransactionCategoryMonthlyTargetStatus = {
   schema_version: string;
   month: string;
   category: string;
   label: string;
   currency: string;
-  judgement: string;
+  target_status: string;
   actual_debit_total: DecimalValue;
   target_debit_total: DecimalValue | null;
   variance_amount: DecimalValue | null;
@@ -275,12 +275,12 @@ export function parseChargeInspectorReviewResponse(
             response.category_monthly_budget_comparison_version,
             "charge-inspector response.category_monthly_budget_comparison_version",
           ),
-    category_monthly_budget_judgement_version:
-      response.category_monthly_budget_judgement_version == null
+    category_monthly_target_status_version:
+      response.category_monthly_target_status_version == null
         ? "not_returned"
         : expectString(
-            response.category_monthly_budget_judgement_version,
-            "charge-inspector response.category_monthly_budget_judgement_version",
+            response.category_monthly_target_status_version,
+            "charge-inspector response.category_monthly_target_status_version",
           ),
     reviewed_transaction_count: expectNumber(
       response.reviewed_transaction_count,
@@ -344,13 +344,13 @@ export function parseChargeInspectorReviewResponse(
             "charge-inspector response.category_monthly_budget_comparison",
             parseTransactionCategoryMonthlyBudgetComparison,
           ),
-    category_monthly_budget_judgement:
-      response.category_monthly_budget_judgement == null
+    category_monthly_target_status:
+      response.category_monthly_target_status == null
         ? []
         : parseArray(
-            response.category_monthly_budget_judgement,
-            "charge-inspector response.category_monthly_budget_judgement",
-            parseTransactionCategoryMonthlyBudgetJudgement,
+            response.category_monthly_target_status,
+            "charge-inspector response.category_monthly_target_status",
+            parseTransactionCategoryMonthlyTargetStatus,
           ),
     evidence_transactions: parseArray(
       response.evidence_transactions,
@@ -474,42 +474,42 @@ function parseTransactionCategoryMonthlyBudgetComparison(
   };
 }
 
-function parseTransactionCategoryMonthlyBudgetJudgement(
+function parseTransactionCategoryMonthlyTargetStatus(
   value: unknown,
   path: string,
-): PlatformTransactionCategoryMonthlyBudgetJudgement {
-  const judgement = expectRecord(value, path);
+): PlatformTransactionCategoryMonthlyTargetStatus {
+  const targetStatus = expectRecord(value, path);
   return {
-    schema_version: expectString(judgement.schema_version, `${path}.schema_version`),
-    month: expectString(judgement.month, `${path}.month`),
-    category: expectString(judgement.category, `${path}.category`),
-    label: expectString(judgement.label, `${path}.label`),
-    currency: expectString(judgement.currency, `${path}.currency`),
-    judgement: expectString(judgement.judgement, `${path}.judgement`),
+    schema_version: expectString(targetStatus.schema_version, `${path}.schema_version`),
+    month: expectString(targetStatus.month, `${path}.month`),
+    category: expectString(targetStatus.category, `${path}.category`),
+    label: expectString(targetStatus.label, `${path}.label`),
+    currency: expectString(targetStatus.currency, `${path}.currency`),
+    target_status: expectString(targetStatus.target_status, `${path}.target_status`),
     actual_debit_total: expectDecimalValue(
-      judgement.actual_debit_total,
+      targetStatus.actual_debit_total,
       `${path}.actual_debit_total`,
     ),
     target_debit_total:
-      judgement.target_debit_total == null
+      targetStatus.target_debit_total == null
         ? null
         : expectDecimalValue(
-            judgement.target_debit_total,
+            targetStatus.target_debit_total,
             `${path}.target_debit_total`,
           ),
     variance_amount:
-      judgement.variance_amount == null
+      targetStatus.variance_amount == null
         ? null
-        : expectDecimalValue(judgement.variance_amount, `${path}.variance_amount`),
+        : expectDecimalValue(targetStatus.variance_amount, `${path}.variance_amount`),
     evidence_row_count: expectNumber(
-      judgement.evidence_row_count,
+      targetStatus.evidence_row_count,
       `${path}.evidence_row_count`,
     ),
     source_comparison_version: expectString(
-      judgement.source_comparison_version,
+      targetStatus.source_comparison_version,
       `${path}.source_comparison_version`,
     ),
-    limitations: parseStringArray(judgement.limitations, `${path}.limitations`),
+    limitations: parseStringArray(targetStatus.limitations, `${path}.limitations`),
   };
 }
 

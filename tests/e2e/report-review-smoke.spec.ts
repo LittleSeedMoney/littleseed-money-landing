@@ -692,9 +692,9 @@ function uploadedChargeInspectorReview() {
     categoryMonthlyBudgetComparison: [],
     categoryMonthlyBudgetComparisonVersion:
       "transaction_category_monthly_budget_comparison_v0",
-    categoryMonthlyBudgetJudgement: [],
-    categoryMonthlyBudgetJudgementVersion:
-      "transaction_category_monthly_budget_judgement_v0",
+    categoryMonthlyTargetStatus: [],
+    categoryMonthlyTargetStatusVersion:
+      "transaction_category_monthly_target_status_v0",
     limitations: [
       "This review uses only the uploaded CSV rows for the current request.",
       "No account connection, continuous monitoring, or stored transaction history is introduced.",

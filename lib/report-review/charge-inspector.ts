@@ -3,7 +3,7 @@ import type {
   PlatformBankFeeCandidate,
   PlatformChargeInspectorReviewResponse,
   PlatformTransactionCategoryMonthlyBudgetComparison,
-  PlatformTransactionCategoryMonthlyBudgetJudgement,
+  PlatformTransactionCategoryMonthlyTargetStatus,
   PlatformTransactionCategoryMonthlySummary,
   PlatformTransactionCategorySummary,
   PlatformTransactionCategoryEvidenceRow,
@@ -131,13 +131,12 @@ export type ChargeInspectorCategoryMonthlyBudgetComparison = {
   limitations: string[];
 };
 
-export type ChargeInspectorCategoryMonthlyBudgetJudgementStatus =
+export type ChargeInspectorCategoryMonthlyTargetStatusValue =
   | "over-user-target"
   | "within-user-target"
-  | "no-user-target"
-  | "insufficient-context";
+  | "no-user-target";
 
-export type ChargeInspectorCategoryMonthlyBudgetJudgement = {
+export type ChargeInspectorCategoryMonthlyTargetStatus = {
   month: string;
   category: string;
   label: string;
@@ -148,8 +147,8 @@ export type ChargeInspectorCategoryMonthlyBudgetJudgement = {
   varianceAmountCents: number | null;
   varianceAmountLabel: string;
   evidenceRowCount: number;
-  judgement: ChargeInspectorCategoryMonthlyBudgetJudgementStatus;
-  judgementLabel: string;
+  targetStatus: ChargeInspectorCategoryMonthlyTargetStatusValue;
+  targetStatusLabel: string;
   sourceComparisonVersion: string;
   limitations: string[];
 };
@@ -186,12 +185,12 @@ export type ChargeInspectorReview = {
   categorySummaryVersion: string;
   categoryMonthlySummaryVersion: string;
   categoryMonthlyBudgetComparisonVersion: string;
-  categoryMonthlyBudgetJudgementVersion: string;
+  categoryMonthlyTargetStatusVersion: string;
   monthlySpendingSummary: ChargeInspectorMonthlySummary[];
   categorySummary: ChargeInspectorCategorySummary[];
   categoryMonthlySummary: ChargeInspectorCategoryMonthlySummary[];
   categoryMonthlyBudgetComparison: ChargeInspectorCategoryMonthlyBudgetComparison[];
-  categoryMonthlyBudgetJudgement: ChargeInspectorCategoryMonthlyBudgetJudgement[];
+  categoryMonthlyTargetStatus: ChargeInspectorCategoryMonthlyTargetStatus[];
   findings: ChargeInspectorFinding[];
   emptyState: ChargeInspectorEmptyState;
   limitations: string[];
@@ -274,7 +273,7 @@ export const chargeInspectorSampleReview: ChargeInspectorReview = {
   categorySummaryVersion: "sample_fixture",
   categoryMonthlySummaryVersion: "sample_fixture",
   categoryMonthlyBudgetComparisonVersion: "sample_fixture",
-  categoryMonthlyBudgetJudgementVersion: "sample_fixture",
+  categoryMonthlyTargetStatusVersion: "sample_fixture",
   monthlySpendingSummary: [
     {
       month: "2026-03",
@@ -464,7 +463,7 @@ export const chargeInspectorSampleReview: ChargeInspectorReview = {
     categoryMonthlySummary("2026-05", "shopping", "Shopping", "18.90", "0", 1, 1, 0),
   ],
   categoryMonthlyBudgetComparison: [],
-  categoryMonthlyBudgetJudgement: [],
+  categoryMonthlyTargetStatus: [],
   findings: [
     {
       id: "sample-recurring-streaming",
@@ -636,12 +635,12 @@ export const chargeInspectorEmptyReview: ChargeInspectorReview = {
   categorySummaryVersion: "not_applicable",
   categoryMonthlySummaryVersion: "not_applicable",
   categoryMonthlyBudgetComparisonVersion: "not_applicable",
-  categoryMonthlyBudgetJudgementVersion: "not_applicable",
+  categoryMonthlyTargetStatusVersion: "not_applicable",
   monthlySpendingSummary: [],
   categorySummary: [],
   categoryMonthlySummary: [],
   categoryMonthlyBudgetComparison: [],
-  categoryMonthlyBudgetJudgement: [],
+  categoryMonthlyTargetStatus: [],
   findings: [],
   emptyState: chargeInspectorSampleReview.emptyState,
   limitations: chargeInspectorSampleReview.limitations,
@@ -655,12 +654,12 @@ export const chargeInspectorFallbackReview: ChargeInspectorReview = {
   categorySummaryVersion: "not_available",
   categoryMonthlySummaryVersion: "not_available",
   categoryMonthlyBudgetComparisonVersion: "not_available",
-  categoryMonthlyBudgetJudgementVersion: "not_available",
+  categoryMonthlyTargetStatusVersion: "not_available",
   monthlySpendingSummary: [],
   categorySummary: [],
   categoryMonthlySummary: [],
   categoryMonthlyBudgetComparison: [],
-  categoryMonthlyBudgetJudgement: [],
+  categoryMonthlyTargetStatus: [],
   findings: [],
   emptyState: {
     title: "Charge Inspector did not load",
@@ -890,16 +889,16 @@ export function mergeCategoryMonthlyBudgetComparisons(
   );
 }
 
-export function judgeCategoryMonthlyBudgetComparisons(
+export function deriveCategoryMonthlyTargetStatuses(
   comparisons: ChargeInspectorCategoryMonthlyBudgetComparison[],
   rows: ChargeInspectorCategoryMonthlySummary[],
-): ChargeInspectorCategoryMonthlyBudgetJudgement[] {
+): ChargeInspectorCategoryMonthlyTargetStatus[] {
   const rowsByMonthCategory = new Map(
     rows.map((row) => [`${row.month}:${row.category}`, row]),
   );
 
   return comparisons.map((comparison) =>
-    categoryMonthlyBudgetJudgement({
+    categoryMonthlyTargetStatus({
       comparison,
       row:
         rowsByMonthCategory.get(
@@ -909,45 +908,48 @@ export function judgeCategoryMonthlyBudgetComparisons(
   );
 }
 
-export function mergeCategoryMonthlyBudgetJudgements(
-  platformJudgements: ChargeInspectorCategoryMonthlyBudgetJudgement[],
-  localJudgements: ChargeInspectorCategoryMonthlyBudgetJudgement[],
-): ChargeInspectorCategoryMonthlyBudgetJudgement[] {
-  if (localJudgements.length === 0) {
-    return platformJudgements;
+export function mergeCategoryMonthlyTargetStatuses(
+  platformTargetStatuses: ChargeInspectorCategoryMonthlyTargetStatus[],
+  localTargetStatuses: ChargeInspectorCategoryMonthlyTargetStatus[],
+): ChargeInspectorCategoryMonthlyTargetStatus[] {
+  if (localTargetStatuses.length === 0) {
+    return platformTargetStatuses;
   }
 
-  if (platformJudgements.length === 0) {
-    return localJudgements;
+  if (platformTargetStatuses.length === 0) {
+    return localTargetStatuses;
   }
 
   const mergedByMonthCategory = new Map(
-    platformJudgements.map((judgement) => [
-      categoryMonthlyBudgetJudgementKey(judgement),
-      judgement,
+    platformTargetStatuses.map((targetStatus) => [
+      categoryMonthlyTargetStatusKey(targetStatus),
+      targetStatus,
     ]),
   );
 
-  for (const judgement of localJudgements) {
-    mergedByMonthCategory.set(
-      categoryMonthlyBudgetJudgementKey(judgement),
-      judgement,
-    );
+  for (const targetStatus of localTargetStatuses) {
+    const key = categoryMonthlyTargetStatusKey(targetStatus);
+    if (
+      targetStatus.targetDebitTotalCents !== null ||
+      !mergedByMonthCategory.has(key)
+    ) {
+      mergedByMonthCategory.set(key, targetStatus);
+    }
   }
 
   return [...mergedByMonthCategory.values()].sort(
-    compareCategoryMonthlyBudgetJudgementRows,
+    compareCategoryMonthlyTargetStatusRows,
   );
 }
 
-function categoryMonthlyBudgetJudgement({
+function categoryMonthlyTargetStatus({
   comparison,
   row,
 }: {
   comparison: ChargeInspectorCategoryMonthlyBudgetComparison;
   row: ChargeInspectorCategoryMonthlySummary | null;
-}): ChargeInspectorCategoryMonthlyBudgetJudgement {
-  const judgement = categoryMonthlyBudgetJudgementStatus(comparison.status);
+}): ChargeInspectorCategoryMonthlyTargetStatus {
+  const targetStatus = categoryMonthlyTargetStatusValue(comparison.status);
 
   return {
     month: comparison.month,
@@ -960,19 +962,19 @@ function categoryMonthlyBudgetJudgement({
     varianceAmountCents: comparison.varianceAmountCents,
     varianceAmountLabel: comparison.varianceAmountLabel,
     evidenceRowCount: row?.debitTransactionCount ?? 0,
-    judgement,
-    judgementLabel: categoryMonthlyBudgetJudgementStatusLabel(judgement),
+    targetStatus,
+    targetStatusLabel: categoryMonthlyTargetStatusLabel(targetStatus),
     sourceComparisonVersion: "transaction_category_monthly_budget_comparison_v0",
     limitations: [
-      "Budget judgement uses only already-calculated monthly target comparison facts.",
+      "Target status uses only already-calculated monthly target comparison facts.",
       "This is not spending advice, category ranking, merchant action, or an automation decision.",
     ],
   };
 }
 
-function categoryMonthlyBudgetJudgementStatus(
+function categoryMonthlyTargetStatusValue(
   status: ChargeInspectorCategoryMonthlyBudgetComparisonStatus,
-): ChargeInspectorCategoryMonthlyBudgetJudgementStatus {
+): ChargeInspectorCategoryMonthlyTargetStatusValue {
   if (status === "over-target") {
     return "over-user-target";
   }
@@ -1056,10 +1058,10 @@ function categoryMonthlyBudgetComparisonKey(
   return `${comparison.month}:${comparison.category}`;
 }
 
-function categoryMonthlyBudgetJudgementKey(
-  judgement: ChargeInspectorCategoryMonthlyBudgetJudgement,
+function categoryMonthlyTargetStatusKey(
+  targetStatus: ChargeInspectorCategoryMonthlyTargetStatus,
 ) {
-  return `${judgement.month}:${judgement.category}`;
+  return `${targetStatus.month}:${targetStatus.category}`;
 }
 
 function compareCategoryMonthlyBudgetComparisonRows(
@@ -1079,9 +1081,9 @@ function compareCategoryMonthlyBudgetComparisonRows(
   return left.label.localeCompare(right.label);
 }
 
-function compareCategoryMonthlyBudgetJudgementRows(
-  left: ChargeInspectorCategoryMonthlyBudgetJudgement,
-  right: ChargeInspectorCategoryMonthlyBudgetJudgement,
+function compareCategoryMonthlyTargetStatusRows(
+  left: ChargeInspectorCategoryMonthlyTargetStatus,
+  right: ChargeInspectorCategoryMonthlyTargetStatus,
 ) {
   const monthComparison = left.month.localeCompare(right.month);
   if (monthComparison !== 0) {
@@ -1123,8 +1125,8 @@ export function mapPlatformChargeInspectorReview(
     categoryMonthlySummaryVersion: response.category_monthly_summary_version,
     categoryMonthlyBudgetComparisonVersion:
       response.category_monthly_budget_comparison_version,
-    categoryMonthlyBudgetJudgementVersion:
-      response.category_monthly_budget_judgement_version,
+    categoryMonthlyTargetStatusVersion:
+      response.category_monthly_target_status_version,
     monthlySpendingSummary: response.monthly_spending_summary.map(
       mapMonthlySpendingSummary,
     ),
@@ -1136,9 +1138,9 @@ export function mapPlatformChargeInspectorReview(
       response.category_monthly_budget_comparison.map(
         mapCategoryMonthlyBudgetComparison,
       ),
-    categoryMonthlyBudgetJudgement:
-      response.category_monthly_budget_judgement.map(
-        mapCategoryMonthlyBudgetJudgement,
+    categoryMonthlyTargetStatus:
+      response.category_monthly_target_status.map(
+        mapCategoryMonthlyTargetStatus,
       ),
     findings: [
       ...response.findings.recurring_charges.map((candidate) =>
@@ -1225,25 +1227,25 @@ function mapCategoryMonthlyBudgetComparison(
   };
 }
 
-function mapCategoryMonthlyBudgetJudgement(
-  judgement: PlatformTransactionCategoryMonthlyBudgetJudgement,
-): ChargeInspectorCategoryMonthlyBudgetJudgement {
+function mapCategoryMonthlyTargetStatus(
+  targetStatus: PlatformTransactionCategoryMonthlyTargetStatus,
+): ChargeInspectorCategoryMonthlyTargetStatus {
   const targetDebitTotalCents =
-    judgement.target_debit_total === null
+    targetStatus.target_debit_total === null
       ? null
-      : cents(judgement.target_debit_total);
+      : cents(targetStatus.target_debit_total);
   const varianceAmountCents =
-    judgement.variance_amount === null
+    targetStatus.variance_amount === null
       ? null
-      : cents(judgement.variance_amount);
-  const status = mapCategoryMonthlyBudgetJudgementStatus(judgement.judgement);
+      : cents(targetStatus.variance_amount);
+  const status = mapCategoryMonthlyTargetStatusValue(targetStatus.target_status);
 
   return {
-    month: judgement.month,
-    category: judgement.category,
-    label: judgement.label,
-    actualDebitTotalCents: cents(judgement.actual_debit_total),
-    actualDebitTotalLabel: money(judgement.actual_debit_total),
+    month: targetStatus.month,
+    category: targetStatus.category,
+    label: targetStatus.label,
+    actualDebitTotalCents: cents(targetStatus.actual_debit_total),
+    actualDebitTotalLabel: money(targetStatus.actual_debit_total),
     targetDebitTotalCents,
     targetDebitTotalLabel:
       targetDebitTotalCents === null
@@ -1254,11 +1256,11 @@ function mapCategoryMonthlyBudgetJudgement(
       varianceAmountCents === null
         ? "No target"
         : categoryBudgetVarianceLabel(varianceAmountCents),
-    evidenceRowCount: judgement.evidence_row_count,
-    judgement: status,
-    judgementLabel: categoryMonthlyBudgetJudgementStatusLabel(status),
-    sourceComparisonVersion: judgement.source_comparison_version,
-    limitations: judgement.limitations,
+    evidenceRowCount: targetStatus.evidence_row_count,
+    targetStatus: status,
+    targetStatusLabel: categoryMonthlyTargetStatusLabel(status),
+    sourceComparisonVersion: targetStatus.source_comparison_version,
+    limitations: targetStatus.limitations,
   };
 }
 
@@ -1276,9 +1278,9 @@ function mapCategoryMonthlyBudgetComparisonStatus(
   return "no-target";
 }
 
-function mapCategoryMonthlyBudgetJudgementStatus(
+function mapCategoryMonthlyTargetStatusValue(
   status: string,
-): ChargeInspectorCategoryMonthlyBudgetJudgementStatus {
+): ChargeInspectorCategoryMonthlyTargetStatusValue {
   if (status === "over_user_target") {
     return "over-user-target";
   }
@@ -1287,11 +1289,11 @@ function mapCategoryMonthlyBudgetJudgementStatus(
     return "within-user-target";
   }
 
-  if (status === "insufficient_context") {
-    return "insufficient-context";
+  if (status === "no_user_target") {
+    return "no-user-target";
   }
 
-  return "no-user-target";
+  throw new Error(`Unsupported monthly target status: ${status}`);
 }
 
 function categoryMonthlyBudgetComparisonStatusLabel(
@@ -1308,8 +1310,8 @@ function categoryMonthlyBudgetComparisonStatusLabel(
   return "No target";
 }
 
-function categoryMonthlyBudgetJudgementStatusLabel(
-  status: ChargeInspectorCategoryMonthlyBudgetJudgementStatus,
+function categoryMonthlyTargetStatusLabel(
+  status: ChargeInspectorCategoryMonthlyTargetStatusValue,
 ) {
   if (status === "over-user-target") {
     return "Over user target";
@@ -1319,11 +1321,7 @@ function categoryMonthlyBudgetJudgementStatusLabel(
     return "Within user target";
   }
 
-  if (status === "no-user-target") {
-    return "No user target";
-  }
-
-  return "Insufficient context";
+  return "No user target";
 }
 
 function mapCategorySummary(

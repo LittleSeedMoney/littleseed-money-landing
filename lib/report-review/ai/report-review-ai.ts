@@ -66,8 +66,8 @@ export async function explainReportReviewFinding(
       contextPack.categoryEvidence?.budgetComparisonVersion,
     categoryMonthlyBudgetComparisonContext:
       contextPack.categoryEvidence?.categoryMonthlyBudgetComparisonVersion,
-    categoryMonthlyBudgetJudgementContext:
-      contextPack.categoryEvidence?.categoryMonthlyBudgetJudgementVersion,
+    categoryMonthlyTargetStatusContext:
+      contextPack.categoryEvidence?.categoryMonthlyTargetStatusVersion,
     categoryMonthlySummaryContext:
       contextPack.categoryEvidence?.categoryMonthlySummaryVersion,
     categoryEvidenceContext: contextPack.categoryEvidence?.version,
@@ -328,6 +328,9 @@ function rejectClientSuppliedContext(record: Record<string, unknown>) {
     "categoryMonthlyBudgetComparison",
     "categoryMonthlyBudgetComparisons",
     "categoryMonthlyBudgetComparisonRows",
+    "categoryMonthlyTargetStatus",
+    "categoryMonthlyTargetStatuses",
+    "categoryMonthlyTargetStatusRows",
     "categoryMonthlyBudgetJudgement",
     "categoryMonthlyBudgetJudgements",
     "categoryMonthlyBudgetJudgementRows",

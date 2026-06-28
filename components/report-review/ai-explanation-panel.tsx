@@ -460,10 +460,10 @@ function AiAnswerResult({ answer }: { answer: ReportReviewAiResponse }) {
               value={answer.versions.categoryMonthlyBudgetComparisonContext}
             />
           ) : null}
-          {answer.versions.categoryMonthlyBudgetJudgementContext ? (
+          {answer.versions.categoryMonthlyTargetStatusContext ? (
             <VersionItem
-              label="Budget judgement"
-              value={answer.versions.categoryMonthlyBudgetJudgementContext}
+              label="Target status"
+              value={answer.versions.categoryMonthlyTargetStatusContext}
             />
           ) : null}
           <VersionItem label="Corpus" value={answer.versions.corpus} />

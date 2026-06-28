@@ -14,9 +14,9 @@ import {
   compareCategoryBudgetTargets,
   compareCategoryMonthlyBudgetTargets,
   isChargeInspectorEmpty,
-  judgeCategoryMonthlyBudgetComparisons,
+  deriveCategoryMonthlyTargetStatuses,
   mergeCategoryMonthlyBudgetComparisons,
-  mergeCategoryMonthlyBudgetJudgements,
+  mergeCategoryMonthlyTargetStatuses,
   parseCategoryBudgetTargetInput,
   recurringPaymentReviewItems,
   summarizeChargeInspectorReview,
@@ -24,7 +24,7 @@ import {
   type ChargeInspectorCategoryBudgetComparison,
   type ChargeInspectorCategoryBudgetTargetAmounts,
   type ChargeInspectorCategoryMonthlyBudgetComparison,
-  type ChargeInspectorCategoryMonthlyBudgetJudgement,
+  type ChargeInspectorCategoryMonthlyTargetStatus,
   type ChargeInspectorCategoryReviewStatus,
   type ChargeInspectorFinding,
   type ChargeInspectorCategoryMonthlySummary,
@@ -651,31 +651,31 @@ function CategoryMonthlySummaryTable({
       ),
     [localBudgetComparisons, review.categoryMonthlyBudgetComparison],
   );
-  const localBudgetJudgements = useMemo(
+  const localTargetStatuses = useMemo(
     () =>
-      judgeCategoryMonthlyBudgetComparisons(
+      deriveCategoryMonthlyTargetStatuses(
         budgetComparisons,
         review.categoryMonthlySummary,
       ),
     [budgetComparisons, review.categoryMonthlySummary],
   );
-  const budgetJudgements = useMemo(
+  const targetStatuses = useMemo(
     () =>
-      mergeCategoryMonthlyBudgetJudgements(
-        review.categoryMonthlyBudgetJudgement,
-        localBudgetJudgements,
+      mergeCategoryMonthlyTargetStatuses(
+        review.categoryMonthlyTargetStatus,
+        localTargetStatuses,
       ),
-    [localBudgetJudgements, review.categoryMonthlyBudgetJudgement],
+    [localTargetStatuses, review.categoryMonthlyTargetStatus],
   );
-  const budgetJudgementByMonthCategory = useMemo(
+  const targetStatusByMonthCategory = useMemo(
     () =>
       new Map(
-        budgetJudgements.map((judgement) => [
-          `${judgement.month}:${judgement.category}`,
-          judgement,
+        targetStatuses.map((targetStatus) => [
+          `${targetStatus.month}:${targetStatus.category}`,
+          targetStatus,
         ]),
       ),
-    [budgetJudgements],
+    [targetStatuses],
   );
   const budgetCounts = useMemo(
     () => summarizeCategoryMonthlyBudgetComparisons(budgetComparisons),
@@ -720,7 +720,7 @@ function CategoryMonthlySummaryTable({
         <table
           className={[
             "w-full text-left text-sm",
-            showBudgetComparison ? "min-w-[64rem]" : "min-w-[44rem]",
+            showBudgetComparison ? "min-w-[58rem]" : "min-w-[44rem]",
           ].join(" ")}
         >
           <thead className="border-b border-stone-200 text-xs font-semibold uppercase text-earth-600">
@@ -731,8 +731,7 @@ function CategoryMonthlySummaryTable({
                 <th className="px-3 py-2">Spending</th>
                 <th className="px-3 py-2">Target</th>
                 <th className="px-3 py-2">Difference</th>
-                <th className="px-3 py-2">Status</th>
-                <th className="py-2 pl-3">Judgement</th>
+                <th className="py-2 pl-3">Target result</th>
               </tr>
             ) : (
               <tr>
@@ -750,8 +749,8 @@ function CategoryMonthlySummaryTable({
               ? budgetComparisons.map((comparison) => (
                   <CategoryMonthlyBudgetComparisonRow
                     comparison={comparison}
-                    judgement={
-                      budgetJudgementByMonthCategory.get(
+                    targetStatus={
+                      targetStatusByMonthCategory.get(
                         `${comparison.month}:${comparison.category}`,
                       ) ?? null
                     }
@@ -773,7 +772,7 @@ function CategoryMonthlySummaryTable({
         a monthly budget, spending-quality judgment, action priority, or saved
         category memory. Monthly target comparison appears only when a
         user-entered target is available and uses posted-date-month category
-        debit totals. Judgement badges are factual states against user-entered
+        debit totals. Target result badges are factual states against user-entered
         targets, not category rankings or spending instructions.
       </p>
     </div>
@@ -829,11 +828,18 @@ function CategoryMonthlySummaryRow({
 
 function CategoryMonthlyBudgetComparisonRow({
   comparison,
-  judgement,
+  targetStatus,
 }: {
   comparison: ChargeInspectorCategoryMonthlyBudgetComparison;
-  judgement: ChargeInspectorCategoryMonthlyBudgetJudgement | null;
+  targetStatus: ChargeInspectorCategoryMonthlyTargetStatus | null;
 }) {
+  const targetResultLabel =
+    targetStatus?.targetStatusLabel ??
+    categoryMonthlyFallbackTargetStatusLabel(comparison.status);
+  const targetResultStatus =
+    targetStatus?.targetStatus ??
+    categoryMonthlyFallbackTargetStatusValue(comparison.status);
+
   return (
     <tr data-testid="charge-inspector-category-monthly-budget-row">
       <td className="py-2 pr-3 font-medium text-seed-950">
@@ -856,24 +862,40 @@ function CategoryMonthlyBudgetComparisonRow({
       </td>
       <td className="py-2 pl-3">
         <StatusPill
-          label={comparison.statusLabel}
-          tone={comparison.status === "over-target" ? "earth" : "stone"}
+          label={targetResultLabel}
+          tone={targetResultStatus === "over-user-target" ? "earth" : "stone"}
         />
-      </td>
-      <td className="py-2 pl-3">
-        {judgement ? (
-          <StatusPill
-            label={judgement.judgementLabel}
-            tone={
-              judgement.judgement === "over-user-target" ? "earth" : "stone"
-            }
-          />
-        ) : (
-          <span className="text-xs text-earth-500">Not available</span>
-        )}
       </td>
     </tr>
   );
+}
+
+function categoryMonthlyFallbackTargetStatusValue(
+  status: ChargeInspectorCategoryMonthlyBudgetComparison["status"],
+) {
+  if (status === "over-target") {
+    return "over-user-target";
+  }
+
+  if (status === "within-target") {
+    return "within-user-target";
+  }
+
+  return "no-user-target";
+}
+
+function categoryMonthlyFallbackTargetStatusLabel(
+  status: ChargeInspectorCategoryMonthlyBudgetComparison["status"],
+) {
+  if (status === "over-target") {
+    return "Over user target";
+  }
+
+  if (status === "within-target") {
+    return "Within user target";
+  }
+
+  return "No user target";
 }
 
 function CategorySummaryRow({

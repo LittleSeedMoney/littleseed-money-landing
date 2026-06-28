@@ -312,10 +312,10 @@ function explainAnswer(contextPack: CoachContextPack) {
       contextPack.categoryEvidence.categoryMonthlySummaryRows.length;
     const monthlyTargetComparisonCount =
       contextPack.categoryEvidence.categoryMonthlyBudgetComparisons.length;
-    const monthlyJudgementCount =
-      contextPack.categoryEvidence.categoryMonthlyBudgetJudgements.length;
+    const monthlyTargetStatusCount =
+      contextPack.categoryEvidence.categoryMonthlyTargetStatuses.length;
 
-    return `This category evidence summary shows deterministic rule output for ${contextPack.categoryEvidence.categories.length.toLocaleString("en-US")} categor${contextPack.categoryEvidence.categories.length === 1 ? "y" : "ies"}, ${visibleEvidenceCount.toLocaleString("en-US")} bounded merchant-display evidence row${visibleEvidenceCount === 1 ? "" : "s"}, ${monthlyCategoryRowCount.toLocaleString("en-US")} aggregate category-by-month row${monthlyCategoryRowCount === 1 ? "" : "s"}, ${targetComparisonCount.toLocaleString("en-US")} user-entered target comparison${targetComparisonCount === 1 ? "" : "s"}, ${monthlyTargetComparisonCount.toLocaleString("en-US")} monthly target comparison row${monthlyTargetComparisonCount === 1 ? "" : "s"}, and ${monthlyJudgementCount.toLocaleString("en-US")} monthly budget judgement row${monthlyJudgementCount === 1 ? "" : "s"}. It can explain which visible rows are attached to a category, what review status is selected, category-by-month aggregate facts, and any already-calculated target comparison or judgement facts, but it cannot create targets, recategorize rows, score spending quality, recommend changes, or rank actions.`;
+    return `This category evidence summary shows deterministic rule output for ${contextPack.categoryEvidence.categories.length.toLocaleString("en-US")} categor${contextPack.categoryEvidence.categories.length === 1 ? "y" : "ies"}, ${visibleEvidenceCount.toLocaleString("en-US")} bounded merchant-display evidence row${visibleEvidenceCount === 1 ? "" : "s"}, ${monthlyCategoryRowCount.toLocaleString("en-US")} aggregate category-by-month row${monthlyCategoryRowCount === 1 ? "" : "s"}, ${targetComparisonCount.toLocaleString("en-US")} user-entered target comparison${targetComparisonCount === 1 ? "" : "s"}, ${monthlyTargetComparisonCount.toLocaleString("en-US")} monthly target comparison row${monthlyTargetComparisonCount === 1 ? "" : "s"}, and ${monthlyTargetStatusCount.toLocaleString("en-US")} monthly target status row${monthlyTargetStatusCount === 1 ? "" : "s"}. It can explain which visible rows are attached to a category, what review status is selected, category-by-month aggregate facts, and any already-calculated target comparison or target status facts, but it cannot create targets, recategorize rows, score spending quality, recommend changes, or rank actions.`;
   }
 
   return "This context pack does not include enough supported detail to explain.";
@@ -331,7 +331,7 @@ function plainLanguageAnswer(contextPack: CoachContextPack) {
   }
 
   if (contextPack.categoryEvidence) {
-    return "In plain language, category evidence is the visible trail behind the category table: category totals, matched merchant-display rows, rule ids, current review status, and optional user-entered target comparisons by review period and month. It is explanation support, not an automatic recategorization, target recommendation, or spending judgement.";
+    return "In plain language, category evidence is the visible trail behind the category table: category totals, matched merchant-display rows, rule ids, current review status, and optional user-entered target comparisons by review period and month. It is explanation support, not an automatic recategorization, target recommendation, or spending-quality assessment.";
   }
 
   return "In plain language, this context pack does not include enough supported detail to explain.";
@@ -449,17 +449,17 @@ function categoryEvidenceText(
           )
           .join("; ")}.`
       : " No monthly target comparison rows are available.";
-  const monthlyJudgementRows =
-    categoryEvidence.categoryMonthlyBudgetJudgements.length > 0
-      ? ` Monthly budget judgement rows: ${categoryEvidence.categoryMonthlyBudgetJudgements
+  const monthlyTargetStatusRows =
+    categoryEvidence.categoryMonthlyTargetStatuses.length > 0
+      ? ` Monthly target status rows: ${categoryEvidence.categoryMonthlyTargetStatuses
           .map(
-            (judgement) =>
-              `${judgement.month} ${judgement.label}: ${judgement.judgementLabel}, actual ${judgement.actualDebitTotalLabel}, target ${judgement.targetDebitTotalLabel}, difference ${judgement.varianceAmountLabel}, evidence rows ${judgement.evidenceRowCount.toLocaleString("en-US")}`,
+            (targetStatus) =>
+              `${targetStatus.month} ${targetStatus.label}: ${targetStatus.targetStatusLabel}, actual ${targetStatus.actualDebitTotalLabel}, target ${targetStatus.targetDebitTotalLabel}, difference ${targetStatus.varianceAmountLabel}, evidence rows ${targetStatus.evidenceRowCount.toLocaleString("en-US")}`,
           )
           .join("; ")}.`
-      : " No monthly budget judgement rows are available.";
+      : " No monthly target status rows are available.";
 
-  return `${categoryRows}${monthlyRows}${monthlyBudgetRows}${monthlyJudgementRows}`;
+  return `${categoryRows}${monthlyRows}${monthlyBudgetRows}${monthlyTargetStatusRows}`;
 }
 
 function defaultLimitations(contextPack: CoachContextPack) {
