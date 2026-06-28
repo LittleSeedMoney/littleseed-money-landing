@@ -312,8 +312,10 @@ function explainAnswer(contextPack: CoachContextPack) {
       contextPack.categoryEvidence.categoryMonthlySummaryWindow;
     const monthlyTargetComparisonRows =
       contextPack.categoryEvidence.categoryMonthlyBudgetComparisonWindow;
+    const automationReadinessRows =
+      contextPack.categoryEvidence.categoryBudgetAutomationReadinessWindow;
 
-    return `This category evidence summary shows deterministic rule output for ${contextPack.categoryEvidence.categories.length.toLocaleString("en-US")} categor${contextPack.categoryEvidence.categories.length === 1 ? "y" : "ies"}, ${visibleEvidenceCount.toLocaleString("en-US")} bounded merchant-display evidence row${visibleEvidenceCount === 1 ? "" : "s"}, ${monthlyCategoryRows.includedCount.toLocaleString("en-US")} of ${monthlyCategoryRows.totalCount.toLocaleString("en-US")} aggregate category-by-month row${monthlyCategoryRows.totalCount === 1 ? "" : "s"}, ${targetComparisonCount.toLocaleString("en-US")} user-entered target comparison${targetComparisonCount === 1 ? "" : "s"}, and ${monthlyTargetComparisonRows.includedCount.toLocaleString("en-US")} of ${monthlyTargetComparisonRows.totalCount.toLocaleString("en-US")} monthly target comparison row${monthlyTargetComparisonRows.totalCount === 1 ? "" : "s"}. It can explain which visible rows are attached to a category, what review status is selected, category-by-month aggregate facts, and any already-calculated target comparison facts, but it cannot create targets, recategorize rows, score spending quality, recommend changes, or rank actions.`;
+    return `This category evidence summary shows deterministic rule output for ${contextPack.categoryEvidence.categories.length.toLocaleString("en-US")} categor${contextPack.categoryEvidence.categories.length === 1 ? "y" : "ies"}, ${visibleEvidenceCount.toLocaleString("en-US")} bounded merchant-display evidence row${visibleEvidenceCount === 1 ? "" : "s"}, ${monthlyCategoryRows.includedCount.toLocaleString("en-US")} of ${monthlyCategoryRows.totalCount.toLocaleString("en-US")} aggregate category-by-month row${monthlyCategoryRows.totalCount === 1 ? "" : "s"}, ${targetComparisonCount.toLocaleString("en-US")} user-entered target comparison${targetComparisonCount === 1 ? "" : "s"}, ${monthlyTargetComparisonRows.includedCount.toLocaleString("en-US")} of ${monthlyTargetComparisonRows.totalCount.toLocaleString("en-US")} monthly target comparison row${monthlyTargetComparisonRows.totalCount === 1 ? "" : "s"}, and ${automationReadinessRows.includedCount.toLocaleString("en-US")} of ${automationReadinessRows.totalCount.toLocaleString("en-US")} budget automation readiness row${automationReadinessRows.totalCount === 1 ? "" : "s"}. It can explain which visible rows are attached to a category, what review status is selected, category-by-month aggregate facts, already-calculated target comparison facts, and explanation-only automation readiness, but it cannot create targets, recategorize rows, score spending quality, recommend changes, run automation, or rank actions.`;
   }
 
   return "This context pack does not include enough supported detail to explain.";
@@ -329,7 +331,7 @@ function plainLanguageAnswer(contextPack: CoachContextPack) {
   }
 
   if (contextPack.categoryEvidence) {
-    return "In plain language, category evidence is the visible trail behind the category table: category totals, matched merchant-display rows, rule ids, current review status, and optional user-entered target comparisons by review period and month. It is explanation support, not an automatic recategorization, target recommendation, or spending-quality assessment.";
+    return "In plain language, category evidence is the visible trail behind the category table: category totals, matched merchant-display rows, rule ids, current review status, optional user-entered target comparisons, and explanation-only automation readiness. It is explanation support, not automatic recategorization, target recommendation, spending-quality assessment, or automation.";
   }
 
   return "In plain language, this context pack does not include enough supported detail to explain.";
@@ -345,7 +347,7 @@ function missingContextAnswer(contextPack: CoachContextPack) {
   }
 
   if (contextPack.categoryEvidence) {
-    return "This category evidence is limited by the bounded fields available here. Missing context includes receipts, full merchant descriptors, statement period completeness, whether the user-entered target covers the same review period and monthly cadence, and whether a product owner has reviewed any ambiguous category rules.";
+    return "This category evidence is limited by the bounded fields available here. Missing context includes receipts, full merchant descriptors, statement period completeness, whether the user-entered target covers the same review period and monthly cadence, whether any readiness rows need human review, and whether a product owner has reviewed any ambiguous category rules.";
   }
 
   return "This context is limited by the fields available in the selected context pack.";
@@ -361,7 +363,7 @@ function nextQuestionsAnswer(contextPack: CoachContextPack) {
   }
 
   if (contextPack.categoryEvidence) {
-    return "Useful next questions are: Which merchant-display labels look ambiguous? Which categories are marked needs review? Do any user-entered targets need review-period or monthly context? Are any rule ids too broad for product review? Does the statement period look complete? These are review questions, not action priorities.";
+    return "Useful next questions are: Which merchant-display labels look ambiguous? Which categories are marked needs review? Do any user-entered targets need review-period or monthly context? Which readiness rows are missing a target or need human review? Does the statement period look complete? These are review questions, not action priorities.";
   }
 
   return "Useful next questions should stay inside the selected context pack and focus on missing context, source limits, and versioned evidence.";
@@ -447,6 +449,15 @@ function categoryEvidenceText(
           )
           .join("; ")}.`
       : " No monthly target comparison rows are available.";
+  const automationReadinessRows =
+    categoryEvidence.categoryBudgetAutomationReadinessRows.length > 0
+      ? ` Budget automation readiness rows: ${categoryEvidence.categoryBudgetAutomationReadinessRows
+          .map(
+            (row) =>
+              `${row.month} ${row.label}: ${row.readinessStatusLabel}, reason ${row.reasonLabel}, scope ${row.automationScope}, source status ${row.sourceComparisonStatus}, ${row.debitTransactionCount.toLocaleString("en-US")} debit rows`,
+          )
+          .join("; ")}.`
+      : " No budget automation readiness rows are available.";
 
   return `${categoryRows}${windowMetadataText(
     "Category-by-month context window",
@@ -454,7 +465,10 @@ function categoryEvidenceText(
   )}${monthlyRows}${windowMetadataText(
     "Monthly target comparison context window",
     categoryEvidence.categoryMonthlyBudgetComparisonWindow,
-  )}${monthlyBudgetRows}`;
+  )}${monthlyBudgetRows}${windowMetadataText(
+    "Budget automation readiness context window",
+    categoryEvidence.categoryBudgetAutomationReadinessWindow,
+  )}${automationReadinessRows}`;
 }
 
 function windowMetadataText(

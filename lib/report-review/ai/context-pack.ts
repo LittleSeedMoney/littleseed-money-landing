@@ -2,6 +2,7 @@ import { reportReviewSample } from "@/data/report-review-sample";
 import {
   compareCategoryBudgetTargets,
   compareCategoryMonthlyBudgetTargets,
+  deriveCategoryBudgetAutomationReadiness,
   windowChargeInspectorRows,
   type ChargeInspectorCategoryBudgetTargetAmounts,
   type ChargeInspectorWindowPolicy,
@@ -235,6 +236,8 @@ export function buildCategoryEvidenceContextPack({
     chargeInspector.categoryMonthlySummary,
     categoryBudgetTargets,
   );
+  const budgetAutomationReadinessRows =
+    deriveCategoryBudgetAutomationReadiness(monthlyBudgetComparisons);
   const categoryMonthlySummaryWindow = windowChargeInspectorRows(
     chargeInspector.categoryMonthlySummary,
     { policy: categoryMonthlyWindowPolicy },
@@ -243,6 +246,13 @@ export function buildCategoryEvidenceContextPack({
     monthlyBudgetComparisons,
     {
       isPriorityRow: (comparison) => comparison.targetDebitTotalCents !== null,
+      policy: categoryMonthlyWindowPolicy,
+    },
+  );
+  const categoryBudgetAutomationReadinessWindow = windowChargeInspectorRows(
+    budgetAutomationReadinessRows,
+    {
+      isPriorityRow: (row) => row.readinessStatus !== "insufficient-context",
       policy: categoryMonthlyWindowPolicy,
     },
   );
@@ -282,6 +292,8 @@ export function buildCategoryEvidenceContextPack({
         ? {
             categoryMonthlyBudgetComparisonVersion:
               "category_monthly_budget_comparison_ai_context.v0" as const,
+            categoryBudgetAutomationReadinessVersion:
+              "category_budget_automation_readiness_ai_context.v0" as const,
           }
         : {}),
       sourceLabel: chargeInspector.sourceLabel,
@@ -291,6 +303,8 @@ export function buildCategoryEvidenceContextPack({
         chargeInspector.categoryMonthlySummaryVersion,
       categoryMonthlyBudgetComparisonContractVersion:
         chargeInspector.categoryMonthlyBudgetComparisonVersion,
+      categoryBudgetAutomationReadinessContractVersion:
+        chargeInspector.categoryBudgetAutomationReadinessVersion,
       categories: chargeInspector.categorySummary.map((category) => {
         const budgetComparison = budgetComparisonByCategory.get(
           category.category,
@@ -319,6 +333,11 @@ export function buildCategoryEvidenceContextPack({
       ),
       categoryMonthlyBudgetComparisons:
         categoryMonthlyBudgetComparisonWindow.kept,
+      categoryBudgetAutomationReadinessWindow: windowMetadata(
+        categoryBudgetAutomationReadinessWindow,
+      ),
+      categoryBudgetAutomationReadinessRows:
+        categoryBudgetAutomationReadinessWindow.kept,
       limitations: [
         "Category evidence is deterministic rule output, not an AI categorization decision.",
         "Category monthly summary rows are aggregate posted-date-month totals only, not monthly budgets.",
@@ -326,6 +345,7 @@ export function buildCategoryEvidenceContextPack({
         "Budget comparison facts use only user-entered in-session targets and deterministic current-review category totals.",
         "Monthly budget comparison facts use only user-entered in-session targets and deterministic posted-date-month category debit totals.",
         "Monthly comparison status labels come from already-calculated monthly target comparison facts.",
+        "Budget automation readiness facts are derived from monthly target comparison facts for explanation-only preview; they do not rank actions, recommend spending changes, or run automation.",
         ...windowLimitations(
           categoryMonthlySummaryWindow,
           "category-by-month summary rows",
@@ -333,6 +353,10 @@ export function buildCategoryEvidenceContextPack({
         ...windowLimitations(
           categoryMonthlyBudgetComparisonWindow,
           "monthly target comparison rows",
+        ),
+        ...windowLimitations(
+          categoryBudgetAutomationReadinessWindow,
+          "budget automation readiness rows",
         ),
         "This context does not include raw CSV rows, balances, check numbers, account identifiers, or full transaction history.",
         "The AI explanation cannot create budget targets, recategorize rows, score spending quality, rank actions, or tell the user what to change.",
@@ -348,6 +372,7 @@ export function buildCategoryEvidenceContextPack({
         "automatic recategorization",
         "inferred budget targets",
         "budget variance assessments",
+        "client-supplied budget automation readiness results",
         "client-supplied monthly target status results",
         "client-supplied monthly budget comparison results",
         "saved budget targets",
@@ -374,6 +399,7 @@ export function buildCategoryEvidenceContextPack({
       "automatic recategorization",
       "inferred budget targets",
       "budget variance assessments",
+      "client-supplied budget automation readiness results",
       "client-supplied monthly target status results",
       "client-supplied monthly budget comparison results",
       "saved budget targets",
