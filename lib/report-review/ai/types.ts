@@ -10,6 +10,7 @@ import type {
   ChargeInspectorCategoryMonthlySummary,
   ChargeInspectorCategoryReviewStatus,
   ChargeInspectorMonthlySummary,
+  ChargeInspectorWindowPolicy,
 } from "@/lib/report-review/charge-inspector";
 
 export type ReportReviewAiQuestionType =
@@ -89,6 +90,13 @@ export type CategoryEvidenceContextCategory = {
   limitations: string[];
 };
 
+export type CategoryEvidenceWindowMetadata = {
+  totalCount: number;
+  includedCount: number;
+  omittedCount: number;
+  window: ChargeInspectorWindowPolicy;
+};
+
 export type CategoryEvidenceContext = {
   id: "charge_inspector_category_evidence";
   version: "category_evidence_ai_context.v0";
@@ -101,7 +109,9 @@ export type CategoryEvidenceContext = {
   categoryMonthlySummaryContractVersion: string;
   categoryMonthlyBudgetComparisonContractVersion: string;
   categories: CategoryEvidenceContextCategory[];
+  categoryMonthlySummaryWindow: CategoryEvidenceWindowMetadata;
   categoryMonthlySummaryRows: ChargeInspectorCategoryMonthlySummary[];
+  categoryMonthlyBudgetComparisonWindow: CategoryEvidenceWindowMetadata;
   categoryMonthlyBudgetComparisons: ChargeInspectorCategoryMonthlyBudgetComparison[];
   limitations: string[];
   excludedFields: string[];

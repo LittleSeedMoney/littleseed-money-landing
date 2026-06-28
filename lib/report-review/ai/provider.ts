@@ -308,12 +308,12 @@ function explainAnswer(contextPack: CoachContextPack) {
     const targetComparisonCount = contextPack.categoryEvidence.categories.filter(
       (category) => category.budgetComparison,
     ).length;
-    const monthlyCategoryRowCount =
-      contextPack.categoryEvidence.categoryMonthlySummaryRows.length;
-    const monthlyTargetComparisonCount =
-      contextPack.categoryEvidence.categoryMonthlyBudgetComparisons.length;
+    const monthlyCategoryRows =
+      contextPack.categoryEvidence.categoryMonthlySummaryWindow;
+    const monthlyTargetComparisonRows =
+      contextPack.categoryEvidence.categoryMonthlyBudgetComparisonWindow;
 
-    return `This category evidence summary shows deterministic rule output for ${contextPack.categoryEvidence.categories.length.toLocaleString("en-US")} categor${contextPack.categoryEvidence.categories.length === 1 ? "y" : "ies"}, ${visibleEvidenceCount.toLocaleString("en-US")} bounded merchant-display evidence row${visibleEvidenceCount === 1 ? "" : "s"}, ${monthlyCategoryRowCount.toLocaleString("en-US")} aggregate category-by-month row${monthlyCategoryRowCount === 1 ? "" : "s"}, ${targetComparisonCount.toLocaleString("en-US")} user-entered target comparison${targetComparisonCount === 1 ? "" : "s"}, and ${monthlyTargetComparisonCount.toLocaleString("en-US")} monthly target comparison row${monthlyTargetComparisonCount === 1 ? "" : "s"}. It can explain which visible rows are attached to a category, what review status is selected, category-by-month aggregate facts, and any already-calculated target comparison facts, but it cannot create targets, recategorize rows, score spending quality, recommend changes, or rank actions.`;
+    return `This category evidence summary shows deterministic rule output for ${contextPack.categoryEvidence.categories.length.toLocaleString("en-US")} categor${contextPack.categoryEvidence.categories.length === 1 ? "y" : "ies"}, ${visibleEvidenceCount.toLocaleString("en-US")} bounded merchant-display evidence row${visibleEvidenceCount === 1 ? "" : "s"}, ${monthlyCategoryRows.includedCount.toLocaleString("en-US")} of ${monthlyCategoryRows.totalCount.toLocaleString("en-US")} aggregate category-by-month row${monthlyCategoryRows.totalCount === 1 ? "" : "s"}, ${targetComparisonCount.toLocaleString("en-US")} user-entered target comparison${targetComparisonCount === 1 ? "" : "s"}, and ${monthlyTargetComparisonRows.includedCount.toLocaleString("en-US")} of ${monthlyTargetComparisonRows.totalCount.toLocaleString("en-US")} monthly target comparison row${monthlyTargetComparisonRows.totalCount === 1 ? "" : "s"}. It can explain which visible rows are attached to a category, what review status is selected, category-by-month aggregate facts, and any already-calculated target comparison facts, but it cannot create targets, recategorize rows, score spending quality, recommend changes, or rank actions.`;
   }
 
   return "This context pack does not include enough supported detail to explain.";
@@ -448,7 +448,27 @@ function categoryEvidenceText(
           .join("; ")}.`
       : " No monthly target comparison rows are available.";
 
-  return `${categoryRows}${monthlyRows}${monthlyBudgetRows}`;
+  return `${categoryRows}${windowMetadataText(
+    "Category-by-month context window",
+    categoryEvidence.categoryMonthlySummaryWindow,
+  )}${monthlyRows}${windowMetadataText(
+    "Monthly target comparison context window",
+    categoryEvidence.categoryMonthlyBudgetComparisonWindow,
+  )}${monthlyBudgetRows}`;
+}
+
+function windowMetadataText(
+  label: string,
+  metadata: NonNullable<
+    CoachContextPack["categoryEvidence"]
+  >["categoryMonthlySummaryWindow"],
+) {
+  const omitted =
+    metadata.omittedCount > 0
+      ? `${metadata.omittedCount.toLocaleString("en-US")} omitted`
+      : "no rows omitted";
+
+  return ` ${label}: ${metadata.includedCount.toLocaleString("en-US")} of ${metadata.totalCount.toLocaleString("en-US")} rows included by recent ${metadata.window.recentMonths.toLocaleString("en-US")}-month / ${metadata.window.rowCap.toLocaleString("en-US")}-row policy; ${omitted}.`;
 }
 
 function defaultLimitations(contextPack: CoachContextPack) {
