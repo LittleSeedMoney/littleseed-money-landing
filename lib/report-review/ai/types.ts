@@ -98,6 +98,27 @@ export type CategoryEvidenceWindowMetadata = {
   window: ChargeInspectorWindowPolicy;
 };
 
+type CategoryEvidenceFactBundleBase = {
+  label: string;
+  rowLabel: string;
+  contractVersion: string;
+  window: CategoryEvidenceWindowMetadata;
+};
+
+export type CategoryEvidenceFactBundle =
+  | (CategoryEvidenceFactBundleBase & {
+      id: "category_monthly_summary";
+      aiContextVersion: "category_monthly_summary_ai_context.v0";
+    })
+  | (CategoryEvidenceFactBundleBase & {
+      id: "category_monthly_budget_comparison";
+      aiContextVersion: "category_monthly_budget_comparison_ai_context.v0";
+    })
+  | (CategoryEvidenceFactBundleBase & {
+      id: "category_budget_automation_readiness";
+      aiContextVersion: "category_budget_automation_readiness_ai_context.v0";
+    });
+
 export type CategoryEvidenceContext = {
   id: "charge_inspector_category_evidence";
   version: "category_evidence_ai_context.v0";
@@ -118,6 +139,7 @@ export type CategoryEvidenceContext = {
   categoryMonthlyBudgetComparisons: ChargeInspectorCategoryMonthlyBudgetComparison[];
   categoryBudgetAutomationReadinessWindow: CategoryEvidenceWindowMetadata;
   categoryBudgetAutomationReadinessRows: ChargeInspectorCategoryBudgetAutomationReadiness[];
+  factBundles: CategoryEvidenceFactBundle[];
   limitations: string[];
   excludedFields: string[];
 };

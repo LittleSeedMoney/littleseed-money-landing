@@ -232,6 +232,35 @@ test("report-review AI category evidence context pack stays bounded", () => {
     contextPack.categoryEvidence.categoryBudgetAutomationReadinessContractVersion,
     "sample_fixture",
   );
+  assert.deepEqual(
+    contextPack.categoryEvidence.factBundles.map((bundle) => ({
+      aiContextVersion: bundle.aiContextVersion,
+      contractVersion: bundle.contractVersion,
+      id: bundle.id,
+      rowLabel: bundle.rowLabel,
+    })),
+    [
+      {
+        aiContextVersion: "category_monthly_summary_ai_context.v0",
+        contractVersion: "sample_fixture",
+        id: "category_monthly_summary",
+        rowLabel: "category-by-month summary rows",
+      },
+      {
+        aiContextVersion: "category_monthly_budget_comparison_ai_context.v0",
+        contractVersion: "sample_fixture",
+        id: "category_monthly_budget_comparison",
+        rowLabel: "monthly target comparison rows",
+      },
+      {
+        aiContextVersion:
+          "category_budget_automation_readiness_ai_context.v0",
+        contractVersion: "sample_fixture",
+        id: "category_budget_automation_readiness",
+        rowLabel: "budget automation readiness rows",
+      },
+    ],
+  );
   assert.equal(
     contextPack.categoryEvidence.categoryMonthlySummaryRows.find(
       (row) => row.month === "2026-05" && row.category === "groceries",
@@ -320,6 +349,18 @@ test("report-review AI category evidence context records row window omissions", 
       omittedCount: 17,
       window: { recentMonths: 1, rowCap: 2 },
     },
+  );
+  assert.deepEqual(
+    contextPack.categoryEvidence.factBundles.map((bundle) => [
+      bundle.id,
+      bundle.window.includedCount,
+      bundle.window.omittedCount,
+    ]),
+    [
+      ["category_monthly_summary", 2, 13],
+      ["category_monthly_budget_comparison", 2, 17],
+      ["category_budget_automation_readiness", 2, 17],
+    ],
   );
   assert.deepEqual(
     contextPack.categoryEvidence.categoryMonthlyBudgetComparisons.map(
