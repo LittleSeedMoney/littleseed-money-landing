@@ -2,6 +2,7 @@ import type { DecimalValue } from "./platform-workspace-response";
 import type {
   PlatformBankFeeCandidate,
   PlatformChargeInspectorReviewResponse,
+  PlatformTransactionCategoryBudgetAutomationReadiness,
   PlatformTransactionCategoryMonthlyBudgetComparison,
   PlatformTransactionCategoryMonthlySummary,
   PlatformTransactionCategorySummary,
@@ -131,6 +132,37 @@ export type ChargeInspectorCategoryMonthlyBudgetComparison = {
   limitations: string[];
 };
 
+export type ChargeInspectorCategoryBudgetAutomationReadinessStatus =
+  | "ready"
+  | "needs-review"
+  | "insufficient-context";
+
+export type ChargeInspectorCategoryBudgetAutomationReadinessReason =
+  | "within-target"
+  | "over-target"
+  | "missing-target";
+
+export type ChargeInspectorCategoryBudgetAutomationReadiness = {
+  month: string;
+  category: string;
+  label: string;
+  readinessStatus: ChargeInspectorCategoryBudgetAutomationReadinessStatus;
+  readinessStatusLabel: string;
+  reasonCode: ChargeInspectorCategoryBudgetAutomationReadinessReason;
+  reasonLabel: string;
+  automationScope: "explanation-only";
+  sourceComparisonStatus: ChargeInspectorCategoryMonthlyBudgetComparisonStatus;
+  actualDebitTotalCents: number;
+  actualDebitTotalLabel: string;
+  debitTransactionCount: number;
+  targetDebitTotalCents: number | null;
+  targetDebitTotalLabel: string;
+  varianceAmountCents: number | null;
+  varianceAmountLabel: string;
+  explanation: string;
+  limitations: string[];
+};
+
 export type ChargeInspectorCategoryBudgetComparisonStatus =
   | "within-target"
   | "over-target";
@@ -163,10 +195,12 @@ export type ChargeInspectorReview = {
   categorySummaryVersion: string;
   categoryMonthlySummaryVersion: string;
   categoryMonthlyBudgetComparisonVersion: string;
+  categoryBudgetAutomationReadinessVersion: string;
   monthlySpendingSummary: ChargeInspectorMonthlySummary[];
   categorySummary: ChargeInspectorCategorySummary[];
   categoryMonthlySummary: ChargeInspectorCategoryMonthlySummary[];
   categoryMonthlyBudgetComparison: ChargeInspectorCategoryMonthlyBudgetComparison[];
+  categoryBudgetAutomationReadiness: ChargeInspectorCategoryBudgetAutomationReadiness[];
   findings: ChargeInspectorFinding[];
   emptyState: ChargeInspectorEmptyState;
   limitations: string[];
@@ -346,6 +380,7 @@ export const chargeInspectorSampleReview: ChargeInspectorReview = {
   categorySummaryVersion: "sample_fixture",
   categoryMonthlySummaryVersion: "sample_fixture",
   categoryMonthlyBudgetComparisonVersion: "sample_fixture",
+  categoryBudgetAutomationReadinessVersion: "sample_fixture",
   monthlySpendingSummary: [
     {
       month: "2026-03",
@@ -535,6 +570,7 @@ export const chargeInspectorSampleReview: ChargeInspectorReview = {
     categoryMonthlySummary("2026-05", "shopping", "Shopping", "18.90", "0", 1, 1, 0),
   ],
   categoryMonthlyBudgetComparison: [],
+  categoryBudgetAutomationReadiness: [],
   findings: [
     {
       id: "sample-recurring-streaming",
@@ -706,10 +742,12 @@ export const chargeInspectorEmptyReview: ChargeInspectorReview = {
   categorySummaryVersion: "not_applicable",
   categoryMonthlySummaryVersion: "not_applicable",
   categoryMonthlyBudgetComparisonVersion: "not_applicable",
+  categoryBudgetAutomationReadinessVersion: "not_applicable",
   monthlySpendingSummary: [],
   categorySummary: [],
   categoryMonthlySummary: [],
   categoryMonthlyBudgetComparison: [],
+  categoryBudgetAutomationReadiness: [],
   findings: [],
   emptyState: chargeInspectorSampleReview.emptyState,
   limitations: chargeInspectorSampleReview.limitations,
@@ -723,10 +761,12 @@ export const chargeInspectorFallbackReview: ChargeInspectorReview = {
   categorySummaryVersion: "not_available",
   categoryMonthlySummaryVersion: "not_available",
   categoryMonthlyBudgetComparisonVersion: "not_available",
+  categoryBudgetAutomationReadinessVersion: "not_available",
   monthlySpendingSummary: [],
   categorySummary: [],
   categoryMonthlySummary: [],
   categoryMonthlyBudgetComparison: [],
+  categoryBudgetAutomationReadiness: [],
   findings: [],
   emptyState: {
     title: "Charge Inspector did not load",
@@ -956,6 +996,73 @@ export function mergeCategoryMonthlyBudgetComparisons(
   );
 }
 
+export function deriveCategoryBudgetAutomationReadiness(
+  comparisons: ChargeInspectorCategoryMonthlyBudgetComparison[],
+): ChargeInspectorCategoryBudgetAutomationReadiness[] {
+  return comparisons.map(categoryBudgetAutomationReadiness);
+}
+
+function categoryBudgetAutomationReadiness(
+  comparison: ChargeInspectorCategoryMonthlyBudgetComparison,
+): ChargeInspectorCategoryBudgetAutomationReadiness {
+  const reasonCode = categoryBudgetAutomationReadinessReason(comparison.status);
+  const readinessStatus =
+    categoryBudgetAutomationReadinessStatusFromReason(reasonCode);
+
+  return {
+    month: comparison.month,
+    category: comparison.category,
+    label: comparison.label,
+    readinessStatus,
+    readinessStatusLabel:
+      categoryBudgetAutomationReadinessStatusLabel(readinessStatus),
+    reasonCode,
+    reasonLabel: categoryBudgetAutomationReadinessReasonLabel(reasonCode),
+    automationScope: "explanation-only",
+    sourceComparisonStatus: comparison.status,
+    actualDebitTotalCents: comparison.actualDebitTotalCents,
+    actualDebitTotalLabel: comparison.actualDebitTotalLabel,
+    debitTransactionCount: comparison.debitTransactionCount,
+    targetDebitTotalCents: comparison.targetDebitTotalCents,
+    targetDebitTotalLabel: comparison.targetDebitTotalLabel,
+    varianceAmountCents: comparison.varianceAmountCents,
+    varianceAmountLabel: comparison.varianceAmountLabel,
+    explanation: categoryBudgetAutomationReadinessExplanation(reasonCode),
+    limitations: [
+      "Budget automation readiness is derived from already-calculated monthly target comparison facts.",
+      "This is explanation-only readiness, not an automation decision, spending instruction, action ranking, or budget recommendation.",
+    ],
+  };
+}
+
+function categoryBudgetAutomationReadinessReason(
+  status: ChargeInspectorCategoryMonthlyBudgetComparisonStatus,
+): ChargeInspectorCategoryBudgetAutomationReadinessReason {
+  if (status === "within-target") {
+    return "within-target";
+  }
+
+  if (status === "over-target") {
+    return "over-target";
+  }
+
+  return "missing-target";
+}
+
+function categoryBudgetAutomationReadinessStatusFromReason(
+  reason: ChargeInspectorCategoryBudgetAutomationReadinessReason,
+): ChargeInspectorCategoryBudgetAutomationReadinessStatus {
+  if (reason === "within-target") {
+    return "ready";
+  }
+
+  if (reason === "over-target") {
+    return "needs-review";
+  }
+
+  return "insufficient-context";
+}
+
 export function compareCategoryMonthlyBudgetTarget({
   category,
   month,
@@ -1075,6 +1182,8 @@ export function mapPlatformChargeInspectorReview(
     categoryMonthlySummaryVersion: response.category_monthly_summary_version,
     categoryMonthlyBudgetComparisonVersion:
       response.category_monthly_budget_comparison_version,
+    categoryBudgetAutomationReadinessVersion:
+      response.category_budget_automation_readiness_version,
     monthlySpendingSummary: response.monthly_spending_summary.map(
       mapMonthlySpendingSummary,
     ),
@@ -1085,6 +1194,10 @@ export function mapPlatformChargeInspectorReview(
     categoryMonthlyBudgetComparison:
       response.category_monthly_budget_comparison.map(
         mapCategoryMonthlyBudgetComparison,
+      ),
+    categoryBudgetAutomationReadiness:
+      response.category_budget_automation_readiness.map(
+        mapCategoryBudgetAutomationReadiness,
       ),
     findings: [
       ...response.findings.recurring_charges.map((candidate) =>
@@ -1172,6 +1285,57 @@ function mapCategoryMonthlyBudgetComparison(
   };
 }
 
+function mapCategoryBudgetAutomationReadiness(
+  readiness: PlatformTransactionCategoryBudgetAutomationReadiness,
+): ChargeInspectorCategoryBudgetAutomationReadiness {
+  const readinessStatus = mapCategoryBudgetAutomationReadinessStatus(
+    readiness.readiness_status,
+  );
+  const reasonCode = mapCategoryBudgetAutomationReadinessReason(
+    readiness.reason_code,
+  );
+  const sourceComparisonStatus = mapCategoryMonthlyBudgetComparisonStatus(
+    readiness.source_comparison_status,
+  );
+  const automationScope = mapCategoryBudgetAutomationScope(
+    readiness.automation_scope,
+  );
+  const targetDebitTotalCents =
+    readiness.target_debit_total === null
+      ? null
+      : cents(readiness.target_debit_total);
+  const varianceAmountCents =
+    readiness.variance_amount === null ? null : cents(readiness.variance_amount);
+
+  return {
+    month: readiness.month,
+    category: readiness.category,
+    label: readiness.label,
+    readinessStatus,
+    readinessStatusLabel:
+      categoryBudgetAutomationReadinessStatusLabel(readinessStatus),
+    reasonCode,
+    reasonLabel: categoryBudgetAutomationReadinessReasonLabel(reasonCode),
+    automationScope,
+    sourceComparisonStatus,
+    actualDebitTotalCents: cents(readiness.actual_debit_total),
+    actualDebitTotalLabel: money(readiness.actual_debit_total),
+    debitTransactionCount: readiness.debit_transaction_count,
+    targetDebitTotalCents,
+    targetDebitTotalLabel:
+      targetDebitTotalCents === null
+        ? "No target"
+        : moneyFromCents(targetDebitTotalCents),
+    varianceAmountCents,
+    varianceAmountLabel:
+      varianceAmountCents === null
+        ? "No target"
+        : categoryBudgetVarianceLabel(varianceAmountCents),
+    explanation: readiness.explanation,
+    limitations: readiness.limitations,
+  };
+}
+
 function mapCategoryMonthlyBudgetComparisonStatus(
   status: string,
 ): ChargeInspectorCategoryMonthlyBudgetComparisonStatus {
@@ -1186,6 +1350,44 @@ function mapCategoryMonthlyBudgetComparisonStatus(
   return "no-target";
 }
 
+function mapCategoryBudgetAutomationReadinessStatus(
+  status: string,
+): ChargeInspectorCategoryBudgetAutomationReadinessStatus {
+  if (status === "ready") {
+    return "ready";
+  }
+
+  if (status === "needs_review") {
+    return "needs-review";
+  }
+
+  return "insufficient-context";
+}
+
+function mapCategoryBudgetAutomationReadinessReason(
+  reason: string,
+): ChargeInspectorCategoryBudgetAutomationReadinessReason {
+  if (reason === "within_target") {
+    return "within-target";
+  }
+
+  if (reason === "over_target") {
+    return "over-target";
+  }
+
+  return "missing-target";
+}
+
+function mapCategoryBudgetAutomationScope(
+  scope: string,
+): ChargeInspectorCategoryBudgetAutomationReadiness["automationScope"] {
+  if (scope === "explanation_only") {
+    return "explanation-only";
+  }
+
+  throw new Error(`Unsupported automation scope: ${scope}`);
+}
+
 function categoryMonthlyBudgetComparisonStatusLabel(
   status: ChargeInspectorCategoryMonthlyBudgetComparisonStatus,
 ) {
@@ -1198,6 +1400,48 @@ function categoryMonthlyBudgetComparisonStatusLabel(
   }
 
   return "No target";
+}
+
+function categoryBudgetAutomationReadinessStatusLabel(
+  status: ChargeInspectorCategoryBudgetAutomationReadinessStatus,
+) {
+  if (status === "ready") {
+    return "Ready for explanation";
+  }
+
+  if (status === "needs-review") {
+    return "Needs review";
+  }
+
+  return "Missing target";
+}
+
+function categoryBudgetAutomationReadinessReasonLabel(
+  reason: ChargeInspectorCategoryBudgetAutomationReadinessReason,
+) {
+  if (reason === "within-target") {
+    return "Within user target";
+  }
+
+  if (reason === "over-target") {
+    return "Above user target";
+  }
+
+  return "No user target";
+}
+
+function categoryBudgetAutomationReadinessExplanation(
+  reason: ChargeInspectorCategoryBudgetAutomationReadinessReason,
+) {
+  if (reason === "within-target") {
+    return "A user-entered monthly target exists and the posted-date-month category spending is within that target, so this row is ready for explanation-only automation preview.";
+  }
+
+  if (reason === "over-target") {
+    return "A user-entered monthly target exists and the posted-date-month category spending is above that target, so this row needs human review before automation can interpret it.";
+  }
+
+  return "No user-entered monthly target exists for this category, so budget automation readiness cannot be determined from this row.";
 }
 
 function mapCategorySummary(

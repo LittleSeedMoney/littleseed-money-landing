@@ -12,6 +12,7 @@ import {
   categoryBudgetTargetsFromInputs,
   compareCategoryBudgetTargets,
   compareCategoryMonthlyBudgetTargets,
+  deriveCategoryBudgetAutomationReadiness,
   isChargeInspectorEmpty,
   mergeCategoryMonthlyBudgetComparisons,
   parseCategoryBudgetTargetInput,
@@ -19,6 +20,7 @@ import {
   summarizeChargeInspectorReview,
   visibleChargeInspectorFindings,
   windowChargeInspectorRows,
+  type ChargeInspectorCategoryBudgetAutomationReadiness,
   type ChargeInspectorCategoryBudgetComparison,
   type ChargeInspectorCategoryBudgetTargetAmounts,
   type ChargeInspectorCategoryMonthlyBudgetComparison,
@@ -29,6 +31,7 @@ import {
   type ChargeInspectorReview,
   type ChargeInspectorSummary,
   type RecurringPaymentReviewItem,
+  type WindowedRows,
 } from "@/lib/report-review/charge-inspector";
 import { CHARGE_INSPECTOR_CSV_TEXT_MAX_LENGTH } from "@/lib/report-review/charge-inspector-upload";
 
@@ -655,7 +658,20 @@ function CategoryMonthlySummaryTable({
     () => summarizeCategoryMonthlyBudgetComparisons(visibleBudgetComparisons),
     [visibleBudgetComparisons],
   );
+  const automationReadinessRows = useMemo(
+    () => deriveCategoryBudgetAutomationReadiness(budgetComparisons),
+    [budgetComparisons],
+  );
+  const automationReadinessWindow = useMemo(
+    () =>
+      windowChargeInspectorRows(automationReadinessRows, {
+        isPriorityRow: (row) => row.readinessStatus !== "insufficient-context",
+      }),
+    [automationReadinessRows],
+  );
+  const visibleAutomationReadinessRows = automationReadinessWindow.kept;
   const showBudgetComparison = budgetComparisons.length > 0;
+  const showAutomationReadiness = automationReadinessRows.length > 0;
   const activeWindow = showBudgetComparison
     ? budgetComparisonWindow
     : monthlySummaryWindow;
@@ -753,6 +769,13 @@ function CategoryMonthlySummaryTable({
         </table>
       </div>
 
+      {showAutomationReadiness ? (
+        <BudgetAutomationReadinessPreview
+          rows={visibleAutomationReadinessRows}
+          windowedRows={automationReadinessWindow}
+        />
+      ) : null}
+
       <p className="mt-3 text-xs leading-5 text-earth-600">
         Posted-date month plus deterministic category totals only. This is not
         a monthly budget, spending-quality judgment, action priority, or saved
@@ -767,6 +790,140 @@ function CategoryMonthlySummaryTable({
           : ""}
       </p>
     </div>
+  );
+}
+
+function BudgetAutomationReadinessPreview({
+  rows,
+  windowedRows,
+}: {
+  rows: ChargeInspectorCategoryBudgetAutomationReadiness[];
+  windowedRows: WindowedRows<ChargeInspectorCategoryBudgetAutomationReadiness>;
+}) {
+  const counts = summarizeCategoryBudgetAutomationReadiness(rows);
+
+  return (
+    <div
+      className="mt-4 border-t border-stone-200 pt-3"
+      data-testid="charge-inspector-budget-automation-readiness"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h5 className="text-sm font-semibold text-seed-950">
+          Budget automation preview
+        </h5>
+        <div className="flex flex-wrap gap-2">
+          <StatusPill label="Explanation-only" tone="stone" />
+          <StatusPill
+            label={`${counts.ready.toLocaleString("en-US")} ready`}
+            tone={counts.ready > 0 ? "seed" : "stone"}
+          />
+          <StatusPill
+            label={`${counts.needsReview.toLocaleString("en-US")} readiness needs review`}
+            tone={counts.needsReview > 0 ? "earth" : "stone"}
+          />
+          <StatusPill
+            label={`${counts.insufficientContext.toLocaleString("en-US")} missing target`}
+            tone="stone"
+          />
+        </div>
+      </div>
+
+      <div className="mt-3 overflow-x-auto">
+        <table className="w-full min-w-[52rem] text-left text-sm">
+          <thead className="border-b border-stone-200 text-xs font-semibold uppercase text-earth-600">
+            <tr>
+              <th className="py-2 pr-3">Month</th>
+              <th className="px-3 py-2">Category</th>
+              <th className="px-3 py-2">Target result</th>
+              <th className="px-3 py-2">Automation status</th>
+              <th className="py-2 pl-3">Boundary reason</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-stone-100">
+            {rows.map((row) => (
+              <BudgetAutomationReadinessRow
+                key={`${row.month}:${row.category}`}
+                row={row}
+              />
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <p className="mt-3 text-xs leading-5 text-earth-600">
+        This preview is derived from already-calculated monthly target comparison
+        facts. It can mark whether a row is ready for explanation-only
+        automation, needs human review, or lacks a user target. It does not
+        change targets, rank actions, recommend spending changes, or run
+        automation.
+        {windowedRows.omittedCount > 0
+          ? ` Showing ${windowedRows.includedCount.toLocaleString("en-US")} of ${windowedRows.totalCount.toLocaleString("en-US")} readiness rows; ${windowedRows.omittedCount.toLocaleString("en-US")} older or overflow rows are hidden by the display cap.`
+          : ""}
+      </p>
+    </div>
+  );
+}
+
+function BudgetAutomationReadinessRow({
+  row,
+}: {
+  row: ChargeInspectorCategoryBudgetAutomationReadiness;
+}) {
+  return (
+    <tr data-testid="charge-inspector-budget-automation-readiness-row">
+      <td className="py-2 pr-3 font-medium text-seed-950">{row.month}</td>
+      <td className="px-3 py-2 text-earth-800">{row.label}</td>
+      <td className="px-3 py-2 text-xs leading-5 text-earth-700">
+        <div className="font-semibold text-seed-950">
+          {row.reasonLabel}
+        </div>
+        <div className="tabular-nums text-earth-600">
+          {row.actualDebitTotalLabel} / {row.targetDebitTotalLabel}
+        </div>
+      </td>
+      <td className="px-3 py-2">
+        <StatusPill
+          label={row.readinessStatusLabel}
+          tone={budgetAutomationReadinessTone(row.readinessStatus)}
+        />
+      </td>
+      <td className="py-2 pl-3 text-xs leading-5 text-earth-700">
+        {row.explanation}
+      </td>
+    </tr>
+  );
+}
+
+function budgetAutomationReadinessTone(
+  status: ChargeInspectorCategoryBudgetAutomationReadiness["readinessStatus"],
+) {
+  if (status === "ready") {
+    return "seed";
+  }
+
+  if (status === "needs-review") {
+    return "earth";
+  }
+
+  return "stone";
+}
+
+function summarizeCategoryBudgetAutomationReadiness(
+  rows: ChargeInspectorCategoryBudgetAutomationReadiness[],
+) {
+  return rows.reduce(
+    (counts, row) => {
+      if (row.readinessStatus === "ready") {
+        counts.ready += 1;
+      } else if (row.readinessStatus === "needs-review") {
+        counts.needsReview += 1;
+      } else {
+        counts.insufficientContext += 1;
+      }
+
+      return counts;
+    },
+    { insufficientContext: 0, needsReview: 0, ready: 0 },
   );
 }
 

@@ -5,6 +5,7 @@ import type {
 import type {
   ChargeInspectorCategoryEvidenceRow,
   ChargeInspectorCategoryBudgetComparison,
+  ChargeInspectorCategoryBudgetAutomationReadiness,
   ChargeInspectorCategoryBudgetTargetAmounts,
   ChargeInspectorCategoryMonthlyBudgetComparison,
   ChargeInspectorCategoryMonthlySummary,
@@ -103,16 +104,20 @@ export type CategoryEvidenceContext = {
   budgetComparisonVersion?: "category_budget_comparison_ai_context.v0";
   categoryMonthlySummaryVersion?: "category_monthly_summary_ai_context.v0";
   categoryMonthlyBudgetComparisonVersion?: "category_monthly_budget_comparison_ai_context.v0";
+  categoryBudgetAutomationReadinessVersion?: "category_budget_automation_readiness_ai_context.v0";
   sourceLabel: string;
   reviewedTransactionCount: number;
   categorySummaryContractVersion: string;
   categoryMonthlySummaryContractVersion: string;
   categoryMonthlyBudgetComparisonContractVersion: string;
+  categoryBudgetAutomationReadinessContractVersion: string;
   categories: CategoryEvidenceContextCategory[];
   categoryMonthlySummaryWindow: CategoryEvidenceWindowMetadata;
   categoryMonthlySummaryRows: ChargeInspectorCategoryMonthlySummary[];
   categoryMonthlyBudgetComparisonWindow: CategoryEvidenceWindowMetadata;
   categoryMonthlyBudgetComparisons: ChargeInspectorCategoryMonthlyBudgetComparison[];
+  categoryBudgetAutomationReadinessWindow: CategoryEvidenceWindowMetadata;
+  categoryBudgetAutomationReadinessRows: ChargeInspectorCategoryBudgetAutomationReadiness[];
   limitations: string[];
   excludedFields: string[];
 };
@@ -166,6 +171,7 @@ export type ReportReviewAiVersions = {
   contextPack: "coach_context_pack.v0";
   corpus: "knowledge_corpus.fixture.v0";
   categoryBudgetComparisonContext?: "category_budget_comparison_ai_context.v0";
+  categoryBudgetAutomationReadinessContext?: "category_budget_automation_readiness_ai_context.v0";
   categoryMonthlyBudgetComparisonContext?: "category_monthly_budget_comparison_ai_context.v0";
   categoryMonthlySummaryContext?: "category_monthly_summary_ai_context.v0";
   categoryEvidenceContext?: "category_evidence_ai_context.v0";

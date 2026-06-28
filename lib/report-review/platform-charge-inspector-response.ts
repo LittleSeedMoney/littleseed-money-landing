@@ -16,6 +16,7 @@ export type PlatformChargeInspectorReviewResponse = {
   category_summary_version: string;
   category_monthly_summary_version: string;
   category_monthly_budget_comparison_version: string;
+  category_budget_automation_readiness_version: string;
   reviewed_transaction_count: number;
   parse_error_count: number;
   findings: {
@@ -28,6 +29,7 @@ export type PlatformChargeInspectorReviewResponse = {
   category_summary: PlatformTransactionCategorySummary[];
   category_monthly_summary: PlatformTransactionCategoryMonthlySummary[];
   category_monthly_budget_comparison: PlatformTransactionCategoryMonthlyBudgetComparison[];
+  category_budget_automation_readiness: PlatformTransactionCategoryBudgetAutomationReadiness[];
   evidence_transactions: PlatformNormalizedTransaction[];
   parse_errors: PlatformCsvTransactionValidationError[];
   limitations: string[];
@@ -75,6 +77,24 @@ export type PlatformTransactionCategoryMonthlyBudgetComparison = {
   variance_amount: DecimalValue | null;
   variance_percent: DecimalValue | null;
   status: string;
+  limitations: string[];
+};
+
+export type PlatformTransactionCategoryBudgetAutomationReadiness = {
+  schema_version: string;
+  month: string;
+  category: string;
+  label: string;
+  currency: string;
+  readiness_status: string;
+  reason_code: string;
+  automation_scope: string;
+  source_comparison_status: string;
+  actual_debit_total: DecimalValue;
+  debit_transaction_count: number;
+  target_debit_total: DecimalValue | null;
+  variance_amount: DecimalValue | null;
+  explanation: string;
   limitations: string[];
 };
 
@@ -259,6 +279,13 @@ export function parseChargeInspectorReviewResponse(
             response.category_monthly_budget_comparison_version,
             "charge-inspector response.category_monthly_budget_comparison_version",
           ),
+    category_budget_automation_readiness_version:
+      response.category_budget_automation_readiness_version == null
+        ? "not_returned"
+        : expectString(
+            response.category_budget_automation_readiness_version,
+            "charge-inspector response.category_budget_automation_readiness_version",
+          ),
     reviewed_transaction_count: expectNumber(
       response.reviewed_transaction_count,
       "charge-inspector response.reviewed_transaction_count",
@@ -320,6 +347,14 @@ export function parseChargeInspectorReviewResponse(
             response.category_monthly_budget_comparison,
             "charge-inspector response.category_monthly_budget_comparison",
             parseTransactionCategoryMonthlyBudgetComparison,
+          ),
+    category_budget_automation_readiness:
+      response.category_budget_automation_readiness == null
+        ? []
+        : parseArray(
+            response.category_budget_automation_readiness,
+            "charge-inspector response.category_budget_automation_readiness",
+            parseTransactionCategoryBudgetAutomationReadiness,
           ),
     evidence_transactions: parseArray(
       response.evidence_transactions,
@@ -447,6 +482,54 @@ function parseTransactionCategoryMonthlyBudgetComparison(
           ),
     status: expectString(comparison.status, `${path}.status`),
     limitations: parseStringArray(comparison.limitations, `${path}.limitations`),
+  };
+}
+
+function parseTransactionCategoryBudgetAutomationReadiness(
+  value: unknown,
+  path: string,
+): PlatformTransactionCategoryBudgetAutomationReadiness {
+  const readiness = expectRecord(value, path);
+  return {
+    schema_version: expectString(readiness.schema_version, `${path}.schema_version`),
+    month: expectString(readiness.month, `${path}.month`),
+    category: expectString(readiness.category, `${path}.category`),
+    label: expectString(readiness.label, `${path}.label`),
+    currency: expectString(readiness.currency, `${path}.currency`),
+    readiness_status: expectString(
+      readiness.readiness_status,
+      `${path}.readiness_status`,
+    ),
+    reason_code: expectString(readiness.reason_code, `${path}.reason_code`),
+    automation_scope: expectString(
+      readiness.automation_scope,
+      `${path}.automation_scope`,
+    ),
+    source_comparison_status: expectString(
+      readiness.source_comparison_status,
+      `${path}.source_comparison_status`,
+    ),
+    actual_debit_total: expectDecimalValue(
+      readiness.actual_debit_total,
+      `${path}.actual_debit_total`,
+    ),
+    debit_transaction_count: expectNumber(
+      readiness.debit_transaction_count,
+      `${path}.debit_transaction_count`,
+    ),
+    target_debit_total:
+      readiness.target_debit_total == null
+        ? null
+        : expectDecimalValue(
+            readiness.target_debit_total,
+            `${path}.target_debit_total`,
+          ),
+    variance_amount:
+      readiness.variance_amount == null
+        ? null
+        : expectDecimalValue(readiness.variance_amount, `${path}.variance_amount`),
+    explanation: expectString(readiness.explanation, `${path}.explanation`),
+    limitations: parseStringArray(readiness.limitations, `${path}.limitations`),
   };
 }
 
