@@ -331,6 +331,8 @@ function rejectClientSuppliedContext(record: Record<string, unknown>) {
     "categoryMonthlyTargetStatus",
     "categoryMonthlyTargetStatuses",
     "categoryMonthlyTargetStatusRows",
+    // Legacy spelling from the removed budget-judgement path. Keep rejecting it
+    // so older client-supplied calculated context cannot bypass the boundary.
     "categoryMonthlyBudgetJudgement",
     "categoryMonthlyBudgetJudgements",
     "categoryMonthlyBudgetJudgementRows",
