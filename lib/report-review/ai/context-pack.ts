@@ -15,9 +15,10 @@ import {
   REPORT_REVIEW_AI_MONTHLY_SPENDING_TARGET_ID,
 } from "./types";
 import type {
+  CategoryEvidenceContext,
+  CategoryEvidenceFactBundle,
   CoachContextPack,
   CoachContextPackAllowedQuestionType,
-  CategoryEvidenceContext,
   ReportReviewAiTargetType,
 } from "./types";
 
@@ -256,6 +257,59 @@ export function buildCategoryEvidenceContextPack({
       policy: categoryMonthlyWindowPolicy,
     },
   );
+  const categoryMonthlySummaryWindowMetadata = windowMetadata(
+    categoryMonthlySummaryWindow,
+  );
+  const categoryMonthlyBudgetComparisonWindowMetadata = windowMetadata(
+    categoryMonthlyBudgetComparisonWindow,
+  );
+  const categoryBudgetAutomationReadinessWindowMetadata = windowMetadata(
+    categoryBudgetAutomationReadinessWindow,
+  );
+  const categoryMonthlySummaryBundle =
+    chargeInspector.categoryMonthlySummary.length > 0
+      ? ({
+          id: "category_monthly_summary",
+          label: "Category monthly",
+          rowLabel: "category-by-month summary rows",
+          aiContextVersion: "category_monthly_summary_ai_context.v0",
+          contractVersion: chargeInspector.categoryMonthlySummaryVersion,
+          window: categoryMonthlySummaryWindowMetadata,
+        } satisfies CategoryEvidenceFactBundle)
+      : null;
+  const monthlyBudgetFactBundles =
+    monthlyBudgetComparisons.length > 0
+      ? {
+          automationReadiness: {
+            id: "category_budget_automation_readiness",
+            label: "Automation readiness",
+            rowLabel: "budget automation readiness rows",
+            aiContextVersion:
+              "category_budget_automation_readiness_ai_context.v0",
+            contractVersion:
+              chargeInspector.categoryBudgetAutomationReadinessVersion,
+            window: categoryBudgetAutomationReadinessWindowMetadata,
+          } satisfies CategoryEvidenceFactBundle,
+          monthlyBudgetComparison: {
+            id: "category_monthly_budget_comparison",
+            label: "Monthly target",
+            rowLabel: "monthly target comparison rows",
+            aiContextVersion:
+              "category_monthly_budget_comparison_ai_context.v0",
+            contractVersion:
+              chargeInspector.categoryMonthlyBudgetComparisonVersion,
+            window: categoryMonthlyBudgetComparisonWindowMetadata,
+          } satisfies CategoryEvidenceFactBundle,
+        }
+      : null;
+  const factBundles: CategoryEvidenceFactBundle[] = [];
+  if (categoryMonthlySummaryBundle) {
+    factBundles.push(categoryMonthlySummaryBundle);
+  }
+  if (monthlyBudgetFactBundles) {
+    factBundles.push(monthlyBudgetFactBundles.monthlyBudgetComparison);
+    factBundles.push(monthlyBudgetFactBundles.automationReadiness);
+  }
   const budgetComparisonByCategory = new Map(
     budgetComparisons.map((comparison) => [
       comparison.category,
@@ -282,18 +336,18 @@ export function buildCategoryEvidenceContextPack({
               "category_budget_comparison_ai_context.v0" as const,
           }
         : {}),
-      ...(chargeInspector.categoryMonthlySummary.length > 0
+      ...(categoryMonthlySummaryBundle
         ? {
             categoryMonthlySummaryVersion:
-              "category_monthly_summary_ai_context.v0" as const,
+              categoryMonthlySummaryBundle.aiContextVersion,
           }
         : {}),
-      ...(monthlyBudgetComparisons.length > 0
+      ...(monthlyBudgetFactBundles
         ? {
             categoryMonthlyBudgetComparisonVersion:
-              "category_monthly_budget_comparison_ai_context.v0" as const,
+              monthlyBudgetFactBundles.monthlyBudgetComparison.aiContextVersion,
             categoryBudgetAutomationReadinessVersion:
-              "category_budget_automation_readiness_ai_context.v0" as const,
+              monthlyBudgetFactBundles.automationReadiness.aiContextVersion,
           }
         : {}),
       sourceLabel: chargeInspector.sourceLabel,
@@ -326,18 +380,17 @@ export function buildCategoryEvidenceContextPack({
           limitations: category.limitations,
         };
       }),
-      categoryMonthlySummaryWindow: windowMetadata(categoryMonthlySummaryWindow),
+      categoryMonthlySummaryWindow: categoryMonthlySummaryWindowMetadata,
       categoryMonthlySummaryRows: categoryMonthlySummaryWindow.kept,
-      categoryMonthlyBudgetComparisonWindow: windowMetadata(
-        categoryMonthlyBudgetComparisonWindow,
-      ),
+      categoryMonthlyBudgetComparisonWindow:
+        categoryMonthlyBudgetComparisonWindowMetadata,
       categoryMonthlyBudgetComparisons:
         categoryMonthlyBudgetComparisonWindow.kept,
-      categoryBudgetAutomationReadinessWindow: windowMetadata(
-        categoryBudgetAutomationReadinessWindow,
-      ),
+      categoryBudgetAutomationReadinessWindow:
+        categoryBudgetAutomationReadinessWindowMetadata,
       categoryBudgetAutomationReadinessRows:
         categoryBudgetAutomationReadinessWindow.kept,
+      factBundles,
       limitations: [
         "Category evidence is deterministic rule output, not an AI categorization decision.",
         "Category monthly summary rows are aggregate posted-date-month totals only, not monthly budgets.",
@@ -346,17 +399,8 @@ export function buildCategoryEvidenceContextPack({
         "Monthly budget comparison facts use only user-entered in-session targets and deterministic posted-date-month category debit totals.",
         "Monthly comparison status labels come from already-calculated monthly target comparison facts.",
         "Budget automation readiness facts are derived from monthly target comparison facts for explanation-only preview; they do not rank actions, recommend spending changes, or run automation.",
-        ...windowLimitations(
-          categoryMonthlySummaryWindow,
-          "category-by-month summary rows",
-        ),
-        ...windowLimitations(
-          categoryMonthlyBudgetComparisonWindow,
-          "monthly target comparison rows",
-        ),
-        ...windowLimitations(
-          categoryBudgetAutomationReadinessWindow,
-          "budget automation readiness rows",
+        ...factBundles.flatMap((bundle) =>
+          windowLimitations(bundle.window, bundle.rowLabel),
         ),
         "This context does not include raw CSV rows, balances, check numbers, account identifiers, or full transaction history.",
         "The AI explanation cannot create budget targets, recategorize rows, score spending quality, rank actions, or tell the user what to change.",
@@ -423,13 +467,16 @@ function windowMetadata<T>(windowedRows: WindowedRows<T>) {
   };
 }
 
-function windowLimitations<T>(windowedRows: WindowedRows<T>, label: string) {
-  if (windowedRows.omittedCount === 0) {
+function windowLimitations(
+  windowMetadata: CategoryEvidenceContext["categoryMonthlySummaryWindow"],
+  label: string,
+) {
+  if (windowMetadata.omittedCount === 0) {
     return [];
   }
 
   return [
-    `${windowedRows.omittedCount.toLocaleString("en-US")} ${label} omitted by the recent ${windowedRows.window.recentMonths.toLocaleString("en-US")}-month / ${windowedRows.window.rowCap.toLocaleString("en-US")}-row context window.`,
+    `${windowMetadata.omittedCount.toLocaleString("en-US")} ${label} omitted by the recent ${windowMetadata.window.recentMonths.toLocaleString("en-US")}-month / ${windowMetadata.window.rowCap.toLocaleString("en-US")}-row context window.`,
   ];
 }
 

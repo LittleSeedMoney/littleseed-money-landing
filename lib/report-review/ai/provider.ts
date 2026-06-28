@@ -308,14 +308,11 @@ function explainAnswer(contextPack: CoachContextPack) {
     const targetComparisonCount = contextPack.categoryEvidence.categories.filter(
       (category) => category.budgetComparison,
     ).length;
-    const monthlyCategoryRows =
-      contextPack.categoryEvidence.categoryMonthlySummaryWindow;
-    const monthlyTargetComparisonRows =
-      contextPack.categoryEvidence.categoryMonthlyBudgetComparisonWindow;
-    const automationReadinessRows =
-      contextPack.categoryEvidence.categoryBudgetAutomationReadinessWindow;
+    const factBundleSummary = categoryEvidenceFactBundleSummary(
+      contextPack.categoryEvidence,
+    );
 
-    return `This category evidence summary shows deterministic rule output for ${contextPack.categoryEvidence.categories.length.toLocaleString("en-US")} categor${contextPack.categoryEvidence.categories.length === 1 ? "y" : "ies"}, ${visibleEvidenceCount.toLocaleString("en-US")} bounded merchant-display evidence row${visibleEvidenceCount === 1 ? "" : "s"}, ${monthlyCategoryRows.includedCount.toLocaleString("en-US")} of ${monthlyCategoryRows.totalCount.toLocaleString("en-US")} aggregate category-by-month row${monthlyCategoryRows.totalCount === 1 ? "" : "s"}, ${targetComparisonCount.toLocaleString("en-US")} user-entered target comparison${targetComparisonCount === 1 ? "" : "s"}, ${monthlyTargetComparisonRows.includedCount.toLocaleString("en-US")} of ${monthlyTargetComparisonRows.totalCount.toLocaleString("en-US")} monthly target comparison row${monthlyTargetComparisonRows.totalCount === 1 ? "" : "s"}, and ${automationReadinessRows.includedCount.toLocaleString("en-US")} of ${automationReadinessRows.totalCount.toLocaleString("en-US")} budget automation readiness row${automationReadinessRows.totalCount === 1 ? "" : "s"}. It can explain which visible rows are attached to a category, what review status is selected, category-by-month aggregate facts, already-calculated target comparison facts, and explanation-only automation readiness, but it cannot create targets, recategorize rows, score spending quality, recommend changes, run automation, or rank actions.`;
+    return `This category evidence summary shows deterministic rule output for ${contextPack.categoryEvidence.categories.length.toLocaleString("en-US")} categor${contextPack.categoryEvidence.categories.length === 1 ? "y" : "ies"}, ${visibleEvidenceCount.toLocaleString("en-US")} bounded merchant-display evidence row${visibleEvidenceCount === 1 ? "" : "s"}, ${targetComparisonCount.toLocaleString("en-US")} user-entered target comparison${targetComparisonCount === 1 ? "" : "s"}${factBundleSummary}. It can explain which visible rows are attached to a category, what review status is selected, category-by-month aggregate facts, already-calculated target comparison facts, and explanation-only automation readiness, but it cannot create targets, recategorize rows, score spending quality, recommend changes, run automation, or rank actions.`;
   }
 
   return "This context pack does not include enough supported detail to explain.";
@@ -379,6 +376,37 @@ function followUpBoundaryAnswer(contextPack: CoachContextPack) {
   }
 
   return "For this category evidence context, follow-up is not enabled. Use one of the fixed explanation questions so the answer stays inside bounded category evidence, review status, rule ids, versions, and limitations.";
+}
+
+function categoryEvidenceFactBundleSummary(
+  categoryEvidence: NonNullable<CoachContextPack["categoryEvidence"]>,
+) {
+  if (categoryEvidence.factBundles.length === 0) {
+    return "";
+  }
+
+  const clauses = categoryEvidence.factBundles.map((bundle) => {
+    const rowNoun =
+      bundle.window.totalCount === 1
+        ? bundle.rowLabel.replace(/ rows$/, " row")
+        : bundle.rowLabel;
+
+    return `${bundle.window.includedCount.toLocaleString("en-US")} of ${bundle.window.totalCount.toLocaleString("en-US")} ${rowNoun}`;
+  });
+
+  return `, ${formatList(clauses)}`;
+}
+
+function formatList(items: string[]) {
+  if (items.length === 1) {
+    return items[0];
+  }
+
+  if (items.length === 2) {
+    return `${items[0]}, and ${items[1]}`;
+  }
+
+  return `${items.slice(0, -1).join(", ")}, and ${items[items.length - 1]}`;
 }
 
 function monthlySpendingEvidenceText(
@@ -459,16 +487,33 @@ function categoryEvidenceText(
           .join("; ")}.`
       : " No budget automation readiness rows are available.";
 
-  return `${categoryRows}${windowMetadataText(
-    "Category-by-month context window",
-    categoryEvidence.categoryMonthlySummaryWindow,
-  )}${monthlyRows}${windowMetadataText(
-    "Monthly target comparison context window",
-    categoryEvidence.categoryMonthlyBudgetComparisonWindow,
-  )}${monthlyBudgetRows}${windowMetadataText(
-    "Budget automation readiness context window",
-    categoryEvidence.categoryBudgetAutomationReadinessWindow,
+  return `${categoryRows}${factBundleWindowMetadataText(
+    categoryEvidence,
+    "category_monthly_summary",
+  )}${monthlyRows}${factBundleWindowMetadataText(
+    categoryEvidence,
+    "category_monthly_budget_comparison",
+  )}${monthlyBudgetRows}${factBundleWindowMetadataText(
+    categoryEvidence,
+    "category_budget_automation_readiness",
   )}${automationReadinessRows}`;
+}
+
+function factBundleWindowMetadataText(
+  categoryEvidence: NonNullable<CoachContextPack["categoryEvidence"]>,
+  id: NonNullable<
+    CoachContextPack["categoryEvidence"]
+  >["factBundles"][number]["id"],
+) {
+  const bundle = categoryEvidence.factBundles.find(
+    (candidate) => candidate.id === id,
+  );
+
+  if (!bundle) {
+    return "";
+  }
+
+  return windowMetadataText(`${bundle.label} context window`, bundle.window);
 }
 
 function windowMetadataText(

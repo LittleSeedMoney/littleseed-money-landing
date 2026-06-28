@@ -15,6 +15,7 @@ import {
   type ReportReviewAiProvider,
 } from "./provider";
 import type {
+  CategoryEvidenceContext,
   ReportReviewAiQuestionType,
   ReportReviewAiRequest,
   ReportReviewAiResponse,
@@ -62,15 +63,7 @@ export async function explainReportReviewFinding(
     answerValidator: "ai_answer_validator.v0",
     contextPack: "coach_context_pack.v0",
     corpus: KNOWLEDGE_CORPUS_VERSION,
-    categoryBudgetComparisonContext:
-      contextPack.categoryEvidence?.budgetComparisonVersion,
-    categoryMonthlyBudgetComparisonContext:
-      contextPack.categoryEvidence?.categoryMonthlyBudgetComparisonVersion,
-    categoryBudgetAutomationReadinessContext:
-      contextPack.categoryEvidence?.categoryBudgetAutomationReadinessVersion,
-    categoryMonthlySummaryContext:
-      contextPack.categoryEvidence?.categoryMonthlySummaryVersion,
-    categoryEvidenceContext: contextPack.categoryEvidence?.version,
+    ...categoryEvidenceVersionFields(contextPack.categoryEvidence),
     monthlySpendingContext: contextPack.monthlySpendingSummary?.version,
     model: provider.model,
     prompt: "report_review_explain.v0",
@@ -315,6 +308,57 @@ function readString(
   }
 
   return value;
+}
+
+function categoryEvidenceVersionFields(
+  categoryEvidence?: CategoryEvidenceContext,
+): Partial<
+  Pick<
+    ReportReviewAiVersions,
+    | "categoryBudgetAutomationReadinessContext"
+    | "categoryBudgetComparisonContext"
+    | "categoryEvidenceContext"
+    | "categoryMonthlyBudgetComparisonContext"
+    | "categoryMonthlySummaryContext"
+  >
+> {
+  if (!categoryEvidence) {
+    return {};
+  }
+
+  const versions: Partial<
+    Pick<
+      ReportReviewAiVersions,
+      | "categoryBudgetAutomationReadinessContext"
+      | "categoryBudgetComparisonContext"
+      | "categoryEvidenceContext"
+      | "categoryMonthlyBudgetComparisonContext"
+      | "categoryMonthlySummaryContext"
+    >
+  > = {
+    categoryEvidenceContext: categoryEvidence.version,
+  };
+
+  if (categoryEvidence.budgetComparisonVersion) {
+    versions.categoryBudgetComparisonContext =
+      categoryEvidence.budgetComparisonVersion;
+  }
+
+  for (const bundle of categoryEvidence.factBundles) {
+    if (bundle.id === "category_budget_automation_readiness") {
+      versions.categoryBudgetAutomationReadinessContext =
+        bundle.aiContextVersion;
+    }
+    if (bundle.id === "category_monthly_budget_comparison") {
+      versions.categoryMonthlyBudgetComparisonContext =
+        bundle.aiContextVersion;
+    }
+    if (bundle.id === "category_monthly_summary") {
+      versions.categoryMonthlySummaryContext = bundle.aiContextVersion;
+    }
+  }
+
+  return versions;
 }
 
 function rejectClientSuppliedContext(record: Record<string, unknown>) {

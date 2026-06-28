@@ -16,6 +16,7 @@ import type {
   ReportReviewAiQuestionType,
   ReportReviewAiResponse,
   ReportReviewAiTargetType,
+  ReportReviewAiVersions,
 } from "@/lib/report-review/ai/types";
 
 import {
@@ -25,6 +26,21 @@ import {
 } from "./shared";
 
 type AiRequestState = "idle" | "loading" | "ready" | "request_error";
+
+const versionDetailItems: {
+  key: keyof ReportReviewAiVersions;
+  label: string;
+}[] = [
+  { key: "monthlySpendingContext", label: "Monthly spend" },
+  { key: "categoryEvidenceContext", label: "Category evidence" },
+  { key: "categoryMonthlySummaryContext", label: "Category monthly" },
+  { key: "categoryBudgetComparisonContext", label: "Target comparison" },
+  { key: "categoryMonthlyBudgetComparisonContext", label: "Monthly target" },
+  {
+    key: "categoryBudgetAutomationReadinessContext",
+    label: "Automation readiness",
+  },
+];
 
 const answerKindDetails: Record<
   ReportReviewAiAnswerKind,
@@ -430,42 +446,13 @@ function AiAnswerResult({ answer }: { answer: ReportReviewAiResponse }) {
           <VersionItem label="Prompt" value={answer.versions.prompt} />
           <VersionItem label="Model" value={answer.versions.model} />
           <VersionItem label="Context" value={answer.versions.contextPack} />
-          {answer.versions.monthlySpendingContext ? (
-            <VersionItem
-              label="Monthly spend"
-              value={answer.versions.monthlySpendingContext}
-            />
-          ) : null}
-          {answer.versions.categoryEvidenceContext ? (
-            <VersionItem
-              label="Category evidence"
-              value={answer.versions.categoryEvidenceContext}
-            />
-          ) : null}
-          {answer.versions.categoryMonthlySummaryContext ? (
-            <VersionItem
-              label="Category monthly"
-              value={answer.versions.categoryMonthlySummaryContext}
-            />
-          ) : null}
-          {answer.versions.categoryBudgetComparisonContext ? (
-            <VersionItem
-              label="Target comparison"
-              value={answer.versions.categoryBudgetComparisonContext}
-            />
-          ) : null}
-          {answer.versions.categoryMonthlyBudgetComparisonContext ? (
-            <VersionItem
-              label="Monthly target"
-              value={answer.versions.categoryMonthlyBudgetComparisonContext}
-            />
-          ) : null}
-          {answer.versions.categoryBudgetAutomationReadinessContext ? (
-            <VersionItem
-              label="Automation readiness"
-              value={answer.versions.categoryBudgetAutomationReadinessContext}
-            />
-          ) : null}
+          {versionDetailItems.map(({ key, label }) => {
+            const value = answer.versions[key];
+
+            return value ? (
+              <VersionItem key={key} label={label} value={value} />
+            ) : null;
+          })}
           <VersionItem label="Corpus" value={answer.versions.corpus} />
           <VersionItem label="Source map" value={answer.versions.sourceMap} />
           <VersionItem
