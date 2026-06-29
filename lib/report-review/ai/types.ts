@@ -5,6 +5,7 @@ import type {
 import type {
   ChargeInspectorCategoryEvidenceRow,
   ChargeInspectorCategoryBudgetComparison,
+  ChargeInspectorCategoryBudgetAutomationJudgment,
   ChargeInspectorCategoryBudgetAutomationReadiness,
   ChargeInspectorCategoryBudgetTargetAmounts,
   ChargeInspectorCategoryMonthlyBudgetComparison,
@@ -117,6 +118,10 @@ export type CategoryEvidenceFactBundle =
   | (CategoryEvidenceFactBundleBase & {
       id: "category_budget_automation_readiness";
       aiContextVersion: "category_budget_automation_readiness_ai_context.v0";
+    })
+  | (CategoryEvidenceFactBundleBase & {
+      id: "category_budget_automation_judgment";
+      aiContextVersion: "category_budget_automation_judgment_ai_context.v0";
     });
 
 export type CategoryEvidenceContext = {
@@ -126,12 +131,14 @@ export type CategoryEvidenceContext = {
   categoryMonthlySummaryVersion?: "category_monthly_summary_ai_context.v0";
   categoryMonthlyBudgetComparisonVersion?: "category_monthly_budget_comparison_ai_context.v0";
   categoryBudgetAutomationReadinessVersion?: "category_budget_automation_readiness_ai_context.v0";
+  categoryBudgetAutomationJudgmentVersion?: "category_budget_automation_judgment_ai_context.v0";
   sourceLabel: string;
   reviewedTransactionCount: number;
   categorySummaryContractVersion: string;
   categoryMonthlySummaryContractVersion: string;
   categoryMonthlyBudgetComparisonContractVersion: string;
   categoryBudgetAutomationReadinessContractVersion: string;
+  categoryBudgetAutomationJudgmentContractVersion: string;
   categories: CategoryEvidenceContextCategory[];
   categoryMonthlySummaryWindow: CategoryEvidenceWindowMetadata;
   categoryMonthlySummaryRows: ChargeInspectorCategoryMonthlySummary[];
@@ -139,6 +146,8 @@ export type CategoryEvidenceContext = {
   categoryMonthlyBudgetComparisons: ChargeInspectorCategoryMonthlyBudgetComparison[];
   categoryBudgetAutomationReadinessWindow: CategoryEvidenceWindowMetadata;
   categoryBudgetAutomationReadinessRows: ChargeInspectorCategoryBudgetAutomationReadiness[];
+  categoryBudgetAutomationJudgmentWindow: CategoryEvidenceWindowMetadata;
+  categoryBudgetAutomationJudgmentRows: ChargeInspectorCategoryBudgetAutomationJudgment[];
   factBundles: CategoryEvidenceFactBundle[];
   limitations: string[];
   excludedFields: string[];
@@ -192,6 +201,7 @@ export type ReportReviewAiVersions = {
   answerValidator: "ai_answer_validator.v0";
   contextPack: "coach_context_pack.v0";
   corpus: "knowledge_corpus.fixture.v0";
+  categoryBudgetAutomationJudgmentContext?: "category_budget_automation_judgment_ai_context.v0";
   categoryBudgetComparisonContext?: "category_budget_comparison_ai_context.v0";
   categoryBudgetAutomationReadinessContext?: "category_budget_automation_readiness_ai_context.v0";
   categoryMonthlyBudgetComparisonContext?: "category_monthly_budget_comparison_ai_context.v0";

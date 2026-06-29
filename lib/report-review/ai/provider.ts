@@ -486,6 +486,15 @@ function categoryEvidenceText(
           )
           .join("; ")}.`
       : " No budget automation readiness rows are available.";
+  const automationJudgmentRows =
+    categoryEvidence.categoryBudgetAutomationJudgmentRows.length > 0
+      ? ` Budget automation judgment rows: ${categoryEvidence.categoryBudgetAutomationJudgmentRows
+          .map(
+            (row) =>
+              `${row.month} ${row.label}: ${row.judgmentStatusLabel}, reason ${row.reasonLabel}, scope ${row.judgmentScope}, source readiness ${row.sourceReadinessStatus}, ${row.debitTransactionCount.toLocaleString("en-US")} debit rows`,
+          )
+          .join("; ")}.`
+      : " No budget automation judgment rows are available.";
 
   return `${categoryRows}${factBundleWindowMetadataText(
     categoryEvidence,
@@ -496,7 +505,10 @@ function categoryEvidenceText(
   )}${monthlyBudgetRows}${factBundleWindowMetadataText(
     categoryEvidence,
     "category_budget_automation_readiness",
-  )}${automationReadinessRows}`;
+  )}${automationReadinessRows}${factBundleWindowMetadataText(
+    categoryEvidence,
+    "category_budget_automation_judgment",
+  )}${automationJudgmentRows}`;
 }
 
 function factBundleWindowMetadataText(

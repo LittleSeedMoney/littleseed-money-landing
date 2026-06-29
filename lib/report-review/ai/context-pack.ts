@@ -2,6 +2,7 @@ import { reportReviewSample } from "@/data/report-review-sample";
 import {
   compareCategoryBudgetTargets,
   compareCategoryMonthlyBudgetTargets,
+  deriveCategoryBudgetAutomationJudgments,
   deriveCategoryBudgetAutomationReadiness,
   windowChargeInspectorRows,
   type ChargeInspectorCategoryBudgetTargetAmounts,
@@ -239,6 +240,8 @@ export function buildCategoryEvidenceContextPack({
   );
   const budgetAutomationReadinessRows =
     deriveCategoryBudgetAutomationReadiness(monthlyBudgetComparisons);
+  const budgetAutomationJudgmentRows =
+    deriveCategoryBudgetAutomationJudgments(budgetAutomationReadinessRows);
   const categoryMonthlySummaryWindow = windowChargeInspectorRows(
     chargeInspector.categoryMonthlySummary,
     { policy: categoryMonthlyWindowPolicy },
@@ -257,6 +260,13 @@ export function buildCategoryEvidenceContextPack({
       policy: categoryMonthlyWindowPolicy,
     },
   );
+  const categoryBudgetAutomationJudgmentWindow = windowChargeInspectorRows(
+    budgetAutomationJudgmentRows,
+    {
+      isPriorityRow: (row) => row.judgmentStatus !== "not-enough-context",
+      policy: categoryMonthlyWindowPolicy,
+    },
+  );
   const categoryMonthlySummaryWindowMetadata = windowMetadata(
     categoryMonthlySummaryWindow,
   );
@@ -265,6 +275,9 @@ export function buildCategoryEvidenceContextPack({
   );
   const categoryBudgetAutomationReadinessWindowMetadata = windowMetadata(
     categoryBudgetAutomationReadinessWindow,
+  );
+  const categoryBudgetAutomationJudgmentWindowMetadata = windowMetadata(
+    categoryBudgetAutomationJudgmentWindow,
   );
   const categoryMonthlySummaryBundle =
     chargeInspector.categoryMonthlySummary.length > 0
@@ -290,6 +303,16 @@ export function buildCategoryEvidenceContextPack({
               chargeInspector.categoryBudgetAutomationReadinessVersion,
             window: categoryBudgetAutomationReadinessWindowMetadata,
           } satisfies CategoryEvidenceFactBundle,
+          automationJudgment: {
+            id: "category_budget_automation_judgment",
+            label: "Automation judgment",
+            rowLabel: "budget automation judgment rows",
+            aiContextVersion:
+              "category_budget_automation_judgment_ai_context.v0",
+            contractVersion:
+              chargeInspector.categoryBudgetAutomationJudgmentVersion,
+            window: categoryBudgetAutomationJudgmentWindowMetadata,
+          } satisfies CategoryEvidenceFactBundle,
           monthlyBudgetComparison: {
             id: "category_monthly_budget_comparison",
             label: "Monthly target",
@@ -309,6 +332,7 @@ export function buildCategoryEvidenceContextPack({
   if (monthlyBudgetFactBundles) {
     factBundles.push(monthlyBudgetFactBundles.monthlyBudgetComparison);
     factBundles.push(monthlyBudgetFactBundles.automationReadiness);
+    factBundles.push(monthlyBudgetFactBundles.automationJudgment);
   }
   const budgetComparisonByCategory = new Map(
     budgetComparisons.map((comparison) => [
@@ -348,6 +372,8 @@ export function buildCategoryEvidenceContextPack({
               monthlyBudgetFactBundles.monthlyBudgetComparison.aiContextVersion,
             categoryBudgetAutomationReadinessVersion:
               monthlyBudgetFactBundles.automationReadiness.aiContextVersion,
+            categoryBudgetAutomationJudgmentVersion:
+              monthlyBudgetFactBundles.automationJudgment.aiContextVersion,
           }
         : {}),
       sourceLabel: chargeInspector.sourceLabel,
@@ -359,6 +385,8 @@ export function buildCategoryEvidenceContextPack({
         chargeInspector.categoryMonthlyBudgetComparisonVersion,
       categoryBudgetAutomationReadinessContractVersion:
         chargeInspector.categoryBudgetAutomationReadinessVersion,
+      categoryBudgetAutomationJudgmentContractVersion:
+        chargeInspector.categoryBudgetAutomationJudgmentVersion,
       categories: chargeInspector.categorySummary.map((category) => {
         const budgetComparison = budgetComparisonByCategory.get(
           category.category,
@@ -390,6 +418,10 @@ export function buildCategoryEvidenceContextPack({
         categoryBudgetAutomationReadinessWindowMetadata,
       categoryBudgetAutomationReadinessRows:
         categoryBudgetAutomationReadinessWindow.kept,
+      categoryBudgetAutomationJudgmentWindow:
+        categoryBudgetAutomationJudgmentWindowMetadata,
+      categoryBudgetAutomationJudgmentRows:
+        categoryBudgetAutomationJudgmentWindow.kept,
       factBundles,
       limitations: [
         "Category evidence is deterministic rule output, not an AI categorization decision.",
@@ -399,6 +431,7 @@ export function buildCategoryEvidenceContextPack({
         "Monthly budget comparison facts use only user-entered in-session targets and deterministic posted-date-month category debit totals.",
         "Monthly comparison status labels come from already-calculated monthly target comparison facts.",
         "Budget automation readiness facts are derived from monthly target comparison facts for explanation-only preview; they do not rank actions, recommend spending changes, or run automation.",
+        "Budget automation judgment facts are boundary-only labels derived from automation readiness facts; they do not approve execution, rank actions, recommend spending changes, or create targets.",
         ...factBundles.flatMap((bundle) =>
           windowLimitations(bundle.window, bundle.rowLabel),
         ),
@@ -417,6 +450,7 @@ export function buildCategoryEvidenceContextPack({
         "inferred budget targets",
         "budget variance assessments",
         "client-supplied budget automation readiness results",
+        "client-supplied budget automation judgment results",
         "client-supplied monthly target status results",
         "client-supplied monthly budget comparison results",
         "saved budget targets",

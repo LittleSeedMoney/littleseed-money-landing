@@ -209,6 +209,8 @@ test.describe("private report review AI panel", () => {
             answerValidator: "ai_answer_validator.v0",
             categoryBudgetComparisonContext:
               "category_budget_comparison_ai_context.v0",
+            categoryBudgetAutomationJudgmentContext:
+              "category_budget_automation_judgment_ai_context.v0",
             categoryBudgetAutomationReadinessContext:
               "category_budget_automation_readiness_ai_context.v0",
             categoryEvidenceContext: "category_evidence_ai_context.v0",

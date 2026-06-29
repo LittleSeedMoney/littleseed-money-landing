@@ -17,6 +17,7 @@ export type PlatformChargeInspectorReviewResponse = {
   category_monthly_summary_version: string;
   category_monthly_budget_comparison_version: string;
   category_budget_automation_readiness_version: string;
+  category_budget_automation_judgment_version: string;
   reviewed_transaction_count: number;
   parse_error_count: number;
   findings: {
@@ -30,6 +31,7 @@ export type PlatformChargeInspectorReviewResponse = {
   category_monthly_summary: PlatformTransactionCategoryMonthlySummary[];
   category_monthly_budget_comparison: PlatformTransactionCategoryMonthlyBudgetComparison[];
   category_budget_automation_readiness: PlatformTransactionCategoryBudgetAutomationReadiness[];
+  category_budget_automation_judgment: PlatformTransactionCategoryBudgetAutomationJudgment[];
   evidence_transactions: PlatformNormalizedTransaction[];
   parse_errors: PlatformCsvTransactionValidationError[];
   limitations: string[];
@@ -89,6 +91,26 @@ export type PlatformTransactionCategoryBudgetAutomationReadiness = {
   readiness_status: string;
   reason_code: string;
   automation_scope: string;
+  source_comparison_status: string;
+  actual_debit_total: DecimalValue;
+  debit_transaction_count: number;
+  target_debit_total: DecimalValue | null;
+  variance_amount: DecimalValue | null;
+  explanation: string;
+  limitations: string[];
+};
+
+export type PlatformTransactionCategoryBudgetAutomationJudgment = {
+  schema_version: string;
+  month: string;
+  category: string;
+  label: string;
+  currency: string;
+  judgment_status: string;
+  reason_code: string;
+  judgment_scope: string;
+  source_readiness_status: string;
+  source_readiness_reason: string;
   source_comparison_status: string;
   actual_debit_total: DecimalValue;
   debit_transaction_count: number;
@@ -286,6 +308,13 @@ export function parseChargeInspectorReviewResponse(
             response.category_budget_automation_readiness_version,
             "charge-inspector response.category_budget_automation_readiness_version",
           ),
+    category_budget_automation_judgment_version:
+      response.category_budget_automation_judgment_version == null
+        ? "not_returned"
+        : expectString(
+            response.category_budget_automation_judgment_version,
+            "charge-inspector response.category_budget_automation_judgment_version",
+          ),
     reviewed_transaction_count: expectNumber(
       response.reviewed_transaction_count,
       "charge-inspector response.reviewed_transaction_count",
@@ -355,6 +384,14 @@ export function parseChargeInspectorReviewResponse(
             response.category_budget_automation_readiness,
             "charge-inspector response.category_budget_automation_readiness",
             parseTransactionCategoryBudgetAutomationReadiness,
+          ),
+    category_budget_automation_judgment:
+      response.category_budget_automation_judgment == null
+        ? []
+        : parseArray(
+            response.category_budget_automation_judgment,
+            "charge-inspector response.category_budget_automation_judgment",
+            parseTransactionCategoryBudgetAutomationJudgment,
           ),
     evidence_transactions: parseArray(
       response.evidence_transactions,
@@ -530,6 +567,62 @@ function parseTransactionCategoryBudgetAutomationReadiness(
         : expectDecimalValue(readiness.variance_amount, `${path}.variance_amount`),
     explanation: expectString(readiness.explanation, `${path}.explanation`),
     limitations: parseStringArray(readiness.limitations, `${path}.limitations`),
+  };
+}
+
+function parseTransactionCategoryBudgetAutomationJudgment(
+  value: unknown,
+  path: string,
+): PlatformTransactionCategoryBudgetAutomationJudgment {
+  const judgment = expectRecord(value, path);
+  return {
+    schema_version: expectString(judgment.schema_version, `${path}.schema_version`),
+    month: expectString(judgment.month, `${path}.month`),
+    category: expectString(judgment.category, `${path}.category`),
+    label: expectString(judgment.label, `${path}.label`),
+    currency: expectString(judgment.currency, `${path}.currency`),
+    judgment_status: expectString(
+      judgment.judgment_status,
+      `${path}.judgment_status`,
+    ),
+    reason_code: expectString(judgment.reason_code, `${path}.reason_code`),
+    judgment_scope: expectString(
+      judgment.judgment_scope,
+      `${path}.judgment_scope`,
+    ),
+    source_readiness_status: expectString(
+      judgment.source_readiness_status,
+      `${path}.source_readiness_status`,
+    ),
+    source_readiness_reason: expectString(
+      judgment.source_readiness_reason,
+      `${path}.source_readiness_reason`,
+    ),
+    source_comparison_status: expectString(
+      judgment.source_comparison_status,
+      `${path}.source_comparison_status`,
+    ),
+    actual_debit_total: expectDecimalValue(
+      judgment.actual_debit_total,
+      `${path}.actual_debit_total`,
+    ),
+    debit_transaction_count: expectNumber(
+      judgment.debit_transaction_count,
+      `${path}.debit_transaction_count`,
+    ),
+    target_debit_total:
+      judgment.target_debit_total == null
+        ? null
+        : expectDecimalValue(
+            judgment.target_debit_total,
+            `${path}.target_debit_total`,
+          ),
+    variance_amount:
+      judgment.variance_amount == null
+        ? null
+        : expectDecimalValue(judgment.variance_amount, `${path}.variance_amount`),
+    explanation: expectString(judgment.explanation, `${path}.explanation`),
+    limitations: parseStringArray(judgment.limitations, `${path}.limitations`),
   };
 }
 

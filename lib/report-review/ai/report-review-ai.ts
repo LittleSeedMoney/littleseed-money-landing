@@ -315,6 +315,7 @@ function categoryEvidenceVersionFields(
 ): Partial<
   Pick<
     ReportReviewAiVersions,
+    | "categoryBudgetAutomationJudgmentContext"
     | "categoryBudgetAutomationReadinessContext"
     | "categoryBudgetComparisonContext"
     | "categoryEvidenceContext"
@@ -329,6 +330,7 @@ function categoryEvidenceVersionFields(
   const versions: Partial<
     Pick<
       ReportReviewAiVersions,
+      | "categoryBudgetAutomationJudgmentContext"
       | "categoryBudgetAutomationReadinessContext"
       | "categoryBudgetComparisonContext"
       | "categoryEvidenceContext"
@@ -345,6 +347,10 @@ function categoryEvidenceVersionFields(
   }
 
   for (const bundle of categoryEvidence.factBundles) {
+    if (bundle.id === "category_budget_automation_judgment") {
+      versions.categoryBudgetAutomationJudgmentContext =
+        bundle.aiContextVersion;
+    }
     if (bundle.id === "category_budget_automation_readiness") {
       versions.categoryBudgetAutomationReadinessContext =
         bundle.aiContextVersion;
@@ -372,6 +378,10 @@ function rejectClientSuppliedContext(record: Record<string, unknown>) {
     "categoryBudgetAutomationReadiness",
     "categoryBudgetAutomationReadinessRows",
     "categoryBudgetAutomationReadinessResults",
+    "categoryBudgetAutomationJudgment",
+    "categoryBudgetAutomationJudgments",
+    "categoryBudgetAutomationJudgmentRows",
+    "categoryBudgetAutomationJudgmentResults",
     "categoryMonthlyBudgetComparison",
     "categoryMonthlyBudgetComparisons",
     "categoryMonthlyBudgetComparisonRows",
