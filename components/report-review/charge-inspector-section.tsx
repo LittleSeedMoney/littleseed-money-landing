@@ -56,6 +56,11 @@ import {
 } from "./shared";
 
 type CsvReviewRequestState = "idle" | "loading" | "ready" | "error";
+type AutomationReviewDecision =
+  | "unreviewed"
+  | "candidate-reviewed"
+  | "needs-more-context"
+  | "excluded";
 
 const CSV_FILE_LENGTH_ERROR =
   "CSV file must be 250,000 characters or fewer.";
@@ -66,6 +71,15 @@ const CATEGORY_REVIEW_OPTIONS: {
   { label: "Unreviewed", status: "unreviewed" },
   { label: "Confirm", status: "confirmed" },
   { label: "Needs review", status: "needs-review" },
+];
+const AUTOMATION_REVIEW_DECISION_OPTIONS: {
+  decision: AutomationReviewDecision;
+  label: string;
+}[] = [
+  { decision: "unreviewed", label: "Unreviewed" },
+  { decision: "candidate-reviewed", label: "Reviewed" },
+  { decision: "needs-more-context", label: "Needs context" },
+  { decision: "excluded", label: "Exclude" },
 ];
 export function ChargeInspectorSection({
   aiEnabled,
@@ -814,10 +828,28 @@ function BudgetAutomationReadinessPreview({
   windowedRows: WindowedRows<ChargeInspectorCategoryBudgetAutomationReadiness>;
 }) {
   const counts = summarizeCategoryBudgetAutomationReadiness(rows);
+  const [reviewDecisions, setReviewDecisions] = useState<
+    Record<string, AutomationReviewDecision>
+  >({});
   const reviewQueueItems = useMemo(
     () => buildCategoryBudgetAutomationReviewQueue(judgmentRows),
     [judgmentRows],
   );
+
+  function setReviewDecision(
+    item: ChargeInspectorCategoryBudgetAutomationReviewQueueItem,
+    decision: AutomationReviewDecision,
+  ) {
+    const key = automationReviewDecisionKey(item);
+    setReviewDecisions((current) => {
+      if (decision === "unreviewed") {
+        const { [key]: _ignored, ...next } = current;
+        return next;
+      }
+
+      return { ...current, [key]: decision };
+    });
+  }
 
   return (
     <div
@@ -845,15 +877,20 @@ function BudgetAutomationReadinessPreview({
         </div>
       </div>
 
-      <BudgetAutomationReviewQueue items={reviewQueueItems} />
+      <BudgetAutomationReviewQueue
+        decisions={reviewDecisions}
+        items={reviewQueueItems}
+        onDecisionChange={setReviewDecision}
+      />
 
       <p className="mt-3 text-xs leading-5 text-earth-600">
         This preview table is derived from already-calculated monthly target
         comparison facts. It groups visible rows for current-session review and
         shows the source facts behind each boundary judgment. Boundary judgment
         labels only say whether a row can be treated as a later automation
-        candidate; they do not approve execution, change targets, rank actions,
-        or recommend spending changes.
+        candidate; review decisions stay in this browser session and they do not
+        approve execution, save decisions, change targets, rank actions, or
+        recommend spending changes.
         {windowedRows.omittedCount > 0
           ? ` Showing ${windowedRows.includedCount.toLocaleString("en-US")} of ${windowedRows.totalCount.toLocaleString("en-US")} readiness rows; ${windowedRows.omittedCount.toLocaleString("en-US")} older or overflow rows are hidden by the display cap.`
           : ""}
@@ -863,11 +900,22 @@ function BudgetAutomationReadinessPreview({
 }
 
 function BudgetAutomationReviewQueue({
+  decisions,
   items,
+  onDecisionChange,
 }: {
+  decisions: Record<string, AutomationReviewDecision>;
   items: ChargeInspectorCategoryBudgetAutomationReviewQueueItem[];
+  onDecisionChange: (
+    item: ChargeInspectorCategoryBudgetAutomationReviewQueueItem,
+    decision: AutomationReviewDecision,
+  ) => void;
 }) {
   const counts = summarizeBudgetAutomationReviewQueueItems(items);
+  const decisionCounts = summarizeBudgetAutomationReviewDecisions(
+    items,
+    decisions,
+  );
 
   if (items.length === 0) {
     return null;
@@ -886,45 +934,80 @@ function BudgetAutomationReviewQueue({
           <p className="mt-1 max-w-3xl text-xs leading-5 text-earth-600">
             Generated from visible boundary judgment rows for current-session
             review. It combines queue grouping with source facts and boundary
-            notes; it does not approve automation, save a decision, rank
-            actions, or recommend spending changes.
+            notes. Decision labels are temporary browser-session review marks;
+            they do not approve automation, save a decision, rank actions, or
+            recommend spending changes.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <StatusPill
-            label={`${counts.humanReview.toLocaleString("en-US")} human review`}
-            tone={counts.humanReview > 0 ? "earth" : "stone"}
-          />
-          <StatusPill
-            label={`${counts.missingContext.toLocaleString("en-US")} missing context`}
-            tone="stone"
-          />
-          <StatusPill
-            label={`${counts.candidate.toLocaleString("en-US")} candidates`}
-            tone={counts.candidate > 0 ? "seed" : "stone"}
-          />
-          <StatusPill
-            label={`${counts.boundaryBlocked.toLocaleString("en-US")} boundary blocked`}
-            tone={counts.boundaryBlocked > 0 ? "earth" : "stone"}
-          />
+        <div className="space-y-2">
+          <div className="flex flex-wrap justify-start gap-2 xl:justify-end">
+            <StatusPill
+              label={`${counts.humanReview.toLocaleString("en-US")} human review`}
+              tone={counts.humanReview > 0 ? "earth" : "stone"}
+            />
+            <StatusPill
+              label={`${counts.missingContext.toLocaleString("en-US")} missing context`}
+              tone="stone"
+            />
+            <StatusPill
+              label={`${counts.candidate.toLocaleString("en-US")} candidates`}
+              tone={counts.candidate > 0 ? "seed" : "stone"}
+            />
+            <StatusPill
+              label={`${counts.boundaryBlocked.toLocaleString("en-US")} boundary blocked`}
+              tone={counts.boundaryBlocked > 0 ? "earth" : "stone"}
+            />
+          </div>
+          <div className="flex flex-wrap justify-start gap-2 xl:justify-end">
+            <StatusPill
+              label={`${decisionCounts.unreviewed.toLocaleString("en-US")} unreviewed`}
+              tone="stone"
+            />
+            <StatusPill
+              label={`${decisionCounts.candidateReviewed.toLocaleString("en-US")} reviewed`}
+              tone={
+                decisionCounts.candidateReviewed > 0 ? "seed" : "stone"
+              }
+            />
+            <StatusPill
+              label={`${decisionCounts.needsMoreContext.toLocaleString("en-US")} needs context`}
+              tone={
+                decisionCounts.needsMoreContext > 0 ? "earth" : "stone"
+              }
+            />
+            <StatusPill
+              label={`${decisionCounts.excluded.toLocaleString("en-US")} excluded`}
+              tone={decisionCounts.excluded > 0 ? "earth" : "stone"}
+            />
+          </div>
         </div>
       </div>
 
       <div className="mt-3 overflow-x-auto">
-        <table className="w-full min-w-[72rem] text-left text-sm">
+        <table className="w-full min-w-[88rem] text-left text-sm">
           <thead className="border-b border-stone-200 text-xs font-semibold uppercase text-earth-600">
             <tr>
               <th className="py-2 pr-3">Queue group</th>
               <th className="px-3 py-2">Row</th>
               <th className="px-3 py-2">Target facts</th>
               <th className="px-3 py-2">Automation state</th>
+              <th className="px-3 py-2">Review decision</th>
               <th className="py-2 pl-3">Review note</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-stone-100">
-            {items.map((item) => (
-              <BudgetAutomationReviewQueueRow item={item} key={item.id} />
-            ))}
+            {items.map((item) => {
+              const decisionKey = automationReviewDecisionKey(item);
+
+              return (
+                <BudgetAutomationReviewQueueRow
+                  decision={decisions[decisionKey] ?? "unreviewed"}
+                  item={item}
+                  key={decisionKey}
+                  onDecisionChange={onDecisionChange}
+                />
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -933,9 +1016,16 @@ function BudgetAutomationReviewQueue({
 }
 
 function BudgetAutomationReviewQueueRow({
+  decision,
   item,
+  onDecisionChange,
 }: {
+  decision: AutomationReviewDecision;
   item: ChargeInspectorCategoryBudgetAutomationReviewQueueItem;
+  onDecisionChange: (
+    item: ChargeInspectorCategoryBudgetAutomationReviewQueueItem,
+    decision: AutomationReviewDecision,
+  ) => void;
 }) {
   return (
     <tr data-testid="charge-inspector-budget-automation-review-queue-row">
@@ -973,6 +1063,37 @@ function BudgetAutomationReviewQueueRow({
             label={item.judgment.judgmentStatusLabel}
             tone={budgetAutomationJudgmentTone(item.judgment.judgmentStatus)}
           />
+        </div>
+      </td>
+      <td className="px-3 py-2">
+        <div
+          aria-label={`Review decision for ${item.judgment.month} ${item.judgment.label}`}
+          className="inline-flex min-h-9 overflow-hidden rounded-md border border-stone-300 bg-white text-xs font-semibold shadow-sm"
+          data-testid="charge-inspector-budget-automation-review-decision"
+          role="radiogroup"
+        >
+          {AUTOMATION_REVIEW_DECISION_OPTIONS.map((option) => {
+            const isActive = option.decision === decision;
+
+            return (
+              <button
+                aria-checked={isActive}
+                className={[
+                  "px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-seed-500",
+                  isActive
+                    ? "bg-seed-700 text-white"
+                    : "bg-white text-earth-700 hover:bg-stone-50",
+                ].join(" ")}
+                data-testid={`charge-inspector-budget-automation-review-${option.decision}`}
+                key={option.decision}
+                onClick={() => onDecisionChange(item, option.decision)}
+                role="radio"
+                type="button"
+              >
+                {option.label}
+              </button>
+            );
+          })}
         </div>
       </td>
       <td className="py-2 pl-3 text-xs leading-5 text-earth-700">
@@ -1077,6 +1198,48 @@ function summarizeBudgetAutomationReviewQueueItems(
     },
     { boundaryBlocked: 0, candidate: 0, humanReview: 0, missingContext: 0 },
   );
+}
+
+function summarizeBudgetAutomationReviewDecisions(
+  items: ChargeInspectorCategoryBudgetAutomationReviewQueueItem[],
+  decisions: Record<string, AutomationReviewDecision>,
+) {
+  return items.reduce(
+    (counts, item) => {
+      const decision =
+        decisions[automationReviewDecisionKey(item)] ?? "unreviewed";
+
+      if (decision === "candidate-reviewed") {
+        counts.candidateReviewed += 1;
+      } else if (decision === "needs-more-context") {
+        counts.needsMoreContext += 1;
+      } else if (decision === "excluded") {
+        counts.excluded += 1;
+      } else {
+        counts.unreviewed += 1;
+      }
+
+      return counts;
+    },
+    {
+      candidateReviewed: 0,
+      excluded: 0,
+      needsMoreContext: 0,
+      unreviewed: 0,
+    },
+  );
+}
+
+function automationReviewDecisionKey(
+  item: ChargeInspectorCategoryBudgetAutomationReviewQueueItem,
+) {
+  return [
+    item.id,
+    item.lane,
+    item.judgment.judgmentStatus,
+    item.judgment.reasonCode,
+    item.sourceFactsLabel,
+  ].join("|");
 }
 
 function CategoryMonthlySummaryRow({

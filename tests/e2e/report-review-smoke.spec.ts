@@ -396,8 +396,33 @@ test.describe("private report review smoke", () => {
       "actual $130.56, target $100.00",
     );
     await expect(automationReviewQueue).toContainText(
-      "it does not approve automation",
+      "do not approve automation",
     );
+    await expect(automationReviewQueue).toContainText("17 unreviewed");
+    await expect(automationReviewQueue).toContainText("0 reviewed");
+    const groceriesAutomationReviewRow = automationReviewQueue
+      .getByTestId("charge-inspector-budget-automation-review-queue-row")
+      .filter({ hasText: "2026-05 Groceries" });
+    await groceriesAutomationReviewRow
+      .getByRole("radio", { exact: true, name: "Reviewed" })
+      .click();
+    await expect(
+      groceriesAutomationReviewRow.getByRole("radio", {
+        exact: true,
+        name: "Reviewed",
+      }),
+    ).toHaveAttribute("aria-checked", "true");
+    await expect(automationReviewQueue).toContainText("16 unreviewed");
+    await expect(automationReviewQueue).toContainText("1 reviewed");
+    await groceriesAutomationReviewRow
+      .getByRole("radio", { name: "Needs context" })
+      .click();
+    await expect(automationReviewQueue).toContainText("0 reviewed");
+    await expect(automationReviewQueue).toContainText("1 needs context");
+    await groceriesAutomationReviewRow
+      .getByRole("radio", { name: "Unreviewed" })
+      .click();
+    await expect(automationReviewQueue).toContainText("17 unreviewed");
     await groceriesCategory.locator("summary").click();
     await expect(groceriesCategory.getByText("Corner Grocer").first())
       .toBeVisible();
