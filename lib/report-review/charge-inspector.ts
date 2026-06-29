@@ -168,12 +168,15 @@ export type ChargeInspectorCategoryBudgetAutomationJudgmentStatus =
   | "automation-candidate"
   | "needs-human-review"
   | "not-enough-context"
+  // Reserved for a future producer that blocks rows outside the approved
+  // automation boundary. Phase 5.14 local derivation does not emit this value.
   | "blocked-by-boundary";
 
 export type ChargeInspectorCategoryBudgetAutomationJudgmentReason =
   | "within-target-ready"
   | "over-target-review-required"
   | "missing-target"
+  // Reserved with blocked-by-boundary for future non-readiness boundary blocks.
   | "unsupported-automation-scope";
 
 export type ChargeInspectorCategoryBudgetAutomationJudgment = {
@@ -1587,6 +1590,8 @@ function mapCategoryBudgetAutomationJudgmentStatus(
     return "blocked-by-boundary";
   }
 
+  // Intentional fail-closed fallback: unknown platform statuses are not
+  // treated as automation candidates.
   return "not-enough-context";
 }
 
@@ -1605,6 +1610,7 @@ function mapCategoryBudgetAutomationJudgmentReason(
     return "unsupported-automation-scope";
   }
 
+  // Intentional fail-closed fallback matching the status mapper above.
   return "missing-target";
 }
 

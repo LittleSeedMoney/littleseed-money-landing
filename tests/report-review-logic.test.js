@@ -636,6 +636,16 @@ test("charge inspector budget automation judgment derives boundary labels", () =
     rowsByKey.get("2026-05:groceries").explanation,
     /does not recommend a spending change/,
   );
+  assert.deepEqual(
+    Array.from(new Set(judgmentRows.map((row) => row.judgmentStatus))).sort(),
+    ["automation-candidate", "needs-human-review", "not-enough-context"],
+  );
+  assert.equal(
+    judgmentRows.some(
+      (row) => row.reasonCode === "unsupported-automation-scope",
+    ),
+    false,
+  );
 });
 
 test("charge inspector monthly row window keeps recent months before target priority", () => {
