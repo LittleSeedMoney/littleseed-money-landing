@@ -1124,7 +1124,7 @@ function categoryBudgetAutomationReviewQueueItem(
   );
 
   return {
-    id: `${judgment.month}:${judgment.category}:${judgment.judgmentStatus}`,
+    id: `${judgment.month}:${judgment.category}`,
     lane,
     laneLabel: categoryBudgetAutomationReviewQueueLaneLabel(lane),
     sortIndex: categoryBudgetAutomationReviewQueueSortIndex(lane),
@@ -1816,6 +1816,7 @@ function categoryBudgetAutomationReviewQueueSortIndex(
   lane: ChargeInspectorCategoryBudgetAutomationReviewQueueLane,
 ) {
   if (lane === "boundary-blocked") {
+    // Reserved for a future explicit boundary detector; Phase 5.15 has no producer.
     return 0;
   }
 
