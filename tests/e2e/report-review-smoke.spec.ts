@@ -378,6 +378,26 @@ test.describe("private report review smoke", () => {
     ).toContainText("Over target");
     await expect(page.getByText("1 targets")).toBeVisible();
     await expect(page.getByText("1 over")).toBeVisible();
+    const automationReviewQueue = page.getByTestId(
+      "charge-inspector-budget-automation-review-queue",
+    );
+    await expect(automationReviewQueue).toBeVisible();
+    await expect(
+      automationReviewQueue.getByText("Auto-generated review queue"),
+    ).toBeVisible();
+    await expect(
+      automationReviewQueue.getByTestId(
+        "charge-inspector-budget-automation-review-queue-row",
+      ),
+    ).toHaveCount(17);
+    await expect(automationReviewQueue).toContainText("Needs human review");
+    await expect(automationReviewQueue).toContainText("2026-05 Groceries");
+    await expect(automationReviewQueue).toContainText(
+      "actual $130.56, target $100.00",
+    );
+    await expect(automationReviewQueue).toContainText(
+      "It does not approve automation",
+    );
     await groceriesCategory.locator("summary").click();
     await expect(groceriesCategory.getByText("Corner Grocer").first())
       .toBeVisible();

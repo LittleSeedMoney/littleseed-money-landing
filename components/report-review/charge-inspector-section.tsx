@@ -9,6 +9,7 @@ import {
 } from "react";
 
 import {
+  buildCategoryBudgetAutomationReviewQueue,
   categoryBudgetTargetsFromInputs,
   compareCategoryBudgetTargets,
   compareCategoryMonthlyBudgetTargets,
@@ -23,6 +24,8 @@ import {
   windowChargeInspectorRows,
   type ChargeInspectorCategoryBudgetAutomationJudgment,
   type ChargeInspectorCategoryBudgetAutomationReadiness,
+  type ChargeInspectorCategoryBudgetAutomationReviewQueueItem,
+  type ChargeInspectorCategoryBudgetAutomationReviewQueueLane,
   type ChargeInspectorCategoryBudgetComparison,
   type ChargeInspectorCategoryBudgetTargetAmounts,
   type ChargeInspectorCategoryMonthlyBudgetComparison,
@@ -812,6 +815,10 @@ function BudgetAutomationReadinessPreview({
 }) {
   const counts = summarizeCategoryBudgetAutomationReadiness(rows);
   const judgmentCounts = summarizeCategoryBudgetAutomationJudgments(judgmentRows);
+  const reviewQueueItems = useMemo(
+    () => buildCategoryBudgetAutomationReviewQueue(judgmentRows),
+    [judgmentRows],
+  );
   const judgmentByMonthCategory = new Map(
     judgmentRows.map((row) => [`${row.month}:${row.category}`, row]),
   );
@@ -849,6 +856,8 @@ function BudgetAutomationReadinessPreview({
           />
         </div>
       </div>
+
+      <BudgetAutomationReviewQueue items={reviewQueueItems} />
 
       <div className="mt-3 overflow-x-auto">
         <table className="w-full min-w-[64rem] text-left text-sm">
@@ -891,6 +900,103 @@ function BudgetAutomationReadinessPreview({
           : ""}
       </p>
     </div>
+  );
+}
+
+function BudgetAutomationReviewQueue({
+  items,
+}: {
+  items: ChargeInspectorCategoryBudgetAutomationReviewQueueItem[];
+}) {
+  const counts = summarizeBudgetAutomationReviewQueueItems(items);
+
+  if (items.length === 0) {
+    return null;
+  }
+
+  return (
+    <div
+      className="mt-3 border-y border-stone-200 py-3"
+      data-testid="charge-inspector-budget-automation-review-queue"
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h6 className="text-sm font-semibold text-seed-950">
+            Auto-generated review queue
+          </h6>
+          <p className="mt-1 max-w-3xl text-xs leading-5 text-earth-600">
+            Generated from visible boundary judgment rows for current-session
+            review. It does not approve automation, save a decision, rank
+            actions, or recommend spending changes.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <StatusPill
+            label={`${counts.humanReview.toLocaleString("en-US")} human review`}
+            tone={counts.humanReview > 0 ? "earth" : "stone"}
+          />
+          <StatusPill
+            label={`${counts.missingContext.toLocaleString("en-US")} missing context`}
+            tone="stone"
+          />
+          <StatusPill
+            label={`${counts.candidate.toLocaleString("en-US")} candidates`}
+            tone={counts.candidate > 0 ? "seed" : "stone"}
+          />
+          <StatusPill
+            label={`${counts.boundaryBlocked.toLocaleString("en-US")} boundary blocked`}
+            tone={counts.boundaryBlocked > 0 ? "earth" : "stone"}
+          />
+        </div>
+      </div>
+
+      <div className="mt-3 overflow-x-auto">
+        <table className="w-full min-w-[62rem] text-left text-sm">
+          <thead className="border-b border-stone-200 text-xs font-semibold uppercase text-earth-600">
+            <tr>
+              <th className="py-2 pr-3">Queue group</th>
+              <th className="px-3 py-2">Row</th>
+              <th className="px-3 py-2">Source facts</th>
+              <th className="py-2 pl-3">Review note</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-stone-100">
+            {items.map((item) => (
+              <BudgetAutomationReviewQueueRow item={item} key={item.id} />
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function BudgetAutomationReviewQueueRow({
+  item,
+}: {
+  item: ChargeInspectorCategoryBudgetAutomationReviewQueueItem;
+}) {
+  return (
+    <tr data-testid="charge-inspector-budget-automation-review-queue-row">
+      <td className="py-2 pr-3">
+        <StatusPill
+          label={item.laneLabel}
+          tone={budgetAutomationReviewQueueTone(item.lane)}
+        />
+      </td>
+      <td className="px-3 py-2 text-xs leading-5 text-earth-700">
+        <div className="font-semibold text-seed-950">
+          {item.judgment.month} {item.judgment.label}
+        </div>
+        <div className="text-earth-600">{item.judgment.reasonLabel}</div>
+      </td>
+      <td className="px-3 py-2 text-xs leading-5 text-earth-700">
+        {item.sourceFactsLabel}
+      </td>
+      <td className="py-2 pl-3 text-xs leading-5 text-earth-700">
+        {item.reviewPrompt}
+      </td>
+    </tr>
   );
 }
 
@@ -964,6 +1070,20 @@ function budgetAutomationJudgmentTone(
   return "stone";
 }
 
+function budgetAutomationReviewQueueTone(
+  lane: ChargeInspectorCategoryBudgetAutomationReviewQueueLane,
+) {
+  if (lane === "candidate") {
+    return "seed";
+  }
+
+  if (lane === "human-review" || lane === "boundary-blocked") {
+    return "earth";
+  }
+
+  return "stone";
+}
+
 function summarizeCategoryBudgetAutomationReadiness(
   rows: ChargeInspectorCategoryBudgetAutomationReadiness[],
 ) {
@@ -980,6 +1100,27 @@ function summarizeCategoryBudgetAutomationReadiness(
       return counts;
     },
     { insufficientContext: 0, needsReview: 0, ready: 0 },
+  );
+}
+
+function summarizeBudgetAutomationReviewQueueItems(
+  items: ChargeInspectorCategoryBudgetAutomationReviewQueueItem[],
+) {
+  return items.reduce(
+    (counts, item) => {
+      if (item.lane === "candidate") {
+        counts.candidate += 1;
+      } else if (item.lane === "human-review") {
+        counts.humanReview += 1;
+      } else if (item.lane === "boundary-blocked") {
+        counts.boundaryBlocked += 1;
+      } else {
+        counts.missingContext += 1;
+      }
+
+      return counts;
+    },
+    { boundaryBlocked: 0, candidate: 0, humanReview: 0, missingContext: 0 },
   );
 }
 

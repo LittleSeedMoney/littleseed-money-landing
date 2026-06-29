@@ -202,6 +202,22 @@ export type ChargeInspectorCategoryBudgetAutomationJudgment = {
   limitations: string[];
 };
 
+export type ChargeInspectorCategoryBudgetAutomationReviewQueueLane =
+  | "boundary-blocked"
+  | "human-review"
+  | "missing-context"
+  | "candidate";
+
+export type ChargeInspectorCategoryBudgetAutomationReviewQueueItem = {
+  id: string;
+  lane: ChargeInspectorCategoryBudgetAutomationReviewQueueLane;
+  laneLabel: string;
+  sortIndex: number;
+  reviewPrompt: string;
+  sourceFactsLabel: string;
+  judgment: ChargeInspectorCategoryBudgetAutomationJudgment;
+};
+
 export type ChargeInspectorCategoryBudgetComparisonStatus =
   | "within-target"
   | "over-target";
@@ -1055,6 +1071,14 @@ export function deriveCategoryBudgetAutomationJudgments(
   return readinessRows.map(categoryBudgetAutomationJudgment);
 }
 
+export function buildCategoryBudgetAutomationReviewQueue(
+  judgmentRows: ChargeInspectorCategoryBudgetAutomationJudgment[],
+): ChargeInspectorCategoryBudgetAutomationReviewQueueItem[] {
+  return judgmentRows
+    .map(categoryBudgetAutomationReviewQueueItem)
+    .sort(compareCategoryBudgetAutomationReviewQueueItems);
+}
+
 function categoryBudgetAutomationJudgment(
   readiness: ChargeInspectorCategoryBudgetAutomationReadiness,
 ): ChargeInspectorCategoryBudgetAutomationJudgment {
@@ -1089,6 +1113,24 @@ function categoryBudgetAutomationJudgment(
       "Budget automation judgment is derived from already-calculated readiness facts.",
       "This is a boundary-only label, not an automation decision, spending instruction, action ranking, or budget recommendation.",
     ],
+  };
+}
+
+function categoryBudgetAutomationReviewQueueItem(
+  judgment: ChargeInspectorCategoryBudgetAutomationJudgment,
+): ChargeInspectorCategoryBudgetAutomationReviewQueueItem {
+  const lane = categoryBudgetAutomationReviewQueueLane(
+    judgment.judgmentStatus,
+  );
+
+  return {
+    id: `${judgment.month}:${judgment.category}:${judgment.judgmentStatus}`,
+    lane,
+    laneLabel: categoryBudgetAutomationReviewQueueLaneLabel(lane),
+    sortIndex: categoryBudgetAutomationReviewQueueSortIndex(lane),
+    reviewPrompt: categoryBudgetAutomationReviewQueuePrompt(lane),
+    sourceFactsLabel: categoryBudgetAutomationReviewQueueSourceFacts(judgment),
+    judgment,
   };
 }
 
@@ -1732,6 +1774,106 @@ function categoryBudgetAutomationJudgmentExplanation(
   }
 
   return "This row does not have enough user-entered target context for automation judgment, so it is not an automation candidate.";
+}
+
+function categoryBudgetAutomationReviewQueueLane(
+  status: ChargeInspectorCategoryBudgetAutomationJudgmentStatus,
+): ChargeInspectorCategoryBudgetAutomationReviewQueueLane {
+  if (status === "blocked-by-boundary") {
+    return "boundary-blocked";
+  }
+
+  if (status === "needs-human-review") {
+    return "human-review";
+  }
+
+  if (status === "not-enough-context") {
+    return "missing-context";
+  }
+
+  return "candidate";
+}
+
+function categoryBudgetAutomationReviewQueueLaneLabel(
+  lane: ChargeInspectorCategoryBudgetAutomationReviewQueueLane,
+) {
+  if (lane === "boundary-blocked") {
+    return "Boundary blocked";
+  }
+
+  if (lane === "human-review") {
+    return "Needs human review";
+  }
+
+  if (lane === "missing-context") {
+    return "Missing context";
+  }
+
+  return "Review candidate";
+}
+
+function categoryBudgetAutomationReviewQueueSortIndex(
+  lane: ChargeInspectorCategoryBudgetAutomationReviewQueueLane,
+) {
+  if (lane === "boundary-blocked") {
+    return 0;
+  }
+
+  if (lane === "human-review") {
+    return 1;
+  }
+
+  if (lane === "missing-context") {
+    return 2;
+  }
+
+  return 3;
+}
+
+function categoryBudgetAutomationReviewQueuePrompt(
+  lane: ChargeInspectorCategoryBudgetAutomationReviewQueueLane,
+) {
+  if (lane === "boundary-blocked") {
+    return "Keep this row outside automation until the approved boundary changes.";
+  }
+
+  if (lane === "human-review") {
+    return "Review the over-target row before any later workflow treats it as a candidate.";
+  }
+
+  if (lane === "missing-context") {
+    return "Add or confirm a user target before this row can enter automation review.";
+  }
+
+  return "Confirm this row stays inside the explanation-only boundary before any later workflow uses it.";
+}
+
+function categoryBudgetAutomationReviewQueueSourceFacts(
+  judgment: ChargeInspectorCategoryBudgetAutomationJudgment,
+) {
+  const varianceLabel =
+    judgment.varianceAmountCents === null
+      ? "variance not available"
+      : `variance ${judgment.varianceAmountLabel}`;
+
+  return [
+    `actual ${judgment.actualDebitTotalLabel}`,
+    `target ${judgment.targetDebitTotalLabel}`,
+    varianceLabel,
+    `debit rows ${judgment.debitTransactionCount.toLocaleString("en-US")}`,
+  ].join(", ");
+}
+
+function compareCategoryBudgetAutomationReviewQueueItems(
+  left: ChargeInspectorCategoryBudgetAutomationReviewQueueItem,
+  right: ChargeInspectorCategoryBudgetAutomationReviewQueueItem,
+) {
+  return (
+    left.sortIndex - right.sortIndex ||
+    right.judgment.month.localeCompare(left.judgment.month) ||
+    left.judgment.label.localeCompare(right.judgment.label) ||
+    left.judgment.category.localeCompare(right.judgment.category)
+  );
 }
 
 function mapCategorySummary(

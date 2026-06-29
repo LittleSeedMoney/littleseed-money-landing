@@ -26,6 +26,7 @@ const {
   chargeInspectorFallbackReview,
   chargeInspectorFindingTypeLabels,
   chargeInspectorSampleReview,
+  buildCategoryBudgetAutomationReviewQueue,
   categoryBudgetTargetsFromInputs,
   compareCategoryBudgetTarget,
   compareCategoryMonthlyBudgetTargets,
@@ -645,6 +646,45 @@ test("charge inspector budget automation judgment derives boundary labels", () =
       (row) => row.reasonCode === "unsupported-automation-scope",
     ),
     false,
+  );
+});
+
+test("charge inspector automation review queue groups visible judgments", () => {
+  const readinessRows = deriveCategoryBudgetAutomationReadiness(
+    compareCategoryMonthlyBudgetTargets(
+      chargeInspectorSampleReview.categoryMonthlySummary,
+      {
+        groceries: 10000,
+        subscriptions: 2000,
+      },
+    ),
+  );
+  const judgmentRows = deriveCategoryBudgetAutomationJudgments(readinessRows);
+  const queueItems = buildCategoryBudgetAutomationReviewQueue(judgmentRows);
+  const firstCandidateIndex = queueItems.findIndex(
+    (item) => item.lane === "candidate",
+  );
+  const firstMissingContextIndex = queueItems.findIndex(
+    (item) => item.lane === "missing-context",
+  );
+
+  assert.equal(queueItems.length, judgmentRows.length);
+  assert.equal(queueItems[0].lane, "human-review");
+  assert.equal(firstMissingContextIndex > 0, true);
+  assert.equal(firstCandidateIndex > firstMissingContextIndex, true);
+  assert.equal(queueItems[0].judgment.month, "2026-05");
+  assert.match(queueItems[0].reviewPrompt, /before any later workflow/);
+  assert.match(
+    queueItems[0].sourceFactsLabel,
+    /actual \$130\.56, target \$100\.00, variance \$30\.56 over, debit rows 2/,
+  );
+  assert.equal(
+    queueItems.some((item) => item.lane === "boundary-blocked"),
+    false,
+  );
+  assert.doesNotMatch(
+    queueItems.map((item) => item.reviewPrompt).join(" "),
+    /you should|recommend/i,
   );
 });
 
