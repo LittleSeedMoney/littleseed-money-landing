@@ -29,6 +29,7 @@ const {
   categoryBudgetTargetsFromInputs,
   compareCategoryBudgetTarget,
   compareCategoryMonthlyBudgetTargets,
+  deriveCategoryBudgetAutomationJudgments,
   deriveCategoryBudgetAutomationReadiness,
   isChargeInspectorEmpty,
   mapPlatformChargeInspectorReview,
@@ -221,6 +222,10 @@ test("report-review AI category evidence context pack stays bounded", () => {
     "category_budget_automation_readiness_ai_context.v0",
   );
   assert.equal(
+    contextPack.categoryEvidence.categoryBudgetAutomationJudgmentVersion,
+    "category_budget_automation_judgment_ai_context.v0",
+  );
+  assert.equal(
     contextPack.categoryEvidence.categoryMonthlySummaryContractVersion,
     "sample_fixture",
   );
@@ -230,6 +235,10 @@ test("report-review AI category evidence context pack stays bounded", () => {
   );
   assert.equal(
     contextPack.categoryEvidence.categoryBudgetAutomationReadinessContractVersion,
+    "sample_fixture",
+  );
+  assert.equal(
+    contextPack.categoryEvidence.categoryBudgetAutomationJudgmentContractVersion,
     "sample_fixture",
   );
   assert.deepEqual(
@@ -258,6 +267,13 @@ test("report-review AI category evidence context pack stays bounded", () => {
         contractVersion: "sample_fixture",
         id: "category_budget_automation_readiness",
         rowLabel: "budget automation readiness rows",
+      },
+      {
+        aiContextVersion:
+          "category_budget_automation_judgment_ai_context.v0",
+        contractVersion: "sample_fixture",
+        id: "category_budget_automation_judgment",
+        rowLabel: "budget automation judgment rows",
       },
     ],
   );
@@ -296,6 +312,18 @@ test("report-review AI category evidence context pack stays bounded", () => {
       (row) => row.month === "2026-03" && row.category === "groceries",
     ).readinessStatus,
     "ready",
+  );
+  assert.equal(
+    contextPack.categoryEvidence.categoryBudgetAutomationJudgmentRows.find(
+      (row) => row.month === "2026-03" && row.category === "groceries",
+    ).judgmentStatus,
+    "automation-candidate",
+  );
+  assert.equal(
+    contextPack.categoryEvidence.categoryBudgetAutomationJudgmentRows.find(
+      (row) => row.month === "2026-05" && row.category === "groceries",
+    ).reasonCode,
+    "over-target-review-required",
   );
   assert.equal(groceries.budgetComparison.targetDebitTotalLabel, "$100.00");
   assert.equal(groceries.budgetComparison.varianceAmountLabel, "$30.56 over");
@@ -351,6 +379,15 @@ test("report-review AI category evidence context records row window omissions", 
     },
   );
   assert.deepEqual(
+    contextPack.categoryEvidence.categoryBudgetAutomationJudgmentWindow,
+    {
+      totalCount: 19,
+      includedCount: 2,
+      omittedCount: 17,
+      window: { recentMonths: 1, rowCap: 2 },
+    },
+  );
+  assert.deepEqual(
     contextPack.categoryEvidence.factBundles.map((bundle) => [
       bundle.id,
       bundle.window.includedCount,
@@ -360,6 +397,7 @@ test("report-review AI category evidence context records row window omissions", 
       ["category_monthly_summary", 2, 13],
       ["category_monthly_budget_comparison", 2, 17],
       ["category_budget_automation_readiness", 2, 17],
+      ["category_budget_automation_judgment", 2, 17],
     ],
   );
   assert.deepEqual(
@@ -373,6 +411,15 @@ test("report-review AI category evidence context records row window omissions", 
       (row) => `${row.month}:${row.category}:${row.readinessStatus}`,
     ),
     ["2026-05:groceries:needs-review", "2026-05:fees:needs-review"],
+  );
+  assert.deepEqual(
+    contextPack.categoryEvidence.categoryBudgetAutomationJudgmentRows.map(
+      (row) => `${row.month}:${row.category}:${row.judgmentStatus}`,
+    ),
+    [
+      "2026-05:groceries:needs-human-review",
+      "2026-05:fees:needs-human-review",
+    ],
   );
   assert.match(
     contextPack.categoryEvidence.limitations.join(" "),
@@ -539,6 +586,65 @@ test("charge inspector budget automation readiness derives from monthly comparis
   assert.match(
     rowsByKey.get("2026-05:groceries").limitations.join(" "),
     /not an automation decision/,
+  );
+});
+
+test("charge inspector budget automation judgment derives boundary labels", () => {
+  const readinessRows = deriveCategoryBudgetAutomationReadiness(
+    compareCategoryMonthlyBudgetTargets(
+      chargeInspectorSampleReview.categoryMonthlySummary,
+      {
+        groceries: 10000,
+        subscriptions: 2000,
+      },
+    ),
+  );
+  const judgmentRows = deriveCategoryBudgetAutomationJudgments(readinessRows);
+  const rowsByKey = new Map(
+    judgmentRows.map((row) => [`${row.month}:${row.category}`, row]),
+  );
+
+  assert.equal(
+    rowsByKey.get("2026-03:groceries").judgmentStatus,
+    "automation-candidate",
+  );
+  assert.equal(
+    rowsByKey.get("2026-03:groceries").reasonCode,
+    "within-target-ready",
+  );
+  assert.equal(
+    rowsByKey.get("2026-03:groceries").judgmentScope,
+    "boundary-only",
+  );
+  assert.equal(
+    rowsByKey.get("2026-03:fitness").judgmentStatus,
+    "not-enough-context",
+  );
+  assert.equal(
+    rowsByKey.get("2026-03:fitness").reasonCode,
+    "missing-target",
+  );
+  assert.equal(
+    rowsByKey.get("2026-05:groceries").judgmentStatus,
+    "needs-human-review",
+  );
+  assert.equal(
+    rowsByKey.get("2026-05:groceries").reasonCode,
+    "over-target-review-required",
+  );
+  assert.match(
+    rowsByKey.get("2026-05:groceries").explanation,
+    /does not recommend a spending change/,
+  );
+  assert.deepEqual(
+    Array.from(new Set(judgmentRows.map((row) => row.judgmentStatus))).sort(),
+    ["automation-candidate", "needs-human-review", "not-enough-context"],
+  );
+  assert.equal(
+    judgmentRows.some(
+      (row) => row.reasonCode === "unsupported-automation-scope",
+    ),
+    false,
   );
 });
 
@@ -748,6 +854,25 @@ test("report-review AI request parser rejects client-supplied category evidence"
         userMessage: null,
       }),
     /categoryBudgetAutomationReadiness must not be supplied/,
+  );
+
+  assert.throws(
+    () =>
+      parseReportReviewAiRequest({
+        categoryBudgetAutomationJudgment: [
+          {
+            category: "groceries",
+            judgmentStatus: "automation-candidate",
+            month: "2026-05",
+          },
+        ],
+        questionType: "explain_finding",
+        surface: "report_review",
+        targetId: "charge_inspector_category_evidence",
+        targetType: "category_evidence",
+        userMessage: null,
+      }),
+    /categoryBudgetAutomationJudgment must not be supplied/,
   );
 
   assert.throws(
@@ -970,6 +1095,10 @@ test("report-review AI explains category evidence without recategorizing", async
     "category_budget_automation_readiness_ai_context.v0",
   );
   assert.equal(
+    answer.versions.categoryBudgetAutomationJudgmentContext,
+    "category_budget_automation_judgment_ai_context.v0",
+  );
+  assert.equal(
     answer.versions.categoryMonthlyBudgetComparisonContext,
     "category_monthly_budget_comparison_ai_context.v0",
   );
@@ -1015,6 +1144,14 @@ test("report-review AI explains category evidence without recategorizing", async
     answer.evidence.some((item) =>
       item.text.includes(
         "Budget automation readiness rows: 2026-03 Groceries: Ready for explanation",
+      ),
+    ),
+    true,
+  );
+  assert.equal(
+    answer.evidence.some((item) =>
+      item.text.includes(
+        "Budget automation judgment rows: 2026-03 Groceries: Candidate",
       ),
     ),
     true,
@@ -1235,6 +1372,9 @@ test("report-review AI eval cases cover required boundary categories", () => {
   assert.ok(caseIds.has("rejects_client_supplied_category_budget_comparison"));
   assert.ok(
     caseIds.has("rejects_client_supplied_category_monthly_budget_comparison"),
+  );
+  assert.ok(
+    caseIds.has("rejects_client_supplied_category_budget_automation_judgment"),
   );
   assert.ok(caseIds.has("validator_rejects_missing_evidence"));
 });
@@ -1487,6 +1627,8 @@ test("charge inspector platform parser falls back without monthly summary fields
   delete payload.category_monthly_budget_comparison;
   delete payload.category_budget_automation_readiness_version;
   delete payload.category_budget_automation_readiness;
+  delete payload.category_budget_automation_judgment_version;
+  delete payload.category_budget_automation_judgment;
 
   const parsed = parseChargeInspectorReviewResponse(payload);
   const review = mapPlatformChargeInspectorReview(parsed);
@@ -1507,6 +1649,11 @@ test("charge inspector platform parser falls back without monthly summary fields
     "not_returned",
   );
   assert.deepEqual(parsed.category_budget_automation_readiness, []);
+  assert.equal(
+    parsed.category_budget_automation_judgment_version,
+    "not_returned",
+  );
+  assert.deepEqual(parsed.category_budget_automation_judgment, []);
   assert.equal(review.spendingSummaryVersion, "not_returned");
   assert.deepEqual(review.monthlySpendingSummary, []);
   assert.equal(review.categorySummaryVersion, "not_returned");
@@ -1517,6 +1664,8 @@ test("charge inspector platform parser falls back without monthly summary fields
   assert.deepEqual(review.categoryMonthlyBudgetComparison, []);
   assert.equal(review.categoryBudgetAutomationReadinessVersion, "not_returned");
   assert.deepEqual(review.categoryBudgetAutomationReadiness, []);
+  assert.equal(review.categoryBudgetAutomationJudgmentVersion, "not_returned");
+  assert.deepEqual(review.categoryBudgetAutomationJudgment, []);
 });
 
 test("charge inspector platform mapper builds UI findings from contract evidence", () => {
@@ -1570,6 +1719,10 @@ test("charge inspector platform mapper builds UI findings from contract evidence
     review.categoryBudgetAutomationReadinessVersion,
     "transaction_category_budget_automation_readiness_v0",
   );
+  assert.equal(
+    review.categoryBudgetAutomationJudgmentVersion,
+    "transaction_category_budget_automation_judgment_v0",
+  );
   assert.equal(review.categoryMonthlyBudgetComparison[0].label, "Groceries");
   assert.equal(
     review.categoryMonthlyBudgetComparison[0].varianceAmountLabel,
@@ -1588,6 +1741,22 @@ test("charge inspector platform mapper builds UI findings from contract evidence
   assert.equal(
     review.categoryBudgetAutomationReadiness[1].readinessStatus,
     "insufficient-context",
+  );
+  assert.equal(
+    review.categoryBudgetAutomationJudgment[0].judgmentStatus,
+    "needs-human-review",
+  );
+  assert.equal(
+    review.categoryBudgetAutomationJudgment[0].reasonCode,
+    "over-target-review-required",
+  );
+  assert.equal(
+    review.categoryBudgetAutomationJudgment[0].judgmentScope,
+    "boundary-only",
+  );
+  assert.equal(
+    review.categoryBudgetAutomationJudgment[1].judgmentStatus,
+    "not-enough-context",
   );
   assert.deepEqual(review.categorySummary[2].ruleIds, [
     "category.groceries.grocer_text.v0",
@@ -1627,6 +1796,19 @@ test("charge inspector platform mapper rejects unsupported automation scope", ()
         parseChargeInspectorReviewResponse(payload),
       ),
     /Unsupported automation scope: execute/,
+  );
+});
+
+test("charge inspector platform mapper rejects unsupported automation judgment scope", () => {
+  const payload = chargeInspectorPlatformPayload();
+  payload.category_budget_automation_judgment[0].judgment_scope = "execute";
+
+  assert.throws(
+    () =>
+      mapPlatformChargeInspectorReview(
+        parseChargeInspectorReviewResponse(payload),
+      ),
+    /Unsupported automation judgment scope: execute/,
   );
 });
 
@@ -2802,6 +2984,8 @@ function chargeInspectorPlatformPayload() {
       "transaction_category_monthly_budget_comparison_v1",
     category_budget_automation_readiness_version:
       "transaction_category_budget_automation_readiness_v0",
+    category_budget_automation_judgment_version:
+      "transaction_category_budget_automation_judgment_v0",
     reviewed_transaction_count: 18,
     parse_error_count: 0,
     findings: {
@@ -3006,6 +3190,36 @@ function chargeInspectorPlatformPayload() {
         null,
       ),
     ],
+    category_budget_automation_judgment: [
+      categoryBudgetAutomationJudgmentPayload(
+        "2026-05",
+        "groceries",
+        "Groceries",
+        "needs_human_review",
+        "over_target_review_required",
+        "needs_review",
+        "over_target",
+        "over_target",
+        "130.56",
+        2,
+        "100.00",
+        "30.56",
+      ),
+      categoryBudgetAutomationJudgmentPayload(
+        "2026-05",
+        "housing",
+        "Housing",
+        "not_enough_context",
+        "missing_target",
+        "insufficient_context",
+        "missing_target",
+        "no_target",
+        "1500.00",
+        1,
+        null,
+        null,
+      ),
+    ],
     evidence_transactions: evidence,
     parse_errors: [],
     limitations: [
@@ -3133,6 +3347,45 @@ function categoryBudgetAutomationReadinessPayload(
     limitations: [
       "Budget automation readiness is derived from already-calculated monthly target comparison facts.",
       "This is explanation-only readiness, not an automation decision.",
+    ],
+  };
+}
+
+function categoryBudgetAutomationJudgmentPayload(
+  month,
+  category,
+  label,
+  judgmentStatus,
+  reasonCode,
+  sourceReadinessStatus,
+  sourceReadinessReason,
+  sourceComparisonStatus,
+  actualDebitTotal,
+  debitTransactionCount,
+  targetDebitTotal,
+  varianceAmount,
+) {
+  return {
+    schema_version: "transaction_category_budget_automation_judgment_v0",
+    month,
+    category,
+    label,
+    currency: "USD",
+    judgment_status: judgmentStatus,
+    reason_code: reasonCode,
+    judgment_scope: "boundary_only",
+    source_readiness_status: sourceReadinessStatus,
+    source_readiness_reason: sourceReadinessReason,
+    source_comparison_status: sourceComparisonStatus,
+    actual_debit_total: actualDebitTotal,
+    debit_transaction_count: debitTransactionCount,
+    target_debit_total: targetDebitTotal,
+    variance_amount: varianceAmount,
+    explanation:
+      "This row is a deterministic boundary-only automation judgment.",
+    limitations: [
+      "Budget automation judgment is derived from automation readiness facts.",
+      "This is not an automation decision, recommendation, or execution approval.",
     ],
   };
 }

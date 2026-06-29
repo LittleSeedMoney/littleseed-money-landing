@@ -12,6 +12,7 @@ import {
   categoryBudgetTargetsFromInputs,
   compareCategoryBudgetTargets,
   compareCategoryMonthlyBudgetTargets,
+  deriveCategoryBudgetAutomationJudgments,
   deriveCategoryBudgetAutomationReadiness,
   isChargeInspectorEmpty,
   mergeCategoryMonthlyBudgetComparisons,
@@ -20,6 +21,7 @@ import {
   summarizeChargeInspectorReview,
   visibleChargeInspectorFindings,
   windowChargeInspectorRows,
+  type ChargeInspectorCategoryBudgetAutomationJudgment,
   type ChargeInspectorCategoryBudgetAutomationReadiness,
   type ChargeInspectorCategoryBudgetComparison,
   type ChargeInspectorCategoryBudgetTargetAmounts,
@@ -670,6 +672,11 @@ function CategoryMonthlySummaryTable({
     [automationReadinessRows],
   );
   const visibleAutomationReadinessRows = automationReadinessWindow.kept;
+  const visibleAutomationJudgmentRows = useMemo(
+    () =>
+      deriveCategoryBudgetAutomationJudgments(visibleAutomationReadinessRows),
+    [visibleAutomationReadinessRows],
+  );
   const showBudgetComparison = budgetComparisons.length > 0;
   const showAutomationReadiness = automationReadinessRows.length > 0;
   const activeWindow = showBudgetComparison
@@ -771,6 +778,7 @@ function CategoryMonthlySummaryTable({
 
       {showAutomationReadiness ? (
         <BudgetAutomationReadinessPreview
+          judgmentRows={visibleAutomationJudgmentRows}
           rows={visibleAutomationReadinessRows}
           windowedRows={automationReadinessWindow}
         />
@@ -794,13 +802,19 @@ function CategoryMonthlySummaryTable({
 }
 
 function BudgetAutomationReadinessPreview({
+  judgmentRows,
   rows,
   windowedRows,
 }: {
+  judgmentRows: ChargeInspectorCategoryBudgetAutomationJudgment[];
   rows: ChargeInspectorCategoryBudgetAutomationReadiness[];
   windowedRows: WindowedRows<ChargeInspectorCategoryBudgetAutomationReadiness>;
 }) {
   const counts = summarizeCategoryBudgetAutomationReadiness(rows);
+  const judgmentCounts = summarizeCategoryBudgetAutomationJudgments(judgmentRows);
+  const judgmentByMonthCategory = new Map(
+    judgmentRows.map((row) => [`${row.month}:${row.category}`, row]),
+  );
 
   return (
     <div
@@ -825,27 +839,42 @@ function BudgetAutomationReadinessPreview({
             label={`${counts.insufficientContext.toLocaleString("en-US")} missing target`}
             tone="stone"
           />
+          <StatusPill
+            label={`${judgmentCounts.candidate.toLocaleString("en-US")} candidates`}
+            tone={judgmentCounts.candidate > 0 ? "seed" : "stone"}
+          />
+          <StatusPill
+            label={`${judgmentCounts.humanReview.toLocaleString("en-US")} judgment review`}
+            tone={judgmentCounts.humanReview > 0 ? "earth" : "stone"}
+          />
         </div>
       </div>
 
       <div className="mt-3 overflow-x-auto">
-        <table className="w-full min-w-[52rem] text-left text-sm">
+        <table className="w-full min-w-[64rem] text-left text-sm">
           <thead className="border-b border-stone-200 text-xs font-semibold uppercase text-earth-600">
             <tr>
               <th className="py-2 pr-3">Month</th>
               <th className="px-3 py-2">Category</th>
               <th className="px-3 py-2">Target result</th>
               <th className="px-3 py-2">Automation status</th>
+              <th className="px-3 py-2">Boundary judgment</th>
               <th className="py-2 pl-3">Boundary reason</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-stone-100">
-            {rows.map((row) => (
-              <BudgetAutomationReadinessRow
-                key={`${row.month}:${row.category}`}
-                row={row}
-              />
-            ))}
+            {rows.map((row) => {
+              const key = `${row.month}:${row.category}`;
+              const judgment = judgmentByMonthCategory.get(key);
+
+              return (
+                <BudgetAutomationReadinessRow
+                  judgment={judgment}
+                  key={key}
+                  row={row}
+                />
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -853,9 +882,10 @@ function BudgetAutomationReadinessPreview({
       <p className="mt-3 text-xs leading-5 text-earth-600">
         This preview is derived from already-calculated monthly target comparison
         facts. It can mark whether a row is ready for explanation-only
-        automation, needs human review, or lacks a user target. It does not
-        change targets, rank actions, recommend spending changes, or run
-        automation.
+        automation, needs human review, or lacks a user target. Boundary
+        judgment labels only say whether a row can be treated as a later
+        automation candidate; they do not approve execution, change targets,
+        rank actions, or recommend spending changes.
         {windowedRows.omittedCount > 0
           ? ` Showing ${windowedRows.includedCount.toLocaleString("en-US")} of ${windowedRows.totalCount.toLocaleString("en-US")} readiness rows; ${windowedRows.omittedCount.toLocaleString("en-US")} older or overflow rows are hidden by the display cap.`
           : ""}
@@ -865,8 +895,10 @@ function BudgetAutomationReadinessPreview({
 }
 
 function BudgetAutomationReadinessRow({
+  judgment,
   row,
 }: {
+  judgment?: ChargeInspectorCategoryBudgetAutomationJudgment;
   row: ChargeInspectorCategoryBudgetAutomationReadiness;
 }) {
   return (
@@ -887,8 +919,18 @@ function BudgetAutomationReadinessRow({
           tone={budgetAutomationReadinessTone(row.readinessStatus)}
         />
       </td>
+      <td className="px-3 py-2">
+        {judgment ? (
+          <StatusPill
+            label={judgment.judgmentStatusLabel}
+            tone={budgetAutomationJudgmentTone(judgment.judgmentStatus)}
+          />
+        ) : (
+          <StatusPill label="Not available" tone="stone" />
+        )}
+      </td>
       <td className="py-2 pl-3 text-xs leading-5 text-earth-700">
-        {row.explanation}
+        {judgment ? judgment.explanation : row.explanation}
       </td>
     </tr>
   );
@@ -902,6 +944,20 @@ function budgetAutomationReadinessTone(
   }
 
   if (status === "needs-review") {
+    return "earth";
+  }
+
+  return "stone";
+}
+
+function budgetAutomationJudgmentTone(
+  status: ChargeInspectorCategoryBudgetAutomationJudgment["judgmentStatus"],
+) {
+  if (status === "automation-candidate") {
+    return "seed";
+  }
+
+  if (status === "needs-human-review") {
     return "earth";
   }
 
@@ -924,6 +980,27 @@ function summarizeCategoryBudgetAutomationReadiness(
       return counts;
     },
     { insufficientContext: 0, needsReview: 0, ready: 0 },
+  );
+}
+
+function summarizeCategoryBudgetAutomationJudgments(
+  rows: ChargeInspectorCategoryBudgetAutomationJudgment[],
+) {
+  return rows.reduce(
+    (counts, row) => {
+      if (row.judgmentStatus === "automation-candidate") {
+        counts.candidate += 1;
+      } else if (row.judgmentStatus === "needs-human-review") {
+        counts.humanReview += 1;
+      } else if (row.judgmentStatus === "blocked-by-boundary") {
+        counts.blocked += 1;
+      } else {
+        counts.notEnoughContext += 1;
+      }
+
+      return counts;
+    },
+    { blocked: 0, candidate: 0, humanReview: 0, notEnoughContext: 0 },
   );
 }
 

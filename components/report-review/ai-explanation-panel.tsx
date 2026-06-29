@@ -40,6 +40,10 @@ const versionDetailItems: {
     key: "categoryBudgetAutomationReadinessContext",
     label: "Automation readiness",
   },
+  {
+    key: "categoryBudgetAutomationJudgmentContext",
+    label: "Automation judgment",
+  },
 ];
 
 const answerKindDetails: Record<
