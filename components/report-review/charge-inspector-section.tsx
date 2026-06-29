@@ -819,9 +819,6 @@ function BudgetAutomationReadinessPreview({
     () => buildCategoryBudgetAutomationReviewQueue(judgmentRows),
     [judgmentRows],
   );
-  const judgmentByMonthCategory = new Map(
-    judgmentRows.map((row) => [`${row.month}:${row.category}`, row]),
-  );
 
   return (
     <div
@@ -859,42 +856,13 @@ function BudgetAutomationReadinessPreview({
 
       <BudgetAutomationReviewQueue items={reviewQueueItems} />
 
-      <div className="mt-3 overflow-x-auto">
-        <table className="w-full min-w-[64rem] text-left text-sm">
-          <thead className="border-b border-stone-200 text-xs font-semibold uppercase text-earth-600">
-            <tr>
-              <th className="py-2 pr-3">Month</th>
-              <th className="px-3 py-2">Category</th>
-              <th className="px-3 py-2">Target result</th>
-              <th className="px-3 py-2">Automation status</th>
-              <th className="px-3 py-2">Boundary judgment</th>
-              <th className="py-2 pl-3">Boundary reason</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-stone-100">
-            {rows.map((row) => {
-              const key = `${row.month}:${row.category}`;
-              const judgment = judgmentByMonthCategory.get(key);
-
-              return (
-                <BudgetAutomationReadinessRow
-                  judgment={judgment}
-                  key={key}
-                  row={row}
-                />
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
       <p className="mt-3 text-xs leading-5 text-earth-600">
-        This preview is derived from already-calculated monthly target comparison
-        facts. It can mark whether a row is ready for explanation-only
-        automation, needs human review, or lacks a user target. Boundary
-        judgment labels only say whether a row can be treated as a later
-        automation candidate; they do not approve execution, change targets,
-        rank actions, or recommend spending changes.
+        This preview table is derived from already-calculated monthly target
+        comparison facts. It groups visible rows for current-session review and
+        shows the source facts behind each boundary judgment. Boundary judgment
+        labels only say whether a row can be treated as a later automation
+        candidate; they do not approve execution, change targets, rank actions,
+        or recommend spending changes.
         {windowedRows.omittedCount > 0
           ? ` Showing ${windowedRows.includedCount.toLocaleString("en-US")} of ${windowedRows.totalCount.toLocaleString("en-US")} readiness rows; ${windowedRows.omittedCount.toLocaleString("en-US")} older or overflow rows are hidden by the display cap.`
           : ""}
@@ -926,7 +894,8 @@ function BudgetAutomationReviewQueue({
           </h6>
           <p className="mt-1 max-w-3xl text-xs leading-5 text-earth-600">
             Generated from visible boundary judgment rows for current-session
-            review. It does not approve automation, save a decision, rank
+            review. It combines queue grouping with source facts and boundary
+            notes; it does not approve automation, save a decision, rank
             actions, or recommend spending changes.
           </p>
         </div>
@@ -951,12 +920,13 @@ function BudgetAutomationReviewQueue({
       </div>
 
       <div className="mt-3 overflow-x-auto">
-        <table className="w-full min-w-[62rem] text-left text-sm">
+        <table className="w-full min-w-[72rem] text-left text-sm">
           <thead className="border-b border-stone-200 text-xs font-semibold uppercase text-earth-600">
             <tr>
               <th className="py-2 pr-3">Queue group</th>
               <th className="px-3 py-2">Row</th>
-              <th className="px-3 py-2">Source facts</th>
+              <th className="px-3 py-2">Target facts</th>
+              <th className="px-3 py-2">Automation state</th>
               <th className="py-2 pl-3">Review note</th>
             </tr>
           </thead>
@@ -988,55 +958,35 @@ function BudgetAutomationReviewQueueRow({
         <div className="font-semibold text-seed-950">
           {item.judgment.month} {item.judgment.label}
         </div>
-        <div className="text-earth-600">{item.judgment.reasonLabel}</div>
+        <div className="text-earth-600">Boundary-only review</div>
       </td>
-      <td className="px-3 py-2 text-xs leading-5 text-earth-700">
-        {item.sourceFactsLabel}
-      </td>
-      <td className="py-2 pl-3 text-xs leading-5 text-earth-700">
-        {item.reviewPrompt}
-      </td>
-    </tr>
-  );
-}
-
-function BudgetAutomationReadinessRow({
-  judgment,
-  row,
-}: {
-  judgment?: ChargeInspectorCategoryBudgetAutomationJudgment;
-  row: ChargeInspectorCategoryBudgetAutomationReadiness;
-}) {
-  return (
-    <tr data-testid="charge-inspector-budget-automation-readiness-row">
-      <td className="py-2 pr-3 font-medium text-seed-950">{row.month}</td>
-      <td className="px-3 py-2 text-earth-800">{row.label}</td>
       <td className="px-3 py-2 text-xs leading-5 text-earth-700">
         <div className="font-semibold text-seed-950">
-          {row.reasonLabel}
+          {item.judgment.reasonLabel}
         </div>
         <div className="tabular-nums text-earth-600">
-          {row.actualDebitTotalLabel} / {row.targetDebitTotalLabel}
+          {item.sourceFactsLabel}
         </div>
       </td>
       <td className="px-3 py-2">
-        <StatusPill
-          label={row.readinessStatusLabel}
-          tone={budgetAutomationReadinessTone(row.readinessStatus)}
-        />
-      </td>
-      <td className="px-3 py-2">
-        {judgment ? (
+        <div className="flex flex-col gap-1">
           <StatusPill
-            label={judgment.judgmentStatusLabel}
-            tone={budgetAutomationJudgmentTone(judgment.judgmentStatus)}
+            label={budgetAutomationSourceReadinessStatusLabel(
+              item.judgment.sourceReadinessStatus,
+            )}
+            tone={budgetAutomationReadinessTone(
+              item.judgment.sourceReadinessStatus,
+            )}
           />
-        ) : (
-          <StatusPill label="Not available" tone="stone" />
-        )}
+          <StatusPill
+            label={item.judgment.judgmentStatusLabel}
+            tone={budgetAutomationJudgmentTone(item.judgment.judgmentStatus)}
+          />
+        </div>
       </td>
       <td className="py-2 pl-3 text-xs leading-5 text-earth-700">
-        {judgment ? judgment.explanation : row.explanation}
+        <div className="font-semibold text-seed-950">{item.reviewPrompt}</div>
+        <div className="mt-1 text-earth-600">{item.judgment.explanation}</div>
       </td>
     </tr>
   );
@@ -1054,6 +1004,20 @@ function budgetAutomationReadinessTone(
   }
 
   return "stone";
+}
+
+function budgetAutomationSourceReadinessStatusLabel(
+  status: ChargeInspectorCategoryBudgetAutomationReadiness["readinessStatus"],
+) {
+  if (status === "ready") {
+    return "Ready for explanation";
+  }
+
+  if (status === "needs-review") {
+    return "Needs review";
+  }
+
+  return "Missing target";
 }
 
 function budgetAutomationJudgmentTone(

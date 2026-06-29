@@ -396,7 +396,7 @@ test.describe("private report review smoke", () => {
       "actual $130.56, target $100.00",
     );
     await expect(automationReviewQueue).toContainText(
-      "It does not approve automation",
+      "it does not approve automation",
     );
     await groceriesCategory.locator("summary").click();
     await expect(groceriesCategory.getByText("Corner Grocer").first())
