@@ -814,7 +814,6 @@ function BudgetAutomationReadinessPreview({
   windowedRows: WindowedRows<ChargeInspectorCategoryBudgetAutomationReadiness>;
 }) {
   const counts = summarizeCategoryBudgetAutomationReadiness(rows);
-  const judgmentCounts = summarizeCategoryBudgetAutomationJudgments(judgmentRows);
   const reviewQueueItems = useMemo(
     () => buildCategoryBudgetAutomationReviewQueue(judgmentRows),
     [judgmentRows],
@@ -842,14 +841,6 @@ function BudgetAutomationReadinessPreview({
           <StatusPill
             label={`${counts.insufficientContext.toLocaleString("en-US")} missing target`}
             tone="stone"
-          />
-          <StatusPill
-            label={`${judgmentCounts.candidate.toLocaleString("en-US")} candidates`}
-            tone={judgmentCounts.candidate > 0 ? "seed" : "stone"}
-          />
-          <StatusPill
-            label={`${judgmentCounts.humanReview.toLocaleString("en-US")} judgment review`}
-            tone={judgmentCounts.humanReview > 0 ? "earth" : "stone"}
           />
         </div>
       </div>
@@ -1085,27 +1076,6 @@ function summarizeBudgetAutomationReviewQueueItems(
       return counts;
     },
     { boundaryBlocked: 0, candidate: 0, humanReview: 0, missingContext: 0 },
-  );
-}
-
-function summarizeCategoryBudgetAutomationJudgments(
-  rows: ChargeInspectorCategoryBudgetAutomationJudgment[],
-) {
-  return rows.reduce(
-    (counts, row) => {
-      if (row.judgmentStatus === "automation-candidate") {
-        counts.candidate += 1;
-      } else if (row.judgmentStatus === "needs-human-review") {
-        counts.humanReview += 1;
-      } else if (row.judgmentStatus === "blocked-by-boundary") {
-        counts.blocked += 1;
-      } else {
-        counts.notEnoughContext += 1;
-      }
-
-      return counts;
-    },
-    { blocked: 0, candidate: 0, humanReview: 0, notEnoughContext: 0 },
   );
 }
 
