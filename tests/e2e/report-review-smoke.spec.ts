@@ -414,6 +414,34 @@ test.describe("private report review smoke", () => {
     ).toHaveAttribute("aria-checked", "true");
     await expect(automationReviewQueue).toContainText("16 unreviewed");
     await expect(automationReviewQueue).toContainText("1 reviewed");
+    await groceriesCategory
+      .getByTestId("charge-inspector-category-budget-target")
+      .fill("$200.00");
+    await expect(groceriesAutomationReviewRow).toContainText(
+      "actual $130.56, target $200.00",
+    );
+    await expect(
+      groceriesAutomationReviewRow.getByRole("radio", {
+        exact: true,
+        name: "Unreviewed",
+      }),
+    ).toHaveAttribute("aria-checked", "true");
+    await expect(automationReviewQueue).toContainText("17 unreviewed");
+    await expect(automationReviewQueue).toContainText("0 reviewed");
+    await groceriesCategory
+      .getByTestId("charge-inspector-category-budget-target")
+      .fill("$100.00");
+    await expect(groceriesAutomationReviewRow).toContainText(
+      "actual $130.56, target $100.00",
+    );
+    await expect(
+      groceriesAutomationReviewRow.getByRole("radio", {
+        exact: true,
+        name: "Unreviewed",
+      }),
+    ).toHaveAttribute("aria-checked", "true");
+    await expect(automationReviewQueue).toContainText("17 unreviewed");
+    await expect(automationReviewQueue).toContainText("0 reviewed");
     await groceriesAutomationReviewRow
       .getByRole("radio", { name: "Needs context" })
       .click();

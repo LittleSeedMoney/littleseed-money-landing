@@ -79,6 +79,7 @@ const AUTOMATION_REVIEW_DECISION_OPTIONS: {
   { decision: "unreviewed", label: "Unreviewed" },
   { decision: "candidate-reviewed", label: "Reviewed" },
   { decision: "needs-more-context", label: "Needs context" },
+  // Excluded is a local review label only; it must not filter rows or approve/deny automation.
   { decision: "excluded", label: "Exclude" },
 ];
 export function ChargeInspectorSection({
@@ -835,6 +836,22 @@ function BudgetAutomationReadinessPreview({
     () => buildCategoryBudgetAutomationReviewQueue(judgmentRows),
     [judgmentRows],
   );
+
+  useEffect(() => {
+    const liveKeys = new Set(
+      reviewQueueItems.map((item) => automationReviewDecisionKey(item)),
+    );
+
+    setReviewDecisions((current) => {
+      const next = Object.fromEntries(
+        Object.entries(current).filter(([key]) => liveKeys.has(key)),
+      );
+
+      return Object.keys(next).length === Object.keys(current).length
+        ? current
+        : next;
+    });
+  }, [reviewQueueItems]);
 
   function setReviewDecision(
     item: ChargeInspectorCategoryBudgetAutomationReviewQueueItem,
