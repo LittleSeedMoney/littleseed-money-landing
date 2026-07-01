@@ -302,17 +302,53 @@ test("report-review AI category evidence context pack stays bounded", () => {
     ).debitTransactionCount,
     2,
   );
+  assert.deepEqual(
+    pickFields(
+      contextPack.categoryEvidence.categoryMonthlyBudgetComparisons.find(
+        (row) => row.month === "2026-05" && row.category === "housing",
+      ),
+      ["status", "targetDebitTotalLabel"],
+    ),
+    {
+      status: "no-target",
+      targetDebitTotalLabel: "No target",
+    },
+  );
   assert.equal(
     contextPack.categoryEvidence.categoryBudgetAutomationReadinessRows.find(
       (row) => row.month === "2026-05" && row.category === "groceries",
     ).readinessStatusLabel,
     "Needs review",
   );
+  assert.deepEqual(
+    pickFields(
+      contextPack.categoryEvidence.categoryBudgetAutomationReadinessRows.find(
+        (row) => row.month === "2026-05" && row.category === "housing",
+      ),
+      ["readinessStatus", "reasonCode"],
+    ),
+    {
+      readinessStatus: "insufficient-context",
+      reasonCode: "missing-target",
+    },
+  );
   assert.equal(
     contextPack.categoryEvidence.categoryBudgetAutomationReadinessRows.find(
       (row) => row.month === "2026-03" && row.category === "groceries",
     ).readinessStatus,
     "ready",
+  );
+  assert.deepEqual(
+    pickFields(
+      contextPack.categoryEvidence.categoryBudgetAutomationJudgmentRows.find(
+        (row) => row.month === "2026-05" && row.category === "housing",
+      ),
+      ["judgmentStatus", "reasonCode"],
+    ),
+    {
+      judgmentStatus: "not-enough-context",
+      reasonCode: "missing-target",
+    },
   );
   assert.equal(
     contextPack.categoryEvidence.categoryBudgetAutomationJudgmentRows.find(
@@ -341,6 +377,10 @@ test("report-review AI category evidence context pack stays bounded", () => {
   assert.equal(renderedContext.includes("original_description"), false);
   assert.equal(renderedContext.includes("Balance"), false);
 });
+
+function pickFields(value, fields) {
+  return Object.fromEntries(fields.map((field) => [field, value[field]]));
+}
 
 test("report-review AI category evidence context records row window omissions", () => {
   const contextPack = buildCategoryEvidenceContextPack({
@@ -489,13 +529,22 @@ test("charge inspector monthly category budget comparison uses user target facts
       comparison.month === "2026-05" && comparison.category === "housing",
   );
 
-  assert.equal(
-    compareCategoryMonthlyBudgetTargets(
-      chargeInspectorSampleReview.categoryMonthlySummary,
-      {},
-    ).length,
-    0,
+  const noTargetComparisons = compareCategoryMonthlyBudgetTargets(
+    chargeInspectorSampleReview.categoryMonthlySummary,
+    {},
   );
+  const noTargetMayGroceries = noTargetComparisons.find(
+    (comparison) =>
+      comparison.month === "2026-05" && comparison.category === "groceries",
+  );
+
+  assert.equal(
+    noTargetComparisons.length,
+    chargeInspectorSampleReview.categoryMonthlySummary.length,
+  );
+  assert.equal(noTargetMayGroceries.actualDebitTotalLabel, "$130.56");
+  assert.equal(noTargetMayGroceries.targetDebitTotalLabel, "No target");
+  assert.equal(noTargetMayGroceries.status, "no-target");
   assert.equal(marchGroceries.actualDebitTotalLabel, "$0.00");
   assert.equal(marchGroceries.targetDebitTotalLabel, "$100.00");
   assert.equal(marchGroceries.status, "within-target");

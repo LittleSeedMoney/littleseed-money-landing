@@ -101,12 +101,7 @@ export function ReportReviewScreenPanel({
   }
 
   if (activeScreen === "charge-inspector") {
-    return (
-      <ChargeInspectorSection
-        aiEnabled={aiEnabled}
-        review={report.chargeInspector}
-      />
-    );
+    return <ChargeInspectorSection review={report.chargeInspector} />;
   }
 
   if (activeScreen === "education") {
