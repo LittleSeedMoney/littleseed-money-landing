@@ -11,6 +11,11 @@ const smokeScreens = [
     tab: "Snapshot",
   },
   {
+    hash: "goals",
+    heading: "Goal planning workspace",
+    tab: "Goals",
+  },
+  {
     hash: "report",
     heading: "Financial health report review",
     tab: "Report",
@@ -85,6 +90,25 @@ test.describe("private report review smoke", () => {
       );
       await expect(page).toHaveURL(new RegExp(`#${legacyHash}$`));
     }
+  });
+
+  test("legacy saving goal link opens the goals screen", async ({ page }) => {
+    await page.goto(`${reportReviewPath}#saving-goal-draft`);
+
+    const panel = page.locator("#report-review-screen-goals");
+
+    await expect(panel).toBeVisible();
+    await expect(
+      panel.getByRole("heading", {
+        exact: true,
+        name: "Goal planning workspace",
+      }),
+    ).toBeVisible();
+    await expect(page.getByRole("tab", { name: "Goals" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await expect(page).toHaveURL(/#saving-goal-draft$/);
   });
 
   test("report findings show the AI explanation disabled state by default", async ({
@@ -445,6 +469,33 @@ test.describe("private report review smoke", () => {
     await expect(
       groceriesRow.getByTestId("snapshot-expense-category-target-status-cue"),
     ).toBeVisible();
+  });
+
+  test("goals screen priority order drives the snapshot preview", async ({
+    page,
+  }) => {
+    await page.goto(`${reportReviewPath}#goals`);
+
+    const goalRows = page.getByTestId("goal-planning-row");
+
+    await expect(goalRows).toHaveCount(4);
+    await expect(goalRows.first()).toContainText("Emergency fund");
+    await expect(goalRows.first()).toContainText("Priority 1");
+    await expect(goalRows.first()).toContainText("$8,000");
+
+    await goalRows.nth(2).getByRole("button", { name: "Move up" }).click();
+    await expect(goalRows.nth(1)).toContainText("Wedding fund");
+    await goalRows.nth(1).getByRole("button", { name: "Move up" }).click();
+    await expect(goalRows.first()).toContainText("Wedding fund");
+    await expect(goalRows.first()).toContainText("Priority 1");
+
+    await clickTab(page, "Snapshot");
+
+    const goalPreview = page.getByTestId("snapshot-goal-preview");
+    await expect(goalPreview).toBeVisible();
+    await expect(goalPreview).toContainText("User priority #1");
+    await expect(goalPreview).toContainText("Wedding fund");
+    await expect(goalPreview).toContainText("This preview follows the order");
   });
 
   test("screen tabs support click, keyboard movement, and hash updates", async ({

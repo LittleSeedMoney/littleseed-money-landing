@@ -1,5 +1,6 @@
 export type ReportReviewScreenId =
   | "snapshot"
+  | "goals"
   | "report"
   | "charge-inspector"
   | "education";
@@ -19,10 +20,14 @@ export const reportReviewScreens: ReportReviewScreen[] = [
       "inputs",
       "manual-input",
       "portfolio",
-      "saving-goal-draft",
       "snapshot-completeness",
       "validation-checklist",
     ],
+  },
+  {
+    id: "goals",
+    label: "Goals",
+    legacyAnchors: ["saving-goal-draft"],
   },
   {
     id: "report",

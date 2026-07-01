@@ -23,6 +23,11 @@ import type {
   ManualProfileScalarField,
   ManualProfileValues,
 } from "@/lib/report-review/manual-profile";
+import {
+  formatGoalPlanningMoney,
+  formatGoalPlanningPercent,
+  type GoalPlanningSummary,
+} from "@/lib/report-review/goal-planning";
 import type {
   ChargeInspectorCategoryEvidenceRow,
   ChargeInspectorCategoryMonthlySummary,
@@ -80,6 +85,7 @@ export function AssetPortfolioSection({
   requestState,
   sourceById,
   statusLabel,
+  topGoalSummary,
   values,
 }: {
   activePortfolioEdit: PortfolioEditTarget | null;
@@ -113,6 +119,7 @@ export function AssetPortfolioSection({
   requestState: ManualRequestState;
   sourceById: ReadonlyMap<string, EvidenceSource>;
   statusLabel: string;
+  topGoalSummary: GoalPlanningSummary | null;
   values: ManualProfileValues;
 }) {
   const [activeSnapshotTab, setActiveSnapshotTab] =
@@ -206,6 +213,7 @@ export function AssetPortfolioSection({
             onProfileUpdate={onProfileUpdate}
             portfolio={portfolio}
             requestState={requestState}
+            topGoalSummary={topGoalSummary}
             values={values}
           />
         ) : null}
@@ -701,6 +709,7 @@ function SnapshotOverviewTab({
   onProfileUpdate,
   portfolio,
   requestState,
+  topGoalSummary,
   values,
 }: {
   activeField: ManualProfileScalarField | null;
@@ -734,6 +743,7 @@ function SnapshotOverviewTab({
   ) => void;
   portfolio: ReportReviewSample["assetPortfolio"];
   requestState: ManualRequestState;
+  topGoalSummary: GoalPlanningSummary | null;
   values: ManualProfileValues;
 }) {
   return (
@@ -759,6 +769,8 @@ function SnapshotOverviewTab({
             requestState={requestState}
             values={values}
           />
+
+          <SnapshotGoalPreview summary={topGoalSummary} />
 
           <PortfolioSnapshotList
             action={
@@ -865,6 +877,82 @@ function SnapshotOverviewTab({
           <PortfolioNoteCard key={note.id} note={note} />
         ))}
       </div>
+    </div>
+  );
+}
+
+function SnapshotGoalPreview({
+  summary,
+}: {
+  summary: GoalPlanningSummary | null;
+}) {
+  if (!summary) {
+    return null;
+  }
+
+  return (
+    <section
+      aria-labelledby="snapshot-goal-preview-heading"
+      className={reviewSubtlePanelClass("p-3")}
+      data-testid="snapshot-goal-preview"
+    >
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-seed-700">
+            User priority #1
+          </p>
+          <h4
+            className="mt-1 text-sm font-semibold text-seed-950"
+            id="snapshot-goal-preview-heading"
+          >
+            {summary.name}
+          </h4>
+          <p className="mt-1 text-sm leading-6 text-earth-700">
+            This preview follows the order you set on the Goals screen.
+          </p>
+        </div>
+        <StatusPill label="In-session goal" tone="seed" />
+      </div>
+
+      <dl className="mt-3 grid gap-3 sm:grid-cols-3">
+        <SnapshotGoalPreviewMetric
+          label="Remaining"
+          value={formatGoalPlanningMoney(summary.remainingAmount)}
+        />
+        <SnapshotGoalPreviewMetric
+          label="Progress"
+          value={formatGoalPlanningPercent(summary.progressPercent)}
+        />
+        <SnapshotGoalPreviewMetric
+          label="Needed"
+          value={
+            summary.monthlyNeededForTarget === null
+              ? "Needs month"
+              : `${formatGoalPlanningMoney(
+                  summary.monthlyNeededForTarget,
+                )} / mo`
+          }
+        />
+      </dl>
+    </section>
+  );
+}
+
+function SnapshotGoalPreviewMetric({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div>
+      <dt className="text-xs font-medium uppercase tracking-[0.1em] text-earth-600">
+        {label}
+      </dt>
+      <dd className="mt-1 text-base font-semibold tabular-nums text-seed-950">
+        {value}
+      </dd>
     </div>
   );
 }

@@ -735,7 +735,7 @@ function CheckboxField({
   );
 }
 
-export function createManualRowId(prefix: "asset" | "debt") {
+export function createManualRowId(prefix: "asset" | "debt" | "goal") {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
