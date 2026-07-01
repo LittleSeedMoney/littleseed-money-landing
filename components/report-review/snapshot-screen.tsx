@@ -29,6 +29,7 @@ import {
 import {
   reviewPanelClass,
   ReviewSectionHeading,
+  StatusPill,
 } from "./shared";
 import { ValidationChecklistSection } from "./validation-checklist-section";
 
@@ -140,7 +141,6 @@ export function SnapshotScreen({
             topGoalSummary={topGoalSummary}
             values={values}
           />
-          <InputsSection dataCompleteness={report.dataCompleteness} />
         </>
       ) : (
         <>
@@ -163,10 +163,11 @@ export function SnapshotScreen({
           <EmptySnapshotState />
         </>
       )}
-      <ValidationChecklistSection selectedPreset={selectedPreset} />
-      <DataSourcesSection
+      <SnapshotSupportDetails
+        dataCompleteness={report.dataCompleteness}
         dataMode={report.dataMode}
         reconciliation={report.sourceReconciliation}
+        selectedPreset={selectedPreset}
         sources={report.dataSources}
       />
     </>
@@ -232,6 +233,56 @@ export function SnapshotScreen({
     setActivePortfolioEdit(null);
     setActiveProfileField(null);
   }
+}
+
+function SnapshotSupportDetails({
+  dataCompleteness,
+  dataMode,
+  reconciliation,
+  selectedPreset,
+  sources,
+}: {
+  dataCompleteness: ReportReviewSample["dataCompleteness"];
+  dataMode: string;
+  reconciliation: ReportReviewSample["sourceReconciliation"];
+  selectedPreset: ManualProfilePresetId | "custom";
+  sources: ReportReviewSample["dataSources"];
+}) {
+  return (
+    <details className={reviewPanelClass("overflow-hidden p-0")}>
+      <summary className="cursor-pointer list-none p-4 outline-none focus:ring-2 focus:ring-seed-500 [&::-webkit-details-marker]:hidden">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="text-sm font-semibold text-seed-950">
+              Review support
+            </h3>
+            <p className="sr-only">
+              Data completeness, validation cases, and source details.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <StatusPill label={dataCompleteness.status} tone="stone" />
+            <StatusPill
+              label={`${sources.length.toLocaleString("en-US")} sources`}
+              tone="stone"
+            />
+            <span className="self-center text-sm font-semibold text-seed-700">
+              Details
+            </span>
+          </div>
+        </div>
+      </summary>
+      <div className="space-y-4 border-t border-stone-200 p-4">
+        <InputsSection dataCompleteness={dataCompleteness} />
+        <ValidationChecklistSection selectedPreset={selectedPreset} />
+        <DataSourcesSection
+          dataMode={dataMode}
+          reconciliation={reconciliation}
+          sources={sources}
+        />
+      </div>
+    </details>
+  );
 }
 
 type SnapshotEditBaseline = {
