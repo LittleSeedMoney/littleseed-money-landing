@@ -28,6 +28,7 @@ import {
 } from "./manual-input-section";
 import {
   reviewPanelClass,
+  ReviewDisclosure,
   ReviewSectionHeading,
   StatusPill,
 } from "./shared";
@@ -168,6 +169,7 @@ export function SnapshotScreen({
         dataMode={report.dataMode}
         reconciliation={report.sourceReconciliation}
         selectedPreset={selectedPreset}
+        showDataCompleteness={hasReportContent}
         sources={report.dataSources}
       />
     </>
@@ -240,17 +242,20 @@ function SnapshotSupportDetails({
   dataMode,
   reconciliation,
   selectedPreset,
+  showDataCompleteness,
   sources,
 }: {
   dataCompleteness: ReportReviewSample["dataCompleteness"];
   dataMode: string;
   reconciliation: ReportReviewSample["sourceReconciliation"];
   selectedPreset: ManualProfilePresetId | "custom";
+  showDataCompleteness: boolean;
   sources: ReportReviewSample["dataSources"];
 }) {
   return (
-    <details className={reviewPanelClass("overflow-hidden p-0")}>
-      <summary className="cursor-pointer list-none p-4 outline-none focus:ring-2 focus:ring-seed-500 [&::-webkit-details-marker]:hidden">
+    <ReviewDisclosure
+      className="overflow-hidden p-0"
+      summary={
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h3 className="text-sm font-semibold text-seed-950">
@@ -271,9 +276,13 @@ function SnapshotSupportDetails({
             </span>
           </div>
         </div>
-      </summary>
+      }
+      variant="panel"
+    >
       <div className="space-y-4 border-t border-stone-200 p-4">
-        <InputsSection dataCompleteness={dataCompleteness} />
+        {showDataCompleteness ? (
+          <InputsSection dataCompleteness={dataCompleteness} />
+        ) : null}
         <ValidationChecklistSection selectedPreset={selectedPreset} />
         <DataSourcesSection
           dataMode={dataMode}
@@ -281,7 +290,7 @@ function SnapshotSupportDetails({
           sources={sources}
         />
       </div>
-    </details>
+    </ReviewDisclosure>
   );
 }
 

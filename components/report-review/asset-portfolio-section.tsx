@@ -49,6 +49,7 @@ import {
 import {
   EducationTopicLink,
   ProvenanceTag,
+  ReviewDisclosure,
   reviewDisclosureClass,
   reviewDisclosureSummaryClass,
   reviewInlineDisclosureSummaryClass,
@@ -2479,8 +2480,9 @@ function SnapshotDecisionDetails({
   sourceById: ReadonlyMap<string, EvidenceSource>;
 }) {
   return (
-    <details className={reviewPanelClass("overflow-hidden p-0")}>
-      <summary className="cursor-pointer list-none p-4 outline-none focus:ring-2 focus:ring-seed-500 [&::-webkit-details-marker]:hidden">
+    <ReviewDisclosure
+      className="overflow-hidden p-0"
+      summary={
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-seed-700">
@@ -2498,14 +2500,16 @@ function SnapshotDecisionDetails({
             </span>
           </div>
         </div>
-      </summary>
+      }
+      variant="panel"
+    >
       <div className="border-t border-stone-200 p-4">
         <DecisionReadinessContent
           decisionReadiness={decisionReadiness}
           sourceById={sourceById}
         />
       </div>
-    </details>
+    </ReviewDisclosure>
   );
 }
 
