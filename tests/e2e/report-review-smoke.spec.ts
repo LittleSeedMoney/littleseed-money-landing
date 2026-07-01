@@ -495,7 +495,7 @@ test.describe("private report review smoke", () => {
     await expect(goalPreview).toBeVisible();
     await expect(goalPreview).toContainText("User priority #1");
     await expect(goalPreview).toContainText("Wedding fund");
-    await expect(goalPreview).toContainText("Follows your Goals order");
+    await expect(goalPreview).toContainText("In-session goal");
   });
 
   test("screen tabs support click, keyboard movement, and hash updates", async ({
@@ -556,6 +556,7 @@ test.describe("private report review smoke", () => {
     await expect(recurringBoard.getByText("3 matched rows")).toBeVisible();
     await expect(recurringBoard.getByText("Around Jun 9, 2026"))
       .toBeVisible();
+    await recurringBoard.getByText("Limits").first().click();
     await expect(
       recurringBoard.getByText(
         "A recurring pattern does not mean the charge is unwanted.",

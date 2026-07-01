@@ -8,7 +8,13 @@ import {
   uniqueTopicIds,
 } from "@/lib/report-review/education-topics";
 
-import { reviewPanelClass, ReviewSectionHeading, StatusPill } from "./shared";
+import {
+  reviewDisclosureClass,
+  reviewDisclosureSummaryClass,
+  reviewPanelClass,
+  ReviewSectionHeading,
+  StatusPill,
+} from "./shared";
 
 type EducationTopicContext = {
   id: string;
@@ -56,15 +62,21 @@ export function EducationSection({
                   <h3 className="text-lg font-semibold text-seed-950">
                     {topic.title}
                   </h3>
-                  <p className="mt-2 text-sm leading-6 text-earth-700">
-                    {topic.concept}
-                  </p>
                 </div>
                 <StatusPill
                   label={topic.status === "ready" ? "Ready" : "Target pending"}
                   tone="stone"
                 />
               </div>
+
+              <details className={reviewDisclosureClass("mt-4 p-3")}>
+                <summary className={reviewDisclosureSummaryClass()}>
+                  Concept
+                </summary>
+                <p className="mt-3 text-sm leading-6 text-earth-700">
+                  {topic.concept}
+                </p>
+              </details>
 
               <dl className="mt-4 space-y-3 text-sm">
                 <div>

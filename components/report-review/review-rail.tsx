@@ -28,7 +28,7 @@ export function ReviewRail({ report }: { report: ReportReviewSample }) {
           <MetaItem label="Sources" value={sourceCountLabel(report)} />
           <MetaItem label="Persistence" value="In-session only" />
         </dl>
-        <p className="mt-4 text-sm leading-6 text-earth-700">
+        <p className="sr-only">
           {report.dataCompleteness.explanation}
         </p>
         <a

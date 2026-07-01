@@ -40,9 +40,14 @@ export function OverviewSection({
           >
             Financial health report review
           </h2>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-earth-700">
-            {report.disclaimer}
-          </p>
+          <details className="mt-2">
+            <summary className={reviewInlineDisclosureSummaryClass()}>
+              Review limits
+            </summary>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-earth-700">
+              {report.disclaimer}
+            </p>
+          </details>
         </div>
 
         <dl
@@ -115,7 +120,7 @@ function noticeToneClass(tone: ReportReviewSample["connectionNotice"]["tone"]) {
 
 function MetricCard({ metric }: { metric: SummaryMetric }) {
   return (
-    <article className={reviewSubtlePanelClass("p-3")}>
+    <article className={reviewSubtlePanelClass("p-3")} title={metric.detail}>
       <div className="flex items-start justify-between gap-3">
         <h3 className="text-sm font-semibold text-earth-800">
           {metric.label}
@@ -125,7 +130,7 @@ function MetricCard({ metric }: { metric: SummaryMetric }) {
       <p className="mt-2 text-xl font-semibold tabular-nums text-seed-950">
         {metric.value}
       </p>
-      <p className="mt-1 text-sm leading-6 text-earth-700">{metric.detail}</p>
+      <p className="sr-only">{metric.detail}</p>
 
       {metric.disclosure ? (
         <MetricDisclosureDetails disclosure={metric.disclosure} />

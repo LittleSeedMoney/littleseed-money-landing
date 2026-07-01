@@ -269,9 +269,7 @@ export function ReviewSectionHeading({
       <h2 id={id} className="mt-1 text-xl font-semibold text-seed-950">
         {title}
       </h2>
-      <p className="mt-1 max-w-3xl text-sm leading-6 text-earth-700">
-        {description}
-      </p>
+      <p className="sr-only">{description}</p>
     </div>
   );
 }

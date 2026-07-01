@@ -33,7 +33,7 @@ export function PortfolioSnapshotList({
           <h3 className="text-sm font-semibold text-seed-950">{title}</h3>
           <p
             id={descriptionId}
-            className="mt-0.5 text-sm leading-6 text-earth-700"
+            className="sr-only"
           >
             {description}
           </p>

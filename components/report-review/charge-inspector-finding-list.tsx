@@ -51,7 +51,7 @@ function ChargeInspectorFindingListItem({
 }) {
   return (
     <article data-finding-id={finding.id}>
-      <details className="group" open>
+      <details className="group">
         <summary className={reviewAccordionSummaryClass()}>
           <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
             <div className="min-w-0">
@@ -73,7 +73,7 @@ function ChargeInspectorFindingListItem({
                   ) : null}
                 </div>
               </div>
-              <p className="mt-1 max-w-3xl text-sm leading-6 text-earth-700">
+              <p className="sr-only">
                 {finding.summary}
               </p>
             </div>

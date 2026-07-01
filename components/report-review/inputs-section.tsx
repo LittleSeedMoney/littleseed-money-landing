@@ -31,12 +31,15 @@ export function InputsSection({
             <h3 className="text-lg font-semibold text-seed-950">
               Data completeness
             </h3>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-earth-700">
-              {dataCompleteness.explanation}
-            </p>
           </div>
           <StatusPill label={dataCompleteness.status} tone="stone" />
         </div>
+
+        <ReviewDisclosure className="mt-4 rounded-lg p-3" summary="Details">
+          <p className="mt-3 text-sm leading-6 text-earth-700">
+            {dataCompleteness.explanation}
+          </p>
+        </ReviewDisclosure>
 
         <div className="mt-5 grid gap-3 lg:grid-cols-3">
           <InputStateList

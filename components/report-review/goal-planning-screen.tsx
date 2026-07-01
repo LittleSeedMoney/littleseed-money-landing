@@ -65,7 +65,7 @@ export function GoalPlanningScreen({
             <h3 className="text-sm font-semibold text-seed-950">
               Goal order
             </h3>
-            <p className="mt-1 max-w-3xl text-sm leading-6 text-earth-700">
+            <p className="sr-only">
               Move rows to set priority. Values stay in this session.
             </p>
           </div>
@@ -176,7 +176,7 @@ function GoalPlanningRowEditor({
               tone={goalStatusTone(summary.status)}
             />
           </div>
-          <p className="mt-1 text-sm leading-6 text-earth-700">
+          <p className="sr-only">
             As of {asOfMonth}.
           </p>
         </div>

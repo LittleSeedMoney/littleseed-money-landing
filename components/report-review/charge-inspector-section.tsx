@@ -242,10 +242,6 @@ function ChargeInspectorCsvUpload({
           >
             Review a CSV export
           </label>
-          <p className="mt-1 max-w-3xl text-sm leading-6 text-earth-700">
-            Chase-style checking CSV rows are sent to the internal review route
-            for deterministic parsing, monthly totals, and finding prompts.
-          </p>
           <input
             accept=".csv,text/csv"
             className="mt-3 block w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm text-earth-900 file:mr-3 file:rounded-md file:border-0 file:bg-seed-50 file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-seed-900 hover:file:bg-seed-100 focus:outline-none focus:ring-2 focus:ring-seed-500"
@@ -325,11 +321,6 @@ function ChargeInspectorDashboard({
           <h3 className="text-base font-semibold text-seed-950">
             {review.sourceLabel}
           </h3>
-          <p className="mt-1 max-w-3xl text-sm leading-6 text-earth-700">
-            Current-session review prompts only. Local hide actions are
-            temporary, and no transaction history or account connection is
-            stored.
-          </p>
         </div>
         <div className="flex flex-wrap gap-2 xl:justify-end">
           <StatusPill label={sourcePillLabel(review)} tone="stone" />
@@ -363,21 +354,20 @@ function ChargeInspectorDashboard({
             />
           </dl>
 
-          <p className="mt-3 text-sm leading-6 text-earth-700">
-            Signal mix:{" "}
-            <span className="font-semibold text-seed-950">
-              {summary.recurringCount.toLocaleString("en-US")} recurring
-            </span>
-            ,{" "}
-            <span className="font-semibold text-seed-950">
-              {summary.duplicateCount.toLocaleString("en-US")} duplicate
-            </span>
-            ,{" "}
-            <span className="font-semibold text-seed-950">
-              {otherSignalCount.toLocaleString("en-US")} other
-            </span>
-            .
-          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <StatusPill
+              label={`${summary.recurringCount.toLocaleString("en-US")} recurring`}
+              tone="earth"
+            />
+            <StatusPill
+              label={`${summary.duplicateCount.toLocaleString("en-US")} duplicate`}
+              tone="stone"
+            />
+            <StatusPill
+              label={`${otherSignalCount.toLocaleString("en-US")} other`}
+              tone="stone"
+            />
+          </div>
 
           {recurringReviewItems.length > 0 ? (
             <RecurringPaymentReviewBoard items={recurringReviewItems} />
@@ -390,8 +380,7 @@ function ChargeInspectorDashboard({
                 Recurring payment review
               </h4>
               <p className="mt-1 text-sm leading-6 text-earth-700">
-                No recurring payment or subscription-like pattern is visible in
-                the current review set.
+                No recurring patterns.
               </p>
             </div>
           )}
@@ -469,18 +458,13 @@ function RecurringPaymentReviewBoard({
               </div>
             </dl>
 
-            <p className="mt-3 text-xs leading-5 text-earth-600">
-              Estimate from matched posting dates only. Not a payment
-              instruction, cancellation instruction, or merchant action.
-            </p>
-
             {item.limitations.length > 0 ? (
-              <div className="mt-3 border-t border-stone-200 pt-3">
-                <p className="text-xs font-semibold text-earth-700">
-                  Limitations
-                </p>
+              <details className={reviewDisclosureClass("mt-3 p-3")}>
+                <summary className={reviewDisclosureSummaryClass()}>
+                  Limits
+                </summary>
                 <BoundaryList items={item.limitations} />
-              </div>
+              </details>
             ) : null}
           </article>
         ))}

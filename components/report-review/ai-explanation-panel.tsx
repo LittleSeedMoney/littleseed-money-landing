@@ -302,7 +302,7 @@ function AiReportReviewExplanationPanel({
             <h4 className="mt-3 text-sm font-semibold text-seed-950">
               AI explanation unavailable
             </h4>
-            <p className="mt-1 text-sm leading-6 text-earth-700">
+            <p className="sr-only">
               {copy.disabledDescription}
             </p>
           </div>
@@ -334,9 +334,14 @@ function AiReportReviewExplanationPanel({
           <h4 className="mt-3 text-sm font-semibold text-seed-950">
             {copy.title}
           </h4>
-          <p className="mt-1 max-w-2xl text-sm leading-6 text-earth-700">
-            {copy.enabledDescription}
-          </p>
+          <details className="mt-2">
+            <summary className="cursor-pointer text-sm font-semibold text-earth-700 outline-none focus:ring-2 focus:ring-seed-500">
+              Limits
+            </summary>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-earth-700">
+              {copy.enabledDescription}
+            </p>
+          </details>
         </div>
       </div>
 
@@ -426,7 +431,7 @@ function AiAnswerResult({ answer }: { answer: ReportReviewAiResponse }) {
         <h5 className="text-sm font-semibold text-seed-950">
           {details.title}
         </h5>
-        <p className="mt-1 text-sm leading-6 text-earth-700">
+        <p className="sr-only">
           {details.description}
         </p>
       </div>

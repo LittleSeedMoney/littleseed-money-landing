@@ -45,9 +45,6 @@ export function ReportSections({
                   <h3 className="mt-1 text-base font-semibold text-seed-950">
                     {section.question}
                   </h3>
-                  <p className="mt-2 text-sm leading-6 text-earth-700">
-                    {answerPreview(section.answer)}
-                  </p>
                 </div>
               </div>
             </summary>
@@ -76,11 +73,6 @@ export function ReportSections({
       </div>
     </section>
   );
-}
-
-function answerPreview(answer: string) {
-  const firstSentence = answer.match(/^.+?[.!?](?=\s+[A-Z]|$)/);
-  return firstSentence?.[0] ?? answer;
 }
 
 function SourceFooting({

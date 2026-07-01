@@ -93,7 +93,7 @@ export function PortfolioSnapshotGroupEditForm({
       id={group === "assets" ? "manual-input" : "manual-input-liabilities"}
       onSubmit={onSubmit}
     >
-      <p className="text-sm leading-6 text-earth-700">
+      <p className="sr-only">
         Fields marked * build the request; blank optional fields stay missing.
       </p>
 
@@ -102,7 +102,7 @@ export function PortfolioSnapshotGroupEditForm({
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h3 className="text-sm font-semibold text-seed-950">Assets</h3>
-              <p className="mt-1 text-sm leading-6 text-earth-700">
+              <p className="sr-only">
                 Track cash separately from longer-term balances so liquidity
                 stays visible in the report.
               </p>
@@ -181,7 +181,7 @@ export function PortfolioSnapshotGroupEditForm({
               <h3 className="text-sm font-semibold text-seed-950">
                 Liabilities
               </h3>
-              <p className="mt-1 text-sm leading-6 text-earth-700">
+              <p className="sr-only">
                 Rows with no balance stay out of the submitted liability list.
               </p>
             </div>
