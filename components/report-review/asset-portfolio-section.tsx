@@ -865,7 +865,7 @@ function SnapshotMonthlyTab({
   selectedMonth: string;
   values: ManualProfileValues;
 }) {
-  const [savedTargetInputs, setSavedTargetInputs] = useState<
+  const [sessionTargetInputs, setSessionTargetInputs] = useState<
     Record<string, string>
   >({});
   const [draftTargetInputs, setDraftTargetInputs] = useState<
@@ -873,8 +873,8 @@ function SnapshotMonthlyTab({
   >({});
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [
-    savedTransactionCategoryOverrides,
-    setSavedTransactionCategoryOverrides,
+    sessionTransactionCategoryOverrides,
+    setSessionTransactionCategoryOverrides,
   ] = useState<Record<string, string>>({});
   const [
     draftTransactionCategoryOverrides,
@@ -930,7 +930,9 @@ function SnapshotMonthlyTab({
         </h3>
         <p className="mt-1 max-w-3xl text-sm leading-6 text-earth-700">
           Income, expenses, and current assets share this monthly workspace.
-          Category targets start unset and stay in this browser session.
+          Category targets and category changes stay in this browser session;
+          they do not update saved budgets, category rules, or future
+          transactions.
         </p>
       </div>
 
@@ -970,12 +972,13 @@ function SnapshotMonthlyTab({
           if (category) {
             setDraftTargetInputs((current) => ({
               ...current,
-              [category]: current[category] ?? savedTargetInputs[category] ?? "",
+              [category]:
+                current[category] ?? sessionTargetInputs[category] ?? "",
             }));
           }
         }}
-        onSaveCategoryOverride={(transactionId) =>
-          setSavedTransactionCategoryOverrides((current) => {
+        onApplyCategoryOverrideForSession={(transactionId) =>
+          setSessionTransactionCategoryOverrides((current) => {
             const draftCategory =
               draftTransactionCategoryOverrides[transactionId];
 
@@ -989,10 +992,10 @@ function SnapshotMonthlyTab({
             };
           })
         }
-        onSaveTarget={(category) => {
+        onApplyTargetForSession={(category) => {
           const draftValue = draftTargetInputs[category] ?? "";
 
-          setSavedTargetInputs((current) => {
+          setSessionTargetInputs((current) => {
             if (draftValue.trim().length === 0) {
               const { [category]: _removed, ...next } = current;
               return next;
@@ -1010,8 +1013,8 @@ function SnapshotMonthlyTab({
         }
         previousByCategory={previousByCategory}
         rows={currentRows}
-        savedTargetInputs={savedTargetInputs}
-        savedTransactionCategoryOverrides={savedTransactionCategoryOverrides}
+        sessionTargetInputs={sessionTargetInputs}
+        sessionTransactionCategoryOverrides={sessionTransactionCategoryOverrides}
         transactionRowsByCategory={transactionRowsByCategory(chargeInspector)}
       />
 
@@ -1030,13 +1033,13 @@ function SnapshotMonthlyTab({
         }
         onCategoryOverrideChange={() => undefined}
         onEditCategory={() => undefined}
-        onSaveCategoryOverride={() => undefined}
-        onSaveTarget={() => undefined}
+        onApplyCategoryOverrideForSession={() => undefined}
+        onApplyTargetForSession={() => undefined}
         onTargetChange={() => undefined}
         previousByCategory={new Map()}
         rows={previousRows}
-        savedTargetInputs={{}}
-        savedTransactionCategoryOverrides={{}}
+        sessionTargetInputs={{}}
+        sessionTransactionCategoryOverrides={{}}
         transactionRowsByCategory={transactionRowsByCategory(chargeInspector)}
       />
     </section>
@@ -1071,15 +1074,15 @@ function ExpenseMonthTable({
   isReferenceOnly = false,
   monthlySummaryRows,
   monthLabel,
+  onApplyCategoryOverrideForSession,
+  onApplyTargetForSession,
   onCategoryOverrideChange,
   onEditCategory,
-  onSaveCategoryOverride,
-  onSaveTarget,
   onTargetChange,
   previousByCategory,
   rows,
-  savedTargetInputs,
-  savedTransactionCategoryOverrides,
+  sessionTargetInputs,
+  sessionTransactionCategoryOverrides,
   transactionRowsByCategory,
 }: {
   categories: string[];
@@ -1090,15 +1093,15 @@ function ExpenseMonthTable({
   isReferenceOnly?: boolean;
   monthlySummaryRows: ChargeInspectorCategoryMonthlySummary[];
   monthLabel: string;
+  onApplyCategoryOverrideForSession: (transactionId: string) => void;
+  onApplyTargetForSession: (category: string) => void;
   onCategoryOverrideChange: (transactionId: string, category: string) => void;
   onEditCategory: (category: string | null) => void;
-  onSaveCategoryOverride: (transactionId: string) => void;
-  onSaveTarget: (category: string) => void;
   onTargetChange: (category: string, value: string) => void;
   previousByCategory: ReadonlyMap<string, ChargeInspectorCategoryMonthlySummary>;
   rows: ChargeInspectorCategoryMonthlySummary[];
-  savedTargetInputs: Record<string, string>;
-  savedTransactionCategoryOverrides: Record<string, string>;
+  sessionTargetInputs: Record<string, string>;
+  sessionTransactionCategoryOverrides: Record<string, string>;
   transactionRowsByCategory: ReadonlyMap<
     string,
     ChargeInspectorReview["categorySummary"][number]["evidenceRows"]
@@ -1136,9 +1139,10 @@ function ExpenseMonthTable({
           <tbody className="divide-y divide-stone-100">
             {rows.map((row) => {
               const previous = previousByCategory.get(row.category);
-              const savedTargetInput = savedTargetInputs[row.category] ?? "";
+              const sessionTargetInput =
+                sessionTargetInputs[row.category] ?? "";
               const draftTargetInput =
-                draftTargetInputs[row.category] ?? savedTargetInput;
+                draftTargetInputs[row.category] ?? sessionTargetInput;
               const isEditing = editingCategory === row.category;
               const transactionRows =
                 transactionRowsByCategory.get(row.category) ?? [];
@@ -1216,21 +1220,23 @@ function ExpenseMonthTable({
                             />
                           </label>
                           <button
-                            aria-label={`Save target for ${row.label}`}
+                            aria-label={`Apply ${row.label} target for this session`}
                             className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-seed-700 bg-seed-700 text-white shadow-sm hover:bg-seed-800 focus:outline-none focus:ring-2 focus:ring-seed-500"
-                            data-testid="snapshot-expense-category-target-save"
-                            onClick={() => onSaveTarget(row.category)}
-                            title={`Save target for ${row.label}`}
+                            data-testid="snapshot-expense-category-target-apply"
+                            onClick={() =>
+                              onApplyTargetForSession(row.category)
+                            }
+                            title={`Apply ${row.label} target for this session`}
                             type="button"
                           >
-                            <SaveIcon className="h-4 w-4" />
+                            <CheckIcon className="h-4 w-4" />
                           </button>
                         </div>
                       ) : (
                         <div className="flex items-center gap-1.5">
                           <span className="text-earth-500">
-                            {savedTargetInput
-                              ? displayMoneyValue(savedTargetInput)
+                            {sessionTargetInput
+                              ? displayMoneyValue(sessionTargetInput)
                               : "Not set"}
                           </span>
                           <EditIconButton
@@ -1258,79 +1264,95 @@ function ExpenseMonthTable({
                   {isExpanded ? (
                     <tr data-testid="snapshot-expense-transaction-list-row">
                       <td className="px-0 py-0" colSpan={4}>
-                        <ul className="border-t border-stone-100 bg-stone-50 px-3 py-3">
-                          {currentMonthTransactionRows.map((transaction) => {
-                            const savedCategory =
-                              savedTransactionCategoryOverrides[
-                                transaction.id
-                              ] ?? row.category;
-                            const draftCategory =
-                              draftTransactionCategoryOverrides[
-                                transaction.id
-                              ] ?? savedCategory;
-                            const hasDraftChange =
-                              draftCategory !== savedCategory;
+                        <div className="border-t border-stone-100 bg-stone-50 px-3 py-3">
+                          <p
+                            className="max-w-3xl text-xs leading-5 text-earth-700"
+                            data-testid="snapshot-expense-transaction-override-boundary"
+                          >
+                            Category changes apply only to this browser session.
+                            They do not update category rules or future
+                            transactions.
+                          </p>
+                          <ul className="mt-2">
+                            {currentMonthTransactionRows.map((transaction) => {
+                              const sessionCategory =
+                                sessionTransactionCategoryOverrides[
+                                  transaction.id
+                                ] ?? row.category;
+                              const draftCategory =
+                                draftTransactionCategoryOverrides[
+                                  transaction.id
+                                ] ?? sessionCategory;
+                              const hasDraftChange =
+                                draftCategory !== sessionCategory;
 
-                            return (
-                              <li
-                                className="grid gap-2 border-b border-stone-200 py-2 text-xs leading-5 last:border-b-0 md:inline-grid md:grid-cols-[6.5rem_17rem_5.5rem_10.5rem] md:items-center"
-                                data-testid="snapshot-expense-transaction-row"
-                                key={transaction.id}
-                              >
-                                <span className="font-medium text-earth-700">
-                                  {transaction.postedDate}
-                                </span>
-                                <span className="break-words text-seed-950">
-                                  {transaction.merchantName}
-                                </span>
-                                <span className="tabular-nums text-earth-800">
-                                  {transaction.amountLabel}
-                                </span>
-                                <div className="grid gap-1.5">
-                                  <div className="flex items-center gap-1.5">
-                                    <select
-                                      aria-label={`Category for ${transaction.merchantName}`}
-                                      className="min-h-8 min-w-0 flex-1 rounded-md border border-stone-300 bg-white px-2 text-xs text-earth-900 outline-none focus:border-seed-500 focus:ring-2 focus:ring-seed-500"
-                                      data-testid="snapshot-expense-transaction-category"
-                                      onChange={(event) =>
-                                        onCategoryOverrideChange(
-                                          transaction.id,
-                                          event.target.value,
-                                        )
-                                      }
-                                      value={draftCategory}
-                                    >
-                                      {categories.map((category) => (
-                                        <option key={category} value={category}>
-                                          {categoryLabel(category, rows)}
-                                        </option>
-                                      ))}
-                                    </select>
-                                    <button
-                                      aria-label={`Save category for ${transaction.merchantName}`}
-                                      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-stone-300 bg-white text-earth-700 shadow-sm hover:border-seed-300 hover:text-seed-900 focus:outline-none focus:ring-2 focus:ring-seed-500 disabled:cursor-not-allowed disabled:opacity-50"
-                                      data-testid="snapshot-expense-transaction-category-save"
-                                      disabled={!hasDraftChange}
-                                      onClick={() =>
-                                        onSaveCategoryOverride(transaction.id)
-                                      }
-                                      title={`Save category for ${transaction.merchantName}`}
-                                      type="button"
-                                    >
-                                      <SaveIcon className="h-4 w-4" />
-                                    </button>
+                              return (
+                                <li
+                                  className="grid gap-2 border-b border-stone-200 py-2 text-xs leading-5 last:border-b-0 md:inline-grid md:grid-cols-[6.5rem_17rem_5.5rem_10.5rem] md:items-center"
+                                  data-testid="snapshot-expense-transaction-row"
+                                  key={transaction.id}
+                                >
+                                  <span className="font-medium text-earth-700">
+                                    {transaction.postedDate}
+                                  </span>
+                                  <span className="break-words text-seed-950">
+                                    {transaction.merchantName}
+                                  </span>
+                                  <span className="tabular-nums text-earth-800">
+                                    {transaction.amountLabel}
+                                  </span>
+                                  <div className="grid gap-1.5">
+                                    <div className="flex items-center gap-1.5">
+                                      <select
+                                        aria-label={`Category for ${transaction.merchantName}`}
+                                        className="min-h-8 min-w-0 flex-1 rounded-md border border-stone-300 bg-white px-2 text-xs text-earth-900 outline-none focus:border-seed-500 focus:ring-2 focus:ring-seed-500"
+                                        data-testid="snapshot-expense-transaction-category"
+                                        onChange={(event) =>
+                                          onCategoryOverrideChange(
+                                            transaction.id,
+                                            event.target.value,
+                                          )
+                                        }
+                                        value={draftCategory}
+                                      >
+                                        {categories.map((category) => (
+                                          <option
+                                            key={category}
+                                            value={category}
+                                          >
+                                            {categoryLabel(category, rows)}
+                                          </option>
+                                        ))}
+                                      </select>
+                                      <button
+                                        aria-label={`Apply category for ${transaction.merchantName} in this session`}
+                                        className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-stone-300 bg-white text-earth-700 shadow-sm hover:border-seed-300 hover:text-seed-900 focus:outline-none focus:ring-2 focus:ring-seed-500 disabled:cursor-not-allowed disabled:opacity-50"
+                                        data-testid="snapshot-expense-transaction-category-apply"
+                                        disabled={!hasDraftChange}
+                                        onClick={() =>
+                                          onApplyCategoryOverrideForSession(
+                                            transaction.id,
+                                          )
+                                        }
+                                        title={`Apply category for ${transaction.merchantName} in this session`}
+                                        type="button"
+                                      >
+                                        <CheckIcon className="h-4 w-4" />
+                                      </button>
+                                    </div>
+                                    {sessionCategory !== row.category ? (
+                                      <span className="text-xs font-semibold text-seed-800">
+                                        Applied as{" "}
+                                        {categoryLabel(sessionCategory, rows)}{" "}
+                                        for this session
+                                      </span>
+                                    ) : null}
                                   </div>
-                                  {savedCategory !== row.category ? (
-                                    <span className="text-xs font-semibold text-seed-800">
-                                      Saved as{" "}
-                                      {categoryLabel(savedCategory, rows)}
-                                    </span>
-                                  ) : null}
-                                </div>
-                              </li>
-                            );
-                          })}
-                        </ul>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </div>
                       </td>
                     </tr>
                   ) : null}
@@ -2145,7 +2167,7 @@ function PencilIcon({ className }: { className: string }) {
   );
 }
 
-function SaveIcon({ className }: { className: string }) {
+function CheckIcon({ className }: { className: string }) {
   return (
     <svg
       aria-hidden="true"
@@ -2157,9 +2179,7 @@ function SaveIcon({ className }: { className: string }) {
       strokeWidth="2"
       viewBox="0 0 24 24"
     >
-      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z" />
-      <path d="M17 21v-8H7v8" />
-      <path d="M7 3v5h8" />
+      <path d="m5 12 4 4L19 6" />
     </svg>
   );
 }

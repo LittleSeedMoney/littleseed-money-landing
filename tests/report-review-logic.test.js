@@ -302,17 +302,53 @@ test("report-review AI category evidence context pack stays bounded", () => {
     ).debitTransactionCount,
     2,
   );
+  assert.deepEqual(
+    pickFields(
+      contextPack.categoryEvidence.categoryMonthlyBudgetComparisons.find(
+        (row) => row.month === "2026-05" && row.category === "housing",
+      ),
+      ["status", "targetDebitTotalLabel"],
+    ),
+    {
+      status: "no-target",
+      targetDebitTotalLabel: "No target",
+    },
+  );
   assert.equal(
     contextPack.categoryEvidence.categoryBudgetAutomationReadinessRows.find(
       (row) => row.month === "2026-05" && row.category === "groceries",
     ).readinessStatusLabel,
     "Needs review",
   );
+  assert.deepEqual(
+    pickFields(
+      contextPack.categoryEvidence.categoryBudgetAutomationReadinessRows.find(
+        (row) => row.month === "2026-05" && row.category === "housing",
+      ),
+      ["readinessStatus", "reasonCode"],
+    ),
+    {
+      readinessStatus: "insufficient-context",
+      reasonCode: "missing-target",
+    },
+  );
   assert.equal(
     contextPack.categoryEvidence.categoryBudgetAutomationReadinessRows.find(
       (row) => row.month === "2026-03" && row.category === "groceries",
     ).readinessStatus,
     "ready",
+  );
+  assert.deepEqual(
+    pickFields(
+      contextPack.categoryEvidence.categoryBudgetAutomationJudgmentRows.find(
+        (row) => row.month === "2026-05" && row.category === "housing",
+      ),
+      ["judgmentStatus", "reasonCode"],
+    ),
+    {
+      judgmentStatus: "not-enough-context",
+      reasonCode: "missing-target",
+    },
   );
   assert.equal(
     contextPack.categoryEvidence.categoryBudgetAutomationJudgmentRows.find(
@@ -341,6 +377,10 @@ test("report-review AI category evidence context pack stays bounded", () => {
   assert.equal(renderedContext.includes("original_description"), false);
   assert.equal(renderedContext.includes("Balance"), false);
 });
+
+function pickFields(value, fields) {
+  return Object.fromEntries(fields.map((field) => [field, value[field]]));
+}
 
 test("report-review AI category evidence context records row window omissions", () => {
   const contextPack = buildCategoryEvidenceContextPack({

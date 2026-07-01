@@ -385,7 +385,7 @@ test.describe("private report review smoke", () => {
       groceriesRow.getByTestId("snapshot-expense-category-target"),
     ).toHaveValue("140");
     await groceriesRow
-      .getByTestId("snapshot-expense-category-target-save")
+      .getByTestId("snapshot-expense-category-target-apply")
       .click();
     await expect(groceriesRow).toContainText("$140");
 
@@ -399,12 +399,17 @@ test.describe("private report review smoke", () => {
     await expect(
       transactionList.getByTestId("snapshot-expense-transaction-row"),
     ).toHaveCount(2);
+    await expect(
+      transactionList.getByTestId(
+        "snapshot-expense-transaction-override-boundary",
+      ),
+    ).toContainText("apply only to this browser session");
     const firstCategorySelect = transactionList
       .getByTestId("snapshot-expense-transaction-category")
       .first();
     await expect(firstCategorySelect).toHaveValue("groceries");
     const firstCategorySave = transactionList
-      .getByTestId("snapshot-expense-transaction-category-save")
+      .getByTestId("snapshot-expense-transaction-category-apply")
       .first();
     await expect(firstCategorySave).toBeDisabled();
     await firstCategorySelect.selectOption("dining");
@@ -412,7 +417,9 @@ test.describe("private report review smoke", () => {
     await expect(firstCategorySave).toBeEnabled();
     await firstCategorySave.click();
     await expect(firstCategorySave).toBeDisabled();
-    await expect(transactionList).toContainText("Saved as Dining");
+    await expect(transactionList).toContainText(
+      "Applied as Dining for this session",
+    );
   });
 
   test("screen tabs support click, keyboard movement, and hash updates", async ({
