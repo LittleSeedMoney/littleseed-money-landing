@@ -397,6 +397,9 @@ test.describe("private report review smoke", () => {
     await expect(
       groceriesRow.getByTestId("snapshot-expense-category-target-value"),
     ).toHaveAttribute("data-status", "within-target");
+    await expect(
+      groceriesRow.getByTestId("snapshot-expense-category-target-status-cue"),
+    ).toBeVisible();
     await expect(groceriesRow).not.toContainText("Within target");
 
     await groceriesRow
@@ -439,6 +442,9 @@ test.describe("private report review smoke", () => {
     await expect(
       groceriesRow.getByTestId("snapshot-expense-category-target-value"),
     ).toHaveAttribute("data-status", "within-target");
+    await expect(
+      groceriesRow.getByTestId("snapshot-expense-category-target-status-cue"),
+    ).toBeVisible();
   });
 
   test("screen tabs support click, keyboard movement, and hash updates", async ({

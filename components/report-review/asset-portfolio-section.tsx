@@ -28,6 +28,18 @@ import type {
   ChargeInspectorCategoryMonthlySummary,
   ChargeInspectorReview,
 } from "@/lib/report-review/charge-inspector";
+import {
+  categoryMonthlyDebitTotalRows,
+  centsToInputValue,
+  deriveSnapshotMonthlyDraftRows,
+  expenseRowsForMonth,
+  parseMoneyCents,
+  targetPresetForCategory,
+  targetPresetsByCategory,
+  targetStatusForRow,
+  type SnapshotTargetPreset,
+  type SnapshotTargetStatus,
+} from "@/lib/report-review/snapshot-monthly-draft";
 
 import {
   EducationTopicLink,
@@ -1477,17 +1489,6 @@ function PreviousMonthlyTotalList({
   );
 }
 
-type SnapshotTargetPreset = {
-  amountCents: number;
-  amountLabel: string;
-};
-
-type SnapshotTargetStatus =
-  | { kind: "no-target"; label: "No target" }
-  | { kind: "within-target"; label: "Within target" }
-  | { kind: "over-target"; label: string }
-  | { kind: "invalid-target"; label: "Invalid target" };
-
 function SnapshotTargetValue({
   status,
   value,
@@ -1505,14 +1506,45 @@ function SnapshotTargetValue({
   return (
     <span
       aria-label={`Target ${value}; ${status.label}`}
-      className={`inline-flex min-h-7 w-fit items-center rounded-md border px-2 text-sm font-semibold tabular-nums ${className}`}
+      className={`inline-flex min-h-7 w-fit items-center gap-1 rounded-md border px-2 text-sm font-semibold tabular-nums ${className}`}
       data-status={status.kind}
       data-testid="snapshot-expense-category-target-value"
       title={status.label}
     >
+      <span
+        aria-hidden="true"
+        data-testid="snapshot-expense-category-target-status-cue"
+      >
+        <SnapshotTargetStatusIcon
+          className="h-3.5 w-3.5 shrink-0"
+          status={status.kind}
+        />
+      </span>
       {value}
     </span>
   );
+}
+
+function SnapshotTargetStatusIcon({
+  className,
+  status,
+}: {
+  className: string;
+  status: SnapshotTargetStatus["kind"];
+}) {
+  if (status === "within-target") {
+    return <CheckIcon className={className} />;
+  }
+
+  if (status === "over-target") {
+    return <AlertTriangleIcon className={className} />;
+  }
+
+  if (status === "invalid-target") {
+    return <CircleAlertIcon className={className} />;
+  }
+
+  return <MinusIcon className={className} />;
 }
 
 function ProfileSnapshotCard({
@@ -1867,7 +1899,7 @@ function assetBucketSummary(values: ManualProfileValues) {
 function assetBucketSummaryCents(values: ManualProfileValues) {
   return values.assets.reduce(
     (totals, asset) => {
-      totals[asset.category] += decimalStringToCents(asset.balance);
+      totals[asset.category] += parseMoneyCents(asset.balance) ?? 0;
       return totals;
     },
     { brokerage: 0, cash: 0, other: 0, retirement: 0 },
@@ -1877,171 +1909,6 @@ function assetBucketSummaryCents(values: ManualProfileValues) {
 function totalAssetCents(values: ManualProfileValues) {
   const totals = assetBucketSummaryCents(values);
   return totals.brokerage + totals.cash + totals.other + totals.retirement;
-}
-
-function expenseRowsForMonth(
-  rows: ChargeInspectorCategoryMonthlySummary[],
-  month: string,
-) {
-  if (!month) {
-    return [];
-  }
-
-  return rows
-    .filter(
-      (row) =>
-        row.month === month &&
-        row.debitTotalCents > 0 &&
-        row.category !== "income",
-    )
-    .sort((left, right) => {
-      const amountComparison = right.debitTotalCents - left.debitTotalCents;
-      return amountComparison !== 0
-        ? amountComparison
-        : left.label.localeCompare(right.label);
-    });
-}
-
-function deriveSnapshotMonthlyDraftRows(
-  rows: ChargeInspectorCategoryMonthlySummary[],
-  transactionRowsByOriginalCategory: ReadonlyMap<
-    string,
-    ChargeInspectorCategoryEvidenceRow[]
-  >,
-  sessionTransactionCategoryOverrides: Record<string, string>,
-  month: string,
-) {
-  if (!month) {
-    return [];
-  }
-
-  const draftRowsByCategory = new Map(
-    expenseRowsForMonth(rows, month).map((row) => [row.category, { ...row }]),
-  );
-
-  for (const [originalCategory, transactions] of transactionRowsByOriginalCategory) {
-    for (const transaction of transactions) {
-      if (!transaction.postedDate.startsWith(month)) {
-        continue;
-      }
-
-      const nextCategory =
-        sessionTransactionCategoryOverrides[transaction.id] ?? originalCategory;
-
-      if (nextCategory === originalCategory || nextCategory === "income") {
-        continue;
-      }
-
-      const amountCents = centsFromMoneyLabel(transaction.amountLabel);
-      if (amountCents === null || amountCents <= 0) {
-        continue;
-      }
-
-      const sourceRow = ensureSnapshotMonthlyDraftRow(
-        draftRowsByCategory,
-        rows,
-        month,
-        originalCategory,
-      );
-      sourceRow.debitTotalCents = Math.max(
-        0,
-        sourceRow.debitTotalCents - amountCents,
-      );
-      sourceRow.transactionCount = Math.max(0, sourceRow.transactionCount - 1);
-      sourceRow.debitTransactionCount = Math.max(
-        0,
-        sourceRow.debitTransactionCount - 1,
-      );
-
-      const destinationRow = ensureSnapshotMonthlyDraftRow(
-        draftRowsByCategory,
-        rows,
-        month,
-        nextCategory,
-      );
-      destinationRow.debitTotalCents += amountCents;
-      destinationRow.transactionCount += 1;
-      destinationRow.debitTransactionCount += 1;
-    }
-  }
-
-  return [...draftRowsByCategory.values()]
-    .filter((row) => row.category !== "income" && row.debitTotalCents > 0)
-    .map((row) => ({
-      ...row,
-      debitTotalLabel: moneyFromCentsForMonthlyReference(row.debitTotalCents),
-    }))
-    .sort(compareMonthlyExpenseRows);
-}
-
-function ensureSnapshotMonthlyDraftRow(
-  rowsByCategory: Map<string, ChargeInspectorCategoryMonthlySummary>,
-  sourceRows: ChargeInspectorCategoryMonthlySummary[],
-  month: string,
-  category: string,
-) {
-  const existing = rowsByCategory.get(category);
-  if (existing) {
-    return existing;
-  }
-
-  const sourceRow = sourceRows.find((row) => row.category === category);
-  const row: ChargeInspectorCategoryMonthlySummary = {
-    category,
-    creditTotalCents: 0,
-    creditTotalLabel: moneyFromCentsForMonthlyReference(0),
-    creditTransactionCount: 0,
-    debitTotalCents: 0,
-    debitTotalLabel: moneyFromCentsForMonthlyReference(0),
-    debitTransactionCount: 0,
-    label: sourceRow?.label ?? titleCase(category),
-    limitations: [
-      "This visible row is recalculated from current-session category overrides.",
-    ],
-    month,
-    ruleIds: sourceRow?.ruleIds ?? [],
-    transactionCount: 0,
-  };
-
-  rowsByCategory.set(category, row);
-  return row;
-}
-
-function compareMonthlyExpenseRows(
-  left: ChargeInspectorCategoryMonthlySummary,
-  right: ChargeInspectorCategoryMonthlySummary,
-) {
-  const amountComparison = right.debitTotalCents - left.debitTotalCents;
-  return amountComparison !== 0
-    ? amountComparison
-    : left.label.localeCompare(right.label);
-}
-
-function categoryMonthlyDebitTotalRows(
-  rows: ChargeInspectorCategoryMonthlySummary[],
-  category: string,
-  activeMonth: string,
-) {
-  const months = [...new Set(rows.map((row) => row.month))]
-    .filter((month) => !activeMonth || month <= activeMonth)
-    .sort((left, right) => right.localeCompare(left))
-    .slice(0, 3);
-  const rowByMonth = new Map(
-    rows
-      .filter((row) => row.category === category)
-      .map((row) => [row.month, row]),
-  );
-
-  return months.map((month) => {
-    const row = rowByMonth.get(month);
-
-    return {
-      amountLabel: row
-        ? moneyFromCentsForMonthlyReference(row.debitTotalCents)
-        : moneyFromCentsForMonthlyReference(0),
-      month,
-    };
-  });
 }
 
 function categoryOptions(rows: ChargeInspectorCategoryMonthlySummary[]) {
@@ -2102,79 +1969,6 @@ function transactionOriginalCategoryMap(
   return categoryByTransactionId;
 }
 
-function targetPresetsByCategory(
-  rows: ChargeInspectorCategoryMonthlySummary[],
-  categories: string[],
-  activeMonth: string,
-) {
-  const presets = new Map<string, SnapshotTargetPreset>();
-
-  for (const category of categories) {
-    const preset = targetPresetForCategory(rows, category, activeMonth);
-    if (preset) {
-      presets.set(category, preset);
-    }
-  }
-
-  return presets;
-}
-
-function targetPresetForCategory(
-  rows: ChargeInspectorCategoryMonthlySummary[],
-  category: string,
-  activeMonth: string,
-): SnapshotTargetPreset | null {
-  const previousRows = rows
-    .filter(
-      (row) =>
-        row.category === category &&
-        row.month < activeMonth &&
-        row.debitTotalCents > 0,
-    )
-    .sort((left, right) => right.month.localeCompare(left.month))
-    .slice(0, 3);
-
-  if (previousRows.length === 0) {
-    return null;
-  }
-
-  const totalCents = previousRows.reduce(
-    (total, row) => total + row.debitTotalCents,
-    0,
-  );
-  const amountCents = Math.round(totalCents / previousRows.length);
-
-  return {
-    amountCents,
-    amountLabel: moneyFromCentsForMonthlyReference(amountCents),
-  };
-}
-
-function targetStatusForRow(
-  row: ChargeInspectorCategoryMonthlySummary,
-  targetInput: string,
-): SnapshotTargetStatus {
-  if (targetInput.trim().length === 0) {
-    return { kind: "no-target", label: "No target" };
-  }
-
-  const targetCents = targetInputCents(targetInput);
-  if (targetCents === null || targetCents <= 0) {
-    return { kind: "invalid-target", label: "Invalid target" };
-  }
-
-  if (row.debitTotalCents <= targetCents) {
-    return { kind: "within-target", label: "Within target" };
-  }
-
-  return {
-    kind: "over-target",
-    label: `Over by ${moneyFromCentsForMonthlyReference(
-      row.debitTotalCents - targetCents,
-    )}`,
-  };
-}
-
 function categoryLabel(
   category: string,
   rows: ChargeInspectorCategoryMonthlySummary[],
@@ -2182,50 +1976,10 @@ function categoryLabel(
   return rows.find((row) => row.category === category)?.label ?? titleCase(category);
 }
 
-function targetInputCents(value: string) {
-  const parsed = Number(value.replace(/[$,\s]/g, ""));
-  if (!Number.isFinite(parsed)) {
-    return null;
-  }
-
-  return Math.round(parsed * 100);
-}
-
-function centsFromMoneyLabel(value: string) {
-  const parsed = Number(value.replace(/[$,\s]/g, ""));
-  if (!Number.isFinite(parsed)) {
-    return null;
-  }
-
-  return Math.round(parsed * 100);
-}
-
-function centsToInputValue(cents: number) {
-  return (cents / 100).toFixed(cents % 100 === 0 ? 0 : 2);
-}
-
-function decimalStringToCents(value: string) {
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed)) {
-    return 0;
-  }
-
-  return Math.round(parsed * 100);
-}
-
 function moneyFromCentsForSnapshot(cents: number) {
   return new Intl.NumberFormat("en-US", {
     currency: "USD",
     maximumFractionDigits: 0,
-    style: "currency",
-  }).format(cents / 100);
-}
-
-function moneyFromCentsForMonthlyReference(cents: number) {
-  return new Intl.NumberFormat("en-US", {
-    currency: "USD",
-    maximumFractionDigits: cents % 100 === 0 ? 0 : 2,
-    minimumFractionDigits: cents % 100 === 0 ? 0 : 2,
     style: "currency",
   }).format(cents / 100);
 }
@@ -2551,6 +2305,61 @@ function CheckIcon({ className }: { className: string }) {
       viewBox="0 0 24 24"
     >
       <path d="m5 12 4 4L19 6" />
+    </svg>
+  );
+}
+
+function AlertTriangleIcon({ className }: { className: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+    >
+      <path d="m21 19-9-16-9 16h18Z" />
+      <path d="M12 9v4" />
+      <path d="M12 17h.01" />
+    </svg>
+  );
+}
+
+function CircleAlertIcon({ className }: { className: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+    >
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 8v4" />
+      <path d="M12 16h.01" />
+    </svg>
+  );
+}
+
+function MinusIcon({ className }: { className: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+    >
+      <path d="M5 12h14" />
     </svg>
   );
 }
