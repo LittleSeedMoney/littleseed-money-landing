@@ -70,6 +70,13 @@ const {
   formatSavingGoalDraftMoney,
 } = require("../lib/report-review/saving-goal-draft.ts");
 const {
+  centsToInputValue,
+  deriveSnapshotMonthlyDraftRows,
+  parseMoneyCents,
+  targetPresetForCategory,
+  targetStatusForRow,
+} = require("../lib/report-review/snapshot-monthly-draft.ts");
+const {
   approvedKnowledgeArtifactIdsForFinding,
   buildCategoryEvidenceContextPack,
   buildFindingContextPack,
@@ -103,6 +110,45 @@ function classListIncludes(className, token) {
   return className.split(/\s+/).includes(token);
 }
 
+function snapshotMonthlyRow({
+  category,
+  debitTotalCents,
+  label,
+  month = "2026-05",
+  transactionCount = 1,
+}) {
+  return {
+    category,
+    creditTotalCents: 0,
+    creditTotalLabel: "$0",
+    creditTransactionCount: 0,
+    debitTotalCents,
+    debitTotalLabel: `$${(debitTotalCents / 100).toFixed(2)}`,
+    debitTransactionCount: transactionCount,
+    label: label ?? category,
+    limitations: [],
+    month,
+    ruleIds: [],
+    transactionCount,
+  };
+}
+
+function snapshotEvidenceRow({
+  amountLabel,
+  category,
+  id,
+  postedDate = "2026-05-10",
+}) {
+  return {
+    amountLabel,
+    directionLabel: "Debit",
+    id: id ?? `${category}-${amountLabel}`,
+    merchantName: `${category} merchant`,
+    postedDate,
+    ruleId: `${category}-rule`,
+  };
+}
+
 test("manual profile omits blank user target months", () => {
   const values = defaultManualProfileValues();
 
@@ -124,6 +170,209 @@ test("report review class names resolve Tailwind utility conflicts", () => {
   assert.equal(classListIncludes(className, "border-seed-300"), true);
   assert.equal(classListIncludes(className, "shadow-sm"), false);
   assert.equal(classListIncludes(className, "shadow-none"), true);
+});
+
+test("snapshot monthly draft rows recalculate visible category moves", () => {
+  const rows = [
+    snapshotMonthlyRow({
+      category: "groceries",
+      debitTotalCents: 13056,
+      label: "Groceries",
+      transactionCount: 2,
+    }),
+    snapshotMonthlyRow({
+      category: "dining",
+      debitTotalCents: 1650,
+      label: "Dining",
+    }),
+  ];
+  const transactionsByOriginalCategory = new Map([
+    [
+      "groceries",
+      [
+        snapshotEvidenceRow({
+          amountLabel: "$76.44",
+          category: "groceries",
+          id: "groceries-1",
+        }),
+        snapshotEvidenceRow({
+          amountLabel: "$54.12",
+          category: "groceries",
+          id: "groceries-2",
+        }),
+      ],
+    ],
+  ]);
+
+  const draftRows = deriveSnapshotMonthlyDraftRows(
+    rows,
+    transactionsByOriginalCategory,
+    { "groceries-1": "dining" },
+    "2026-05",
+  );
+  const rowByCategory = new Map(
+    draftRows.map((row) => [row.category, row]),
+  );
+
+  assert.equal(rowByCategory.get("groceries").debitTotalCents, 5412);
+  assert.equal(rowByCategory.get("groceries").debitTotalLabel, "$54.12");
+  assert.equal(rowByCategory.get("groceries").debitTransactionCount, 1);
+  assert.equal(rowByCategory.get("dining").debitTotalCents, 9294);
+  assert.equal(rowByCategory.get("dining").debitTotalLabel, "$92.94");
+  assert.equal(rowByCategory.get("dining").debitTransactionCount, 2);
+});
+
+test("snapshot monthly draft rows clamp empty sources and skip unsupported moves", () => {
+  const rows = [
+    snapshotMonthlyRow({
+      category: "groceries",
+      debitTotalCents: 500,
+      label: "Groceries",
+    }),
+    snapshotMonthlyRow({
+      category: "utilities",
+      debitTotalCents: 100,
+      label: "Utilities",
+    }),
+    snapshotMonthlyRow({
+      category: "income",
+      debitTotalCents: 50000,
+      label: "Income",
+    }),
+  ];
+  const transactionsByOriginalCategory = new Map([
+    [
+      "groceries",
+      [
+        snapshotEvidenceRow({
+          amountLabel: "$7.00",
+          category: "groceries",
+          id: "groceries-1",
+        }),
+        snapshotEvidenceRow({
+          amountLabel: "$1.00",
+          category: "groceries",
+          id: "groceries-old",
+          postedDate: "2026-04-30",
+        }),
+      ],
+    ],
+    [
+      "utilities",
+      [
+        snapshotEvidenceRow({
+          amountLabel: "Not available",
+          category: "utilities",
+          id: "utilities-1",
+        }),
+      ],
+    ],
+    [
+      "income",
+      [
+        snapshotEvidenceRow({
+          amountLabel: "$50.00",
+          category: "income",
+          id: "income-1",
+        }),
+      ],
+    ],
+  ]);
+
+  const draftRows = deriveSnapshotMonthlyDraftRows(
+    rows,
+    transactionsByOriginalCategory,
+    {
+      "groceries-1": "dining",
+      "groceries-old": "dining",
+      "income-1": "dining",
+      "utilities-1": "dining",
+    },
+    "2026-05",
+  );
+  const rowByCategory = new Map(
+    draftRows.map((row) => [row.category, row]),
+  );
+
+  assert.equal(rowByCategory.has("groceries"), false);
+  assert.equal(rowByCategory.get("dining").debitTotalCents, 700);
+  assert.equal(rowByCategory.get("dining").debitTotalLabel, "$7");
+  assert.equal(rowByCategory.get("utilities").debitTotalCents, 100);
+  assert.equal(rowByCategory.has("income"), false);
+});
+
+test("snapshot monthly target status stays factual", () => {
+  const row = snapshotMonthlyRow({
+    category: "groceries",
+    debitTotalCents: 13056,
+    label: "Groceries",
+  });
+
+  assert.deepEqual(targetStatusForRow(row, ""), {
+    kind: "no-target",
+    label: "No target",
+  });
+  assert.deepEqual(targetStatusForRow(row, "abc"), {
+    kind: "invalid-target",
+    label: "Invalid target",
+  });
+  assert.deepEqual(targetStatusForRow(row, "0"), {
+    kind: "invalid-target",
+    label: "Invalid target",
+  });
+  assert.deepEqual(targetStatusForRow(row, "140"), {
+    kind: "within-target",
+    label: "Within target",
+  });
+  assert.deepEqual(targetStatusForRow(row, "$100.00"), {
+    kind: "over-target",
+    label: "Over by $30.56",
+  });
+});
+
+test("snapshot monthly target preset uses recent non-zero prior months", () => {
+  const rows = [
+    snapshotMonthlyRow({
+      category: "subscriptions",
+      debitTotalCents: 1000,
+      month: "2026-01",
+    }),
+    snapshotMonthlyRow({
+      category: "subscriptions",
+      debitTotalCents: 0,
+      month: "2026-02",
+    }),
+    snapshotMonthlyRow({
+      category: "subscriptions",
+      debitTotalCents: 2000,
+      month: "2026-03",
+    }),
+    snapshotMonthlyRow({
+      category: "subscriptions",
+      debitTotalCents: 3000,
+      month: "2026-04",
+    }),
+    snapshotMonthlyRow({
+      category: "subscriptions",
+      debitTotalCents: 4000,
+      month: "2026-05",
+    }),
+    snapshotMonthlyRow({
+      category: "subscriptions",
+      debitTotalCents: 9000,
+      month: "2026-06",
+    }),
+  ];
+
+  assert.deepEqual(targetPresetForCategory(rows, "subscriptions", "2026-05"), {
+    amountCents: 2000,
+    amountLabel: "$20",
+  });
+  assert.equal(targetPresetForCategory(rows, "groceries", "2026-05"), null);
+  assert.equal(centsToInputValue(1599), "15.99");
+  assert.equal(centsToInputValue(1500), "15");
+  assert.equal(parseMoneyCents("$1,234.56"), 123456);
+  assert.equal(parseMoneyCents("Not available"), null);
 });
 
 test("report-review AI context pack stays bounded to the selected finding", () => {

@@ -355,6 +355,12 @@ test.describe("private report review smoke", () => {
     await expect(targetReferenceList).toContainText("2026-05");
     await expect(targetReferenceList).toContainText("2026-04");
     await expect(targetReferenceList).toContainText("$15.99");
+    await targetReferenceList
+      .getByTestId("snapshot-expense-target-preset-fill")
+      .click();
+    await expect(
+      subscriptionsRow.getByTestId("snapshot-expense-category-target"),
+    ).toHaveValue("15.99");
 
     const groceriesRow = currentMonthTable
       .locator(
@@ -362,7 +368,7 @@ test.describe("private report review smoke", () => {
       );
 
     await expect(groceriesRow).toContainText("$130.56");
-    await expect(groceriesRow).toContainText("Not set");
+    await expect(groceriesRow).toContainText("No target");
     await groceriesRow
       .getByRole("button", { name: "Edit Groceries target" })
       .click();
@@ -388,6 +394,13 @@ test.describe("private report review smoke", () => {
       .getByTestId("snapshot-expense-category-target-apply")
       .click();
     await expect(groceriesRow).toContainText("$140");
+    await expect(
+      groceriesRow.getByTestId("snapshot-expense-category-target-value"),
+    ).toHaveAttribute("data-status", "within-target");
+    await expect(
+      groceriesRow.getByTestId("snapshot-expense-category-target-status-cue"),
+    ).toBeVisible();
+    await expect(groceriesRow).not.toContainText("Within target");
 
     await groceriesRow
       .getByTestId("snapshot-expense-category-toggle")
@@ -417,9 +430,21 @@ test.describe("private report review smoke", () => {
     await expect(firstCategorySave).toBeEnabled();
     await firstCategorySave.click();
     await expect(firstCategorySave).toBeDisabled();
-    await expect(transactionList).toContainText(
-      "Applied as Dining for this session",
+    await expect(groceriesRow).toContainText("$54.12");
+    const diningRow = currentMonthTable.locator(
+      '[data-testid="snapshot-expense-category-row"][data-category="dining"]',
     );
+    await expect(diningRow).toContainText("$92.94");
+    await diningRow.getByTestId("snapshot-expense-category-toggle").click();
+    await expect(
+      currentMonthTable.getByTestId("snapshot-expense-transaction-list-row"),
+    ).toContainText("Applied as Dining for this session");
+    await expect(
+      groceriesRow.getByTestId("snapshot-expense-category-target-value"),
+    ).toHaveAttribute("data-status", "within-target");
+    await expect(
+      groceriesRow.getByTestId("snapshot-expense-category-target-status-cue"),
+    ).toBeVisible();
   });
 
   test("screen tabs support click, keyboard movement, and hash updates", async ({

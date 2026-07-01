@@ -24,9 +24,22 @@ import type {
   ManualProfileValues,
 } from "@/lib/report-review/manual-profile";
 import type {
+  ChargeInspectorCategoryEvidenceRow,
   ChargeInspectorCategoryMonthlySummary,
   ChargeInspectorReview,
 } from "@/lib/report-review/charge-inspector";
+import {
+  categoryMonthlyDebitTotalRows,
+  centsToInputValue,
+  deriveSnapshotMonthlyDraftRows,
+  expenseRowsForMonth,
+  parseMoneyCents,
+  targetPresetForCategory,
+  targetPresetsByCategory,
+  targetStatusForRow,
+  type SnapshotTargetPreset,
+  type SnapshotTargetStatus,
+} from "@/lib/report-review/snapshot-monthly-draft";
 
 import {
   EducationTopicLink,
@@ -891,8 +904,15 @@ function SnapshotMonthlyTab({
   const activeMonthIndex = months.indexOf(activeMonth);
   const previousMonth =
     activeMonthIndex > 0 ? (months[activeMonthIndex - 1] ?? "") : "";
-  const currentRows = expenseRowsForMonth(
+  const originalTransactionRowsByCategory =
+    transactionRowsByCategory(chargeInspector);
+  const originalCategoryByTransactionId = transactionOriginalCategoryMap(
+    originalTransactionRowsByCategory,
+  );
+  const currentRows = deriveSnapshotMonthlyDraftRows(
     chargeInspector.categoryMonthlySummary,
+    originalTransactionRowsByCategory,
+    sessionTransactionCategoryOverrides,
     activeMonth,
   );
   const previousRows = expenseRowsForMonth(
@@ -903,6 +923,10 @@ function SnapshotMonthlyTab({
     previousRows.map((row) => [row.category, row]),
   );
   const categories = categoryOptions(chargeInspector.categoryMonthlySummary);
+  const currentTransactionRowsByCategory = transactionRowsByDisplayCategory(
+    originalTransactionRowsByCategory,
+    sessionTransactionCategoryOverrides,
+  );
   const trendRows = monthlyFinancialTrendRows(chargeInspector, values);
   const activeTrend =
     trendRows.find((row) => row.month === activeMonth) ??
@@ -977,6 +1001,22 @@ function SnapshotMonthlyTab({
             }));
           }
         }}
+        onFillTargetPreset={(category) => {
+          const preset = targetPresetForCategory(
+            chargeInspector.categoryMonthlySummary,
+            category,
+            activeMonth,
+          );
+
+          if (!preset) {
+            return;
+          }
+
+          setDraftTargetInputs((current) => ({
+            ...current,
+            [category]: centsToInputValue(preset.amountCents),
+          }));
+        }}
         onApplyCategoryOverrideForSession={(transactionId) =>
           setSessionTransactionCategoryOverrides((current) => {
             const draftCategory =
@@ -1015,7 +1055,13 @@ function SnapshotMonthlyTab({
         rows={currentRows}
         sessionTargetInputs={sessionTargetInputs}
         sessionTransactionCategoryOverrides={sessionTransactionCategoryOverrides}
-        transactionRowsByCategory={transactionRowsByCategory(chargeInspector)}
+        targetPresetsByCategory={targetPresetsByCategory(
+          chargeInspector.categoryMonthlySummary,
+          categories,
+          activeMonth,
+        )}
+        transactionOriginalCategoryById={originalCategoryByTransactionId}
+        transactionRowsByCategory={currentTransactionRowsByCategory}
       />
 
       <ExpenseMonthTable
@@ -1033,6 +1079,7 @@ function SnapshotMonthlyTab({
         }
         onCategoryOverrideChange={() => undefined}
         onEditCategory={() => undefined}
+        onFillTargetPreset={() => undefined}
         onApplyCategoryOverrideForSession={() => undefined}
         onApplyTargetForSession={() => undefined}
         onTargetChange={() => undefined}
@@ -1040,7 +1087,9 @@ function SnapshotMonthlyTab({
         rows={previousRows}
         sessionTargetInputs={{}}
         sessionTransactionCategoryOverrides={{}}
-        transactionRowsByCategory={transactionRowsByCategory(chargeInspector)}
+        targetPresetsByCategory={new Map()}
+        transactionOriginalCategoryById={originalCategoryByTransactionId}
+        transactionRowsByCategory={originalTransactionRowsByCategory}
       />
     </section>
   );
@@ -1078,11 +1127,14 @@ function ExpenseMonthTable({
   onApplyTargetForSession,
   onCategoryOverrideChange,
   onEditCategory,
+  onFillTargetPreset,
   onTargetChange,
   previousByCategory,
   rows,
   sessionTargetInputs,
   sessionTransactionCategoryOverrides,
+  targetPresetsByCategory,
+  transactionOriginalCategoryById,
   transactionRowsByCategory,
 }: {
   categories: string[];
@@ -1097,11 +1149,14 @@ function ExpenseMonthTable({
   onApplyTargetForSession: (category: string) => void;
   onCategoryOverrideChange: (transactionId: string, category: string) => void;
   onEditCategory: (category: string | null) => void;
+  onFillTargetPreset: (category: string) => void;
   onTargetChange: (category: string, value: string) => void;
   previousByCategory: ReadonlyMap<string, ChargeInspectorCategoryMonthlySummary>;
   rows: ChargeInspectorCategoryMonthlySummary[];
   sessionTargetInputs: Record<string, string>;
   sessionTransactionCategoryOverrides: Record<string, string>;
+  targetPresetsByCategory: ReadonlyMap<string, SnapshotTargetPreset>;
+  transactionOriginalCategoryById: ReadonlyMap<string, string>;
   transactionRowsByCategory: ReadonlyMap<
     string,
     ChargeInspectorReview["categorySummary"][number]["evidenceRows"]
@@ -1143,6 +1198,11 @@ function ExpenseMonthTable({
                 sessionTargetInputs[row.category] ?? "";
               const draftTargetInput =
                 draftTargetInputs[row.category] ?? sessionTargetInput;
+              const targetStatus = targetStatusForRow(
+                row,
+                sessionTargetInput,
+              );
+              const targetPreset = targetPresetsByCategory.get(row.category);
               const isEditing = editingCategory === row.category;
               const transactionRows =
                 transactionRowsByCategory.get(row.category) ?? [];
@@ -1234,11 +1294,14 @@ function ExpenseMonthTable({
                         </div>
                       ) : (
                         <div className="flex items-center gap-1.5">
-                          <span className="text-earth-500">
-                            {sessionTargetInput
-                              ? displayMoneyValue(sessionTargetInput)
-                              : "Not set"}
-                          </span>
+                          <SnapshotTargetValue
+                            status={targetStatus}
+                            value={
+                              sessionTargetInput
+                                ? displayMoneyValue(sessionTargetInput)
+                                : "No target"
+                            }
+                          />
                           <EditIconButton
                             isCompact
                             label={`Edit ${row.label} target`}
@@ -1257,7 +1320,11 @@ function ExpenseMonthTable({
                       data-testid="snapshot-expense-target-reference-row"
                     >
                       <td className="px-0 py-0" colSpan={4}>
-                        <PreviousMonthlyTotalList rows={targetReferenceRows} />
+                        <PreviousMonthlyTotalList
+                          onFillPreset={() => onFillTargetPreset(row.category)}
+                          preset={targetPreset}
+                          rows={targetReferenceRows}
+                        />
                       </td>
                     </tr>
                   ) : null}
@@ -1275,10 +1342,14 @@ function ExpenseMonthTable({
                           </p>
                           <ul className="mt-2">
                             {currentMonthTransactionRows.map((transaction) => {
+                              const originalCategory =
+                                transactionOriginalCategoryById.get(
+                                  transaction.id,
+                                ) ?? row.category;
                               const sessionCategory =
                                 sessionTransactionCategoryOverrides[
                                   transaction.id
-                                ] ?? row.category;
+                                ] ?? originalCategory;
                               const draftCategory =
                                 draftTransactionCategoryOverrides[
                                   transaction.id
@@ -1340,7 +1411,7 @@ function ExpenseMonthTable({
                                         <CheckIcon className="h-4 w-4" />
                                       </button>
                                     </div>
-                                    {sessionCategory !== row.category ? (
+                                    {sessionCategory !== originalCategory ? (
                                       <span className="text-xs font-semibold text-seed-800">
                                         Applied as{" "}
                                         {categoryLabel(sessionCategory, rows)}{" "}
@@ -1367,8 +1438,12 @@ function ExpenseMonthTable({
 }
 
 function PreviousMonthlyTotalList({
+  onFillPreset,
+  preset,
   rows,
 }: {
+  onFillPreset: () => void;
+  preset?: SnapshotTargetPreset;
   rows: { amountLabel: string; month: string }[];
 }) {
   if (rows.length === 0) {
@@ -1380,7 +1455,22 @@ function PreviousMonthlyTotalList({
       className="border-t border-stone-100 bg-stone-50 px-3 py-3 text-sm leading-6 text-earth-700"
       data-testid="snapshot-expense-target-reference-list"
     >
-      <div className="font-semibold text-earth-600">Previous monthly totals</div>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="font-semibold text-earth-600">
+          Previous monthly totals
+        </div>
+        {preset ? (
+          <button
+            className="inline-flex min-h-8 items-center rounded-md border border-stone-300 bg-white px-2.5 text-xs font-semibold text-earth-800 shadow-sm hover:border-seed-300 hover:text-seed-900 focus:outline-none focus:ring-2 focus:ring-seed-500"
+            data-testid="snapshot-expense-target-preset-fill"
+            onClick={onFillPreset}
+            title={`Fill ${preset.amountLabel} from recent average`}
+            type="button"
+          >
+            Fill recent average {preset.amountLabel}
+          </button>
+        ) : null}
+      </div>
       <ul className="mt-2 grid gap-1 sm:max-w-md">
         {rows.map((row) => (
           <li
@@ -1397,6 +1487,64 @@ function PreviousMonthlyTotalList({
       </ul>
     </div>
   );
+}
+
+function SnapshotTargetValue({
+  status,
+  value,
+}: {
+  status: SnapshotTargetStatus;
+  value: string;
+}) {
+  const className = {
+    "invalid-target": "border-rose-200 bg-rose-50 text-rose-800",
+    "no-target": "border-stone-200 bg-stone-100 text-earth-700",
+    "over-target": "border-amber-200 bg-amber-50 text-amber-800",
+    "within-target": "border-seed-200 bg-seed-50 text-seed-800",
+  }[status.kind];
+
+  return (
+    <span
+      aria-label={`Target ${value}; ${status.label}`}
+      className={`inline-flex min-h-7 w-fit items-center gap-1 rounded-md border px-2 text-sm font-semibold tabular-nums ${className}`}
+      data-status={status.kind}
+      data-testid="snapshot-expense-category-target-value"
+      title={status.label}
+    >
+      <span
+        aria-hidden="true"
+        data-testid="snapshot-expense-category-target-status-cue"
+      >
+        <SnapshotTargetStatusIcon
+          className="h-3.5 w-3.5 shrink-0"
+          status={status.kind}
+        />
+      </span>
+      {value}
+    </span>
+  );
+}
+
+function SnapshotTargetStatusIcon({
+  className,
+  status,
+}: {
+  className: string;
+  status: SnapshotTargetStatus["kind"];
+}) {
+  if (status === "within-target") {
+    return <CheckIcon className={className} />;
+  }
+
+  if (status === "over-target") {
+    return <AlertTriangleIcon className={className} />;
+  }
+
+  if (status === "invalid-target") {
+    return <CircleAlertIcon className={className} />;
+  }
+
+  return <MinusIcon className={className} />;
 }
 
 function ProfileSnapshotCard({
@@ -1751,7 +1899,7 @@ function assetBucketSummary(values: ManualProfileValues) {
 function assetBucketSummaryCents(values: ManualProfileValues) {
   return values.assets.reduce(
     (totals, asset) => {
-      totals[asset.category] += decimalStringToCents(asset.balance);
+      totals[asset.category] += parseMoneyCents(asset.balance) ?? 0;
       return totals;
     },
     { brokerage: 0, cash: 0, other: 0, retirement: 0 },
@@ -1763,58 +1911,14 @@ function totalAssetCents(values: ManualProfileValues) {
   return totals.brokerage + totals.cash + totals.other + totals.retirement;
 }
 
-function expenseRowsForMonth(
-  rows: ChargeInspectorCategoryMonthlySummary[],
-  month: string,
-) {
-  if (!month) {
-    return [];
-  }
-
-  return rows
-    .filter(
-      (row) =>
-        row.month === month &&
-        row.debitTotalCents > 0 &&
-        row.category !== "income",
-    )
-    .sort((left, right) => {
-      const amountComparison = right.debitTotalCents - left.debitTotalCents;
-      return amountComparison !== 0
-        ? amountComparison
-        : left.label.localeCompare(right.label);
-    });
-}
-
-function categoryMonthlyDebitTotalRows(
-  rows: ChargeInspectorCategoryMonthlySummary[],
-  category: string,
-  activeMonth: string,
-) {
-  const months = [...new Set(rows.map((row) => row.month))]
-    .filter((month) => !activeMonth || month <= activeMonth)
-    .sort((left, right) => right.localeCompare(left))
-    .slice(0, 3);
-  const rowByMonth = new Map(
-    rows
-      .filter((row) => row.category === category)
-      .map((row) => [row.month, row]),
-  );
-
-  return months.map((month) => {
-    const row = rowByMonth.get(month);
-
-    return {
-      amountLabel: row
-        ? moneyFromCentsForMonthlyReference(row.debitTotalCents)
-        : moneyFromCentsForMonthlyReference(0),
-      month,
-    };
-  });
-}
-
 function categoryOptions(rows: ChargeInspectorCategoryMonthlySummary[]) {
-  return [...new Set(rows.map((row) => row.category))].sort();
+  return [
+    ...new Set(
+      rows
+        .filter((row) => row.category !== "income")
+        .map((row) => row.category),
+    ),
+  ].sort();
 }
 
 function transactionRowsByCategory(chargeInspector: ChargeInspectorReview) {
@@ -1826,6 +1930,45 @@ function transactionRowsByCategory(chargeInspector: ChargeInspectorReview) {
   );
 }
 
+function transactionRowsByDisplayCategory(
+  transactionRowsByOriginalCategory: ReadonlyMap<
+    string,
+    ChargeInspectorCategoryEvidenceRow[]
+  >,
+  sessionTransactionCategoryOverrides: Record<string, string>,
+) {
+  const rowsByCategory = new Map<string, ChargeInspectorCategoryEvidenceRow[]>();
+
+  for (const [originalCategory, rows] of transactionRowsByOriginalCategory) {
+    for (const row of rows) {
+      const displayCategory =
+        sessionTransactionCategoryOverrides[row.id] ?? originalCategory;
+      const currentRows = rowsByCategory.get(displayCategory) ?? [];
+      currentRows.push(row);
+      rowsByCategory.set(displayCategory, currentRows);
+    }
+  }
+
+  return rowsByCategory;
+}
+
+function transactionOriginalCategoryMap(
+  transactionRowsByOriginalCategory: ReadonlyMap<
+    string,
+    ChargeInspectorCategoryEvidenceRow[]
+  >,
+) {
+  const categoryByTransactionId = new Map<string, string>();
+
+  for (const [category, rows] of transactionRowsByOriginalCategory) {
+    for (const row of rows) {
+      categoryByTransactionId.set(row.id, category);
+    }
+  }
+
+  return categoryByTransactionId;
+}
+
 function categoryLabel(
   category: string,
   rows: ChargeInspectorCategoryMonthlySummary[],
@@ -1833,28 +1976,10 @@ function categoryLabel(
   return rows.find((row) => row.category === category)?.label ?? titleCase(category);
 }
 
-function decimalStringToCents(value: string) {
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed)) {
-    return 0;
-  }
-
-  return Math.round(parsed * 100);
-}
-
 function moneyFromCentsForSnapshot(cents: number) {
   return new Intl.NumberFormat("en-US", {
     currency: "USD",
     maximumFractionDigits: 0,
-    style: "currency",
-  }).format(cents / 100);
-}
-
-function moneyFromCentsForMonthlyReference(cents: number) {
-  return new Intl.NumberFormat("en-US", {
-    currency: "USD",
-    maximumFractionDigits: cents % 100 === 0 ? 0 : 2,
-    minimumFractionDigits: cents % 100 === 0 ? 0 : 2,
     style: "currency",
   }).format(cents / 100);
 }
@@ -2180,6 +2305,61 @@ function CheckIcon({ className }: { className: string }) {
       viewBox="0 0 24 24"
     >
       <path d="m5 12 4 4L19 6" />
+    </svg>
+  );
+}
+
+function AlertTriangleIcon({ className }: { className: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+    >
+      <path d="m21 19-9-16-9 16h18Z" />
+      <path d="M12 9v4" />
+      <path d="M12 17h.01" />
+    </svg>
+  );
+}
+
+function CircleAlertIcon({ className }: { className: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+    >
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 8v4" />
+      <path d="M12 16h.01" />
+    </svg>
+  );
+}
+
+function MinusIcon({ className }: { className: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+    >
+      <path d="M5 12h14" />
     </svg>
   );
 }
