@@ -1,5 +1,6 @@
 import { parseMoneyCents } from "./snapshot-monthly-draft";
 
+// Deterministic fallback for tests; UI callers pass the runtime current month.
 export const GOAL_PLANNING_AS_OF_MONTH = "2026-07";
 
 export type GoalPlanningType =
