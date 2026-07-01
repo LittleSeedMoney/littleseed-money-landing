@@ -356,53 +356,59 @@ test.describe("private report review smoke", () => {
     await expect(groceriesCategory.getByText("$130.56")).toBeVisible();
     await expect(page.getByText("0 confirmed")).toBeVisible();
     await expect(page.getByText("0 needs review")).toBeVisible();
-    await groceriesCategory
-      .getByTestId("charge-inspector-category-budget-target")
-      .fill("$100.00");
-    await expect(groceriesCategory.getByText("Over target")).toBeVisible();
-    await expect(groceriesCategory.getByText("$30.56 over")).toBeVisible();
-    await expect(groceriesCategory.getByText("Target $100.00")).toBeVisible();
-    await expect(page.getByTestId("charge-inspector-category-monthly-budget-row"))
-      .toHaveCount(17);
-    await expect(
-      page
-        .getByTestId("charge-inspector-category-monthly-budget-row")
-        .filter({ hasText: "2026-05" })
-        .filter({ hasText: "Groceries" }),
-    ).toContainText("$30.56 over");
-    await expect(
-      page
-        .getByTestId("charge-inspector-category-monthly-budget-row")
-        .filter({ hasText: "2026-05" })
-        .filter({ hasText: "Groceries" }),
-    ).toContainText("Over target");
-    await expect(page.getByText("1 targets")).toBeVisible();
-    await expect(page.getByText("1 over")).toBeVisible();
     const automationReviewQueue = page.getByTestId(
       "charge-inspector-budget-automation-review-queue",
     );
     await expect(automationReviewQueue).toBeVisible();
     await expect(
-      automationReviewQueue.getByText("Auto-generated review queue"),
+      automationReviewQueue.getByText("Rows to review"),
     ).toBeVisible();
     await expect(
       automationReviewQueue.getByTestId(
         "charge-inspector-budget-automation-review-queue-row",
       ),
-    ).toHaveCount(17);
-    await expect(automationReviewQueue).toContainText("Needs human review");
+    ).toHaveCount(15);
+    await expect(automationReviewQueue).toContainText("Missing context");
     await expect(automationReviewQueue).toContainText("2026-05 Groceries");
-    await expect(automationReviewQueue).toContainText(
-      "actual $130.56, target $100.00",
-    );
+    await expect(automationReviewQueue).toContainText("No target");
     await expect(automationReviewQueue).toContainText(
       "do not approve automation",
     );
-    await expect(automationReviewQueue).toContainText("17 unreviewed");
+    await expect(automationReviewQueue).toContainText("15 unreviewed");
     await expect(automationReviewQueue).toContainText("0 reviewed");
     const groceriesAutomationReviewRow = automationReviewQueue
       .getByTestId("charge-inspector-budget-automation-review-queue-row")
       .filter({ hasText: "2026-05 Groceries" });
+    await expect(groceriesAutomationReviewRow).toContainText(
+      "Candidate $130.56 from 2026-05",
+    );
+    await groceriesAutomationReviewRow
+      .getByTestId("charge-inspector-category-budget-target-preset")
+      .click();
+    await expect(
+      groceriesAutomationReviewRow.getByTestId(
+        "charge-inspector-category-budget-target",
+      ),
+    ).toHaveValue("$130.56");
+    await expect(groceriesAutomationReviewRow).toContainText("Within target");
+    await expect(groceriesAutomationReviewRow).toContainText(
+      "Target $130.56",
+    );
+    await groceriesAutomationReviewRow
+      .getByTestId("charge-inspector-category-budget-target")
+      .fill("$100.00");
+    await expect(
+      automationReviewQueue.getByTestId(
+        "charge-inspector-budget-automation-review-queue-row",
+      ),
+    ).toHaveCount(17);
+    await expect(page.getByText("3 visible monthly target rows")).toBeVisible();
+    await expect(page.getByText("1 visible monthly over")).toBeVisible();
+    await expect(automationReviewQueue).toContainText("Needs human review");
+    await expect(groceriesAutomationReviewRow).toContainText("$30.56 over");
+    await expect(groceriesAutomationReviewRow).toContainText("Over target");
+    await expect(groceriesAutomationReviewRow).toContainText("Target $100.00");
+    await expect(automationReviewQueue).toContainText("17 unreviewed");
     await groceriesAutomationReviewRow
       .getByRole("radio", { exact: true, name: "Reviewed" })
       .click();
@@ -414,12 +420,11 @@ test.describe("private report review smoke", () => {
     ).toHaveAttribute("aria-checked", "true");
     await expect(automationReviewQueue).toContainText("16 unreviewed");
     await expect(automationReviewQueue).toContainText("1 reviewed");
-    await groceriesCategory
+    await groceriesAutomationReviewRow
       .getByTestId("charge-inspector-category-budget-target")
       .fill("$200.00");
-    await expect(groceriesAutomationReviewRow).toContainText(
-      "actual $130.56, target $200.00",
-    );
+    await expect(groceriesAutomationReviewRow).toContainText("Within target");
+    await expect(groceriesAutomationReviewRow).toContainText("Target $200.00");
     await expect(
       groceriesAutomationReviewRow.getByRole("radio", {
         exact: true,
@@ -428,12 +433,11 @@ test.describe("private report review smoke", () => {
     ).toHaveAttribute("aria-checked", "true");
     await expect(automationReviewQueue).toContainText("17 unreviewed");
     await expect(automationReviewQueue).toContainText("0 reviewed");
-    await groceriesCategory
+    await groceriesAutomationReviewRow
       .getByTestId("charge-inspector-category-budget-target")
       .fill("$100.00");
-    await expect(groceriesAutomationReviewRow).toContainText(
-      "actual $130.56, target $100.00",
-    );
+    await expect(groceriesAutomationReviewRow).toContainText("Over target");
+    await expect(groceriesAutomationReviewRow).toContainText("Target $100.00");
     await expect(
       groceriesAutomationReviewRow.getByRole("radio", {
         exact: true,
@@ -568,8 +572,12 @@ test.describe("private report review smoke", () => {
       .toHaveCount(1);
     await expect(page.getByTestId("charge-inspector-category-row"))
       .toHaveCount(1);
-    await expect(page.getByTestId("charge-inspector-category-monthly-row"))
-      .toHaveCount(1);
+    await expect(
+      page.getByTestId("charge-inspector-budget-automation-review-queue-row"),
+    ).toHaveCount(1);
+    await expect(
+      page.getByTestId("charge-inspector-budget-automation-review-queue"),
+    ).toContainText("Missing context");
     await expect(
       page.getByTestId("charge-inspector-category-monthly-summary"),
     ).toContainText("transaction_category_monthly_summary_v0");
@@ -581,8 +589,8 @@ test.describe("private report review smoke", () => {
     ).toBeVisible();
     await expect(page.getByText("0 confirmed")).toBeVisible();
     await expect(page.getByText("0 needs review")).toBeVisible();
-    await expect(page.getByText("0 targets")).toBeVisible();
-    await expect(page.getByText("0 over")).toBeVisible();
+    await expect(page.getByText("0 visible monthly target rows")).toBeVisible();
+    await expect(page.getByText("0 visible monthly over")).toBeVisible();
     await expect(
       page
         .getByTestId("charge-inspector-category-row")

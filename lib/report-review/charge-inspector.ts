@@ -990,10 +990,6 @@ export function compareCategoryMonthlyBudgetTargets(
   targets: ChargeInspectorCategoryBudgetTargetAmounts,
 ): ChargeInspectorCategoryMonthlyBudgetComparison[] {
   const targetEntries = Object.entries(targets);
-  if (targetEntries.length === 0) {
-    return [];
-  }
-
   const rowsByMonthCategory = new Map(
     rows.map((row) => [`${row.month}:${row.category}`, row] as const),
   );

@@ -234,7 +234,10 @@ test.describe("private report review AI panel", () => {
     const feesCategory = page
       .getByTestId("charge-inspector-category-row")
       .filter({ hasText: "Fees" });
-    await feesCategory
+    const feesAutomationReviewRow = page
+      .getByTestId("charge-inspector-budget-automation-review-queue-row")
+      .filter({ hasText: "2026-05 Fees" });
+    await feesAutomationReviewRow
       .getByTestId("charge-inspector-category-budget-target")
       .fill("$10.00");
     await feesCategory.getByRole("radio", { name: "Needs review" }).click();

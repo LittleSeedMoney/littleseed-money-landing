@@ -489,13 +489,22 @@ test("charge inspector monthly category budget comparison uses user target facts
       comparison.month === "2026-05" && comparison.category === "housing",
   );
 
-  assert.equal(
-    compareCategoryMonthlyBudgetTargets(
-      chargeInspectorSampleReview.categoryMonthlySummary,
-      {},
-    ).length,
-    0,
+  const noTargetComparisons = compareCategoryMonthlyBudgetTargets(
+    chargeInspectorSampleReview.categoryMonthlySummary,
+    {},
   );
+  const noTargetMayGroceries = noTargetComparisons.find(
+    (comparison) =>
+      comparison.month === "2026-05" && comparison.category === "groceries",
+  );
+
+  assert.equal(
+    noTargetComparisons.length,
+    chargeInspectorSampleReview.categoryMonthlySummary.length,
+  );
+  assert.equal(noTargetMayGroceries.actualDebitTotalLabel, "$130.56");
+  assert.equal(noTargetMayGroceries.targetDebitTotalLabel, "No target");
+  assert.equal(noTargetMayGroceries.status, "no-target");
   assert.equal(marchGroceries.actualDebitTotalLabel, "$0.00");
   assert.equal(marchGroceries.targetDebitTotalLabel, "$100.00");
   assert.equal(marchGroceries.status, "within-target");

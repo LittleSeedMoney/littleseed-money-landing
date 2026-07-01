@@ -11,7 +11,6 @@ import {
 import {
   buildCategoryBudgetAutomationReviewQueue,
   categoryBudgetTargetsFromInputs,
-  compareCategoryBudgetTargets,
   compareCategoryMonthlyBudgetTargets,
   deriveCategoryBudgetAutomationJudgments,
   deriveCategoryBudgetAutomationReadiness,
@@ -26,12 +25,10 @@ import {
   type ChargeInspectorCategoryBudgetAutomationReadiness,
   type ChargeInspectorCategoryBudgetAutomationReviewQueueItem,
   type ChargeInspectorCategoryBudgetAutomationReviewQueueLane,
-  type ChargeInspectorCategoryBudgetComparison,
   type ChargeInspectorCategoryBudgetTargetAmounts,
   type ChargeInspectorCategoryMonthlyBudgetComparison,
   type ChargeInspectorCategoryReviewStatus,
   type ChargeInspectorFinding,
-  type ChargeInspectorCategoryMonthlySummary,
   type ChargeInspectorCategorySummary,
   type ChargeInspectorReview,
   type ChargeInspectorSummary,
@@ -61,6 +58,11 @@ type AutomationReviewDecision =
   | "candidate-reviewed"
   | "needs-more-context"
   | "excluded";
+type AutomationTargetPreset = {
+  amountLabel: string;
+  sourceMonth: string;
+  value: string;
+};
 
 const CSV_FILE_LENGTH_ERROR =
   "CSV file must be 250,000 characters or fewer.";
@@ -462,10 +464,8 @@ function ChargeInspectorDashboard({
           {review.categorySummary.length > 0 ? (
             <CategorySummaryTable
               aiEnabled={aiEnabled}
-              budgetTargetInputs={budgetTargetInputs}
               budgetTargets={budgetTargets}
               key={reviewKey}
-              onBudgetTargetChange={setBudgetTarget}
               review={review}
               showAiPanel={showSampleAiPanels}
             />
@@ -473,7 +473,9 @@ function ChargeInspectorDashboard({
 
           {review.categoryMonthlySummary.length > 0 ? (
             <CategoryMonthlySummaryTable
+              budgetTargetInputs={budgetTargetInputs}
               budgetTargets={budgetTargets}
+              onBudgetTargetChange={setBudgetTarget}
               review={review}
             />
           ) : null}
@@ -500,16 +502,12 @@ function ChargeInspectorDashboard({
 
 function CategorySummaryTable({
   aiEnabled,
-  budgetTargetInputs,
   budgetTargets,
-  onBudgetTargetChange,
   review,
   showAiPanel,
 }: {
   aiEnabled: boolean;
-  budgetTargetInputs: Record<string, string>;
   budgetTargets: ChargeInspectorCategoryBudgetTargetAmounts;
-  onBudgetTargetChange: (category: string, value: string) => void;
   review: ChargeInspectorReview;
   showAiPanel: boolean;
 }) {
@@ -520,25 +518,6 @@ function CategorySummaryTable({
     () => summarizeCategoryReviewStatuses(review, reviewStatuses),
     [review, reviewStatuses],
   );
-  const budgetComparisons = useMemo(
-    () => compareCategoryBudgetTargets(review.categorySummary, budgetTargets),
-    [review.categorySummary, budgetTargets],
-  );
-  const budgetComparisonByCategory = useMemo(
-    () =>
-      new Map(
-        budgetComparisons.map((comparison) => [
-          comparison.category,
-          comparison,
-        ]),
-      ),
-    [budgetComparisons],
-  );
-  const budgetCounts = useMemo(
-    () => summarizeCategoryBudgetComparisons(budgetComparisons),
-    [budgetComparisons],
-  );
-
   function setCategoryStatus(
     category: string,
     status: ChargeInspectorCategoryReviewStatus,
@@ -572,26 +551,16 @@ function CategorySummaryTable({
             label={`${reviewCounts.needsReview.toLocaleString("en-US")} needs review`}
             tone="stone"
           />
-          <StatusPill
-            label={`${budgetCounts.targets.toLocaleString("en-US")} targets`}
-            tone="stone"
-          />
-          <StatusPill
-            label={`${budgetCounts.overTarget.toLocaleString("en-US")} over`}
-            tone={budgetCounts.overTarget > 0 ? "earth" : "stone"}
-          />
         </div>
       </div>
 
       <div className="mt-3 overflow-x-auto">
-        <table className="w-full min-w-[68rem] text-left text-sm">
+        <table className="w-full min-w-[50rem] text-left text-sm">
           <thead className="border-b border-stone-200 text-xs font-semibold uppercase text-earth-600">
             <tr>
               <th className="py-2 pr-3">Category</th>
               <th className="px-3 py-2">Spending</th>
               <th className="px-3 py-2">Credits</th>
-              <th className="px-3 py-2">Review target</th>
-              <th className="px-3 py-2">Difference</th>
               <th className="px-3 py-2 text-right">Rows</th>
               <th className="py-2 pl-3">Review</th>
             </tr>
@@ -599,15 +568,8 @@ function CategorySummaryTable({
           <tbody className="divide-y divide-stone-100">
             {review.categorySummary.map((category) => (
               <CategorySummaryRow
-                budgetComparison={budgetComparisonByCategory.get(
-                  category.category,
-                ) ?? null}
-                budgetTargetInput={
-                  budgetTargetInputs[category.category] ?? ""
-                }
                 category={category}
                 key={category.category}
-                onBudgetTargetChange={onBudgetTargetChange}
                 onStatusChange={setCategoryStatus}
                 status={
                   reviewStatuses[category.category] ?? "unreviewed"
@@ -621,8 +583,9 @@ function CategorySummaryTable({
       <p className="mt-3 text-xs leading-5 text-earth-600">
         Deterministic text-rule grouping only. This does not infer budgets,
         spending quality, merchant actions, or required changes. Review status
-        and target comparison stay in this browser session and do not edit
-        category rules, recommend targets, or save preferences.
+        stays in this browser session and does not edit category rules,
+        recommend targets, or save preferences. Budget target editing lives in
+        the row-level automation review workspace below.
       </p>
 
       {showAiPanel ? (
@@ -639,16 +602,16 @@ function CategorySummaryTable({
 }
 
 function CategoryMonthlySummaryTable({
+  budgetTargetInputs,
   budgetTargets,
+  onBudgetTargetChange,
   review,
 }: {
+  budgetTargetInputs: Record<string, string>;
   budgetTargets: ChargeInspectorCategoryBudgetTargetAmounts;
+  onBudgetTargetChange: (category: string, value: string) => void;
   review: ChargeInspectorReview;
 }) {
-  const monthlySummaryWindow = useMemo(
-    () => windowChargeInspectorRows(review.categoryMonthlySummary),
-    [review.categoryMonthlySummary],
-  );
   const localBudgetComparisons = useMemo(
     () =>
       compareCategoryMonthlyBudgetTargets(
@@ -678,6 +641,10 @@ function CategoryMonthlySummaryTable({
     () => summarizeCategoryMonthlyBudgetComparisons(visibleBudgetComparisons),
     [visibleBudgetComparisons],
   );
+  const targetPresets = useMemo(
+    () => buildAutomationTargetPresets(visibleBudgetComparisons),
+    [visibleBudgetComparisons],
+  );
   const automationReadinessRows = useMemo(
     () => deriveCategoryBudgetAutomationReadiness(budgetComparisons),
     [budgetComparisons],
@@ -695,11 +662,9 @@ function CategoryMonthlySummaryTable({
       deriveCategoryBudgetAutomationJudgments(visibleAutomationReadinessRows),
     [visibleAutomationReadinessRows],
   );
-  const showBudgetComparison = budgetComparisons.length > 0;
+  const hasMonthlyComparisonRows = budgetComparisons.length > 0;
   const showAutomationReadiness = automationReadinessRows.length > 0;
-  const activeWindow = showBudgetComparison
-    ? budgetComparisonWindow
-    : monthlySummaryWindow;
+  const activeWindow = budgetComparisonWindow;
   const hasWindowOmissions = activeWindow.omittedCount > 0;
   const visibleMonthCount = new Set(
     activeWindow.kept.map((row) => row.month),
@@ -712,7 +677,7 @@ function CategoryMonthlySummaryTable({
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h4 className="text-sm font-semibold text-seed-950">
-          Category by month
+          Monthly target review
         </h4>
         <div className="flex flex-wrap gap-2">
           <StatusPill
@@ -733,7 +698,7 @@ function CategoryMonthlySummaryTable({
               tone="earth"
             />
           ) : null}
-          {showBudgetComparison ? (
+          {hasMonthlyComparisonRows ? (
             <>
               <StatusPill
                 label={`${budgetCounts.targetRows.toLocaleString("en-US")} visible monthly target rows`}
@@ -748,56 +713,13 @@ function CategoryMonthlySummaryTable({
         </div>
       </div>
 
-      <div className="mt-3 overflow-x-auto">
-        <table
-          className={[
-            "w-full text-left text-sm",
-            showBudgetComparison ? "min-w-[58rem]" : "min-w-[44rem]",
-          ].join(" ")}
-        >
-          <thead className="border-b border-stone-200 text-xs font-semibold uppercase text-earth-600">
-            {showBudgetComparison ? (
-              <tr>
-                <th className="py-2 pr-3">Month</th>
-                <th className="px-3 py-2">Category</th>
-                <th className="px-3 py-2">Spending</th>
-                <th className="px-3 py-2">Target</th>
-                <th className="px-3 py-2">Difference</th>
-                <th className="py-2 pl-3">Target result</th>
-              </tr>
-            ) : (
-              <tr>
-                <th className="py-2 pr-3">Month</th>
-                <th className="px-3 py-2">Category</th>
-                <th className="px-3 py-2">Spending</th>
-                <th className="px-3 py-2">Credits</th>
-                <th className="px-3 py-2 text-right">Rows</th>
-                <th className="py-2 pl-3">Rules</th>
-              </tr>
-            )}
-          </thead>
-          <tbody className="divide-y divide-stone-100">
-            {showBudgetComparison
-              ? visibleBudgetComparisons.map((comparison) => (
-                  <CategoryMonthlyBudgetComparisonRow
-                    comparison={comparison}
-                    key={`${comparison.month}:${comparison.category}`}
-                  />
-                ))
-              : monthlySummaryWindow.kept.map((row) => (
-                  <CategoryMonthlySummaryRow
-                    key={`${row.month}:${row.category}`}
-                    row={row}
-                  />
-                ))}
-          </tbody>
-        </table>
-      </div>
-
       {showAutomationReadiness ? (
         <BudgetAutomationReadinessPreview
+          budgetTargetInputs={budgetTargetInputs}
           judgmentRows={visibleAutomationJudgmentRows}
+          onBudgetTargetChange={onBudgetTargetChange}
           rows={visibleAutomationReadinessRows}
+          targetPresets={targetPresets}
           windowedRows={automationReadinessWindow}
         />
       ) : null}
@@ -805,12 +727,16 @@ function CategoryMonthlySummaryTable({
       <p className="mt-3 text-xs leading-5 text-earth-600">
         Posted-date month plus deterministic category totals only. This is not
         a monthly budget, spending-quality judgment, action priority, or saved
-        category memory. Monthly target comparison appears only when a
-        user-entered target is available and uses posted-date-month category
-        debit totals. Target result badges are factual states against user-entered
-        targets, not category rankings or spending instructions. The row window
-        keeps recent posted-date months first and uses target rows only as a cap
-        survival rule inside that recent window.
+        category memory. Monthly row comparison uses posted-date-month category
+        debit totals and shows "No target" until a user-entered target is
+        available. Row target inputs update the category-wide monthly target for
+        this browser session; they do not create saved budgets or month-specific
+        target memory. Target preset candidates are calculated from visible
+        actual rows only and are not recommendations. Target result badges are
+        factual states against user-entered targets, not category rankings or
+        spending instructions. The row window keeps recent posted-date months
+        first and uses target rows only as a cap survival rule inside that recent
+        window.
         {hasWindowOmissions
           ? ` Showing ${activeWindow.includedCount.toLocaleString("en-US")} of ${activeWindow.totalCount.toLocaleString("en-US")} rows; ${activeWindow.omittedCount.toLocaleString("en-US")} older or overflow rows are hidden by the display cap.`
           : ""}
@@ -820,12 +746,18 @@ function CategoryMonthlySummaryTable({
 }
 
 function BudgetAutomationReadinessPreview({
+  budgetTargetInputs,
   judgmentRows,
+  onBudgetTargetChange,
   rows,
+  targetPresets,
   windowedRows,
 }: {
+  budgetTargetInputs: Record<string, string>;
   judgmentRows: ChargeInspectorCategoryBudgetAutomationJudgment[];
+  onBudgetTargetChange: (category: string, value: string) => void;
   rows: ChargeInspectorCategoryBudgetAutomationReadiness[];
+  targetPresets: Map<string, AutomationTargetPreset>;
   windowedRows: WindowedRows<ChargeInspectorCategoryBudgetAutomationReadiness>;
 }) {
   const counts = summarizeCategoryBudgetAutomationReadiness(rows);
@@ -875,16 +807,16 @@ function BudgetAutomationReadinessPreview({
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h5 className="text-sm font-semibold text-seed-950">
-          Budget automation preview
+          Set targets and review rows
         </h5>
         <div className="flex flex-wrap gap-2">
-          <StatusPill label="Explanation-only" tone="stone" />
+          <StatusPill label="Current session only" tone="stone" />
           <StatusPill
             label={`${counts.ready.toLocaleString("en-US")} ready`}
             tone={counts.ready > 0 ? "seed" : "stone"}
           />
           <StatusPill
-            label={`${counts.needsReview.toLocaleString("en-US")} readiness needs review`}
+            label={`${counts.needsReview.toLocaleString("en-US")} need human review`}
             tone={counts.needsReview > 0 ? "earth" : "stone"}
           />
           <StatusPill
@@ -895,19 +827,21 @@ function BudgetAutomationReadinessPreview({
       </div>
 
       <BudgetAutomationReviewQueue
+        budgetTargetInputs={budgetTargetInputs}
         decisions={reviewDecisions}
         items={reviewQueueItems}
         onDecisionChange={setReviewDecision}
+        onBudgetTargetChange={onBudgetTargetChange}
+        targetPresets={targetPresets}
       />
 
       <p className="mt-3 text-xs leading-5 text-earth-600">
-        This preview table is derived from already-calculated monthly target
-        comparison facts. It groups visible rows for current-session review and
-        shows the source facts behind each boundary judgment. Boundary judgment
-        labels only say whether a row can be treated as a later automation
-        candidate; review decisions stay in this browser session and they do not
-        approve execution, save decisions, change targets, rank actions, or
-        recommend spending changes.
+        This table keeps target editing, monthly actuals, factual target
+        results, and review marks in one current-session place. Workflow labels
+        only say whether the row has enough target context for a later guarded
+        workflow review; review marks stay in this browser session and they do
+        not approve execution, save decisions, rank actions, or recommend
+        spending changes.
         {windowedRows.omittedCount > 0
           ? ` Showing ${windowedRows.includedCount.toLocaleString("en-US")} of ${windowedRows.totalCount.toLocaleString("en-US")} readiness rows; ${windowedRows.omittedCount.toLocaleString("en-US")} older or overflow rows are hidden by the display cap.`
           : ""}
@@ -917,16 +851,22 @@ function BudgetAutomationReadinessPreview({
 }
 
 function BudgetAutomationReviewQueue({
+  budgetTargetInputs,
   decisions,
   items,
+  onBudgetTargetChange,
   onDecisionChange,
+  targetPresets,
 }: {
+  budgetTargetInputs: Record<string, string>;
   decisions: Record<string, AutomationReviewDecision>;
   items: ChargeInspectorCategoryBudgetAutomationReviewQueueItem[];
+  onBudgetTargetChange: (category: string, value: string) => void;
   onDecisionChange: (
     item: ChargeInspectorCategoryBudgetAutomationReviewQueueItem,
     decision: AutomationReviewDecision,
   ) => void;
+  targetPresets: Map<string, AutomationTargetPreset>;
 }) {
   const counts = summarizeBudgetAutomationReviewQueueItems(items);
   const decisionCounts = summarizeBudgetAutomationReviewDecisions(
@@ -946,14 +886,13 @@ function BudgetAutomationReviewQueue({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h6 className="text-sm font-semibold text-seed-950">
-            Auto-generated review queue
+            Rows to review
           </h6>
           <p className="mt-1 max-w-3xl text-xs leading-5 text-earth-600">
-            Generated from visible boundary judgment rows for current-session
-            review. It combines queue grouping with source facts and boundary
-            notes. Decision labels are temporary browser-session review marks;
-            they do not approve automation, save a decision, rank actions, or
-            recommend spending changes.
+            Use this table row by row: fill or adjust a category target, check
+            the factual monthly result, then mark whether you reviewed it or
+            need more context. These marks do not approve automation, save a
+            decision, rank actions, or recommend spending changes.
           </p>
         </div>
         <div className="space-y-2">
@@ -1001,15 +940,16 @@ function BudgetAutomationReviewQueue({
       </div>
 
       <div className="mt-3 overflow-x-auto">
-        <table className="w-full min-w-[88rem] text-left text-sm">
+        <table className="w-full min-w-[96rem] text-left text-sm">
           <thead className="border-b border-stone-200 text-xs font-semibold uppercase text-earth-600">
             <tr>
-              <th className="py-2 pr-3">Queue group</th>
               <th className="px-3 py-2">Row</th>
-              <th className="px-3 py-2">Target facts</th>
-              <th className="px-3 py-2">Automation state</th>
-              <th className="px-3 py-2">Review decision</th>
-              <th className="py-2 pl-3">Review note</th>
+              <th className="px-3 py-2">Actual</th>
+              <th className="px-3 py-2">Target</th>
+              <th className="px-3 py-2">Result</th>
+              <th className="px-3 py-2">Workflow check</th>
+              <th className="px-3 py-2">My review</th>
+              <th className="py-2 pl-3">Why this row is here</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-stone-100">
@@ -1021,7 +961,14 @@ function BudgetAutomationReviewQueue({
                   decision={decisions[decisionKey] ?? "unreviewed"}
                   item={item}
                   key={decisionKey}
+                  onBudgetTargetChange={onBudgetTargetChange}
                   onDecisionChange={onDecisionChange}
+                  targetInput={
+                    budgetTargetInputs[item.judgment.category] ?? ""
+                  }
+                  targetPreset={
+                    targetPresets.get(item.judgment.category) ?? null
+                  }
                 />
               );
             })}
@@ -1035,35 +982,108 @@ function BudgetAutomationReviewQueue({
 function BudgetAutomationReviewQueueRow({
   decision,
   item,
+  onBudgetTargetChange,
   onDecisionChange,
+  targetInput,
+  targetPreset,
 }: {
   decision: AutomationReviewDecision;
   item: ChargeInspectorCategoryBudgetAutomationReviewQueueItem;
+  onBudgetTargetChange: (category: string, value: string) => void;
   onDecisionChange: (
     item: ChargeInspectorCategoryBudgetAutomationReviewQueueItem,
     decision: AutomationReviewDecision,
   ) => void;
+  targetInput: string;
+  targetPreset: AutomationTargetPreset | null;
 }) {
+  const targetInputResult = parseCategoryBudgetTargetInput(targetInput);
+
   return (
     <tr data-testid="charge-inspector-budget-automation-review-queue-row">
-      <td className="py-2 pr-3">
-        <StatusPill
-          label={item.laneLabel}
-          tone={budgetAutomationReviewQueueTone(item.lane)}
-        />
-      </td>
       <td className="px-3 py-2 text-xs leading-5 text-earth-700">
         <div className="font-semibold text-seed-950">
           {item.judgment.month} {item.judgment.label}
         </div>
-        <div className="text-earth-600">Boundary-only review</div>
+        <div className="mt-1">
+          <StatusPill
+            label={item.laneLabel}
+            tone={budgetAutomationReviewQueueTone(item.lane)}
+          />
+        </div>
       </td>
       <td className="px-3 py-2 text-xs leading-5 text-earth-700">
-        <div className="font-semibold text-seed-950">
-          {item.judgment.reasonLabel}
+        <div className="font-semibold tabular-nums text-seed-950">
+          {item.judgment.actualDebitTotalLabel}
+        </div>
+        <div className="text-earth-600">
+          {item.judgment.debitTransactionCount.toLocaleString("en-US")} debit
+          rows
+        </div>
+      </td>
+      <td className="px-3 py-2">
+        <input
+          aria-label={`Review target for ${item.judgment.month} ${item.judgment.label}`}
+          aria-invalid={targetInputResult.errorMessage ? "true" : "false"}
+          className="h-9 w-32 rounded-md border border-stone-300 bg-white px-2 text-sm tabular-nums text-earth-900 outline-none placeholder:text-earth-400 focus:border-seed-500 focus:ring-2 focus:ring-seed-500"
+          data-testid="charge-inspector-category-budget-target"
+          inputMode="decimal"
+          maxLength={14}
+          onChange={(event) =>
+            onBudgetTargetChange(item.judgment.category, event.target.value)
+          }
+          placeholder="$0.00"
+          type="text"
+          value={targetInput}
+        />
+        <p className="mt-1 max-w-44 text-xs leading-5 text-earth-600">
+          Applies to all {item.judgment.label} months.
+        </p>
+        {targetPreset ? (
+          <div className="mt-2 max-w-48 text-xs leading-5 text-earth-600">
+            <div className="tabular-nums">
+              Candidate {targetPreset.amountLabel} from{" "}
+              {targetPreset.sourceMonth}
+            </div>
+            <button
+              className="mt-1 min-h-8 rounded-md border border-stone-300 bg-white px-2.5 text-xs font-semibold text-earth-800 shadow-sm hover:border-seed-300 hover:text-seed-900 focus:outline-none focus:ring-2 focus:ring-seed-500"
+              data-testid="charge-inspector-category-budget-target-preset"
+              onClick={() =>
+                onBudgetTargetChange(item.judgment.category, targetPreset.value)
+              }
+              type="button"
+            >
+              Fill target
+            </button>
+          </div>
+        ) : null}
+        {targetInputResult.errorMessage ? (
+          <p
+            className="mt-1 max-w-44 text-xs leading-5 text-amber-800"
+            data-testid="charge-inspector-category-budget-error"
+          >
+            {targetInputResult.errorMessage}
+          </p>
+        ) : null}
+      </td>
+      <td className="px-3 py-2 text-xs leading-5 text-earth-700">
+        <StatusPill
+          label={categoryMonthlyBudgetComparisonStatusLabel(
+            item.judgment.sourceComparisonStatus,
+          )}
+          tone={
+            item.judgment.sourceComparisonStatus === "over-target"
+              ? "earth"
+              : item.judgment.sourceComparisonStatus === "within-target"
+                ? "seed"
+                : "stone"
+          }
+        />
+        <div className="mt-1 font-semibold tabular-nums text-seed-950">
+          {item.judgment.varianceAmountLabel}
         </div>
         <div className="tabular-nums text-earth-600">
-          {item.sourceFactsLabel}
+          Target {item.judgment.targetDebitTotalLabel}
         </div>
       </td>
       <td className="px-3 py-2">
@@ -1114,7 +1134,10 @@ function BudgetAutomationReviewQueueRow({
         </div>
       </td>
       <td className="py-2 pl-3 text-xs leading-5 text-earth-700">
-        <div className="font-semibold text-seed-950">{item.reviewPrompt}</div>
+        <div className="font-semibold text-seed-950">
+          {item.judgment.reasonLabel}
+        </div>
+        <div className="mt-1 text-earth-700">{item.reviewPrompt}</div>
         <div className="mt-1 text-earth-600">{item.judgment.explanation}</div>
       </td>
     </tr>
@@ -1147,6 +1170,20 @@ function budgetAutomationSourceReadinessStatusLabel(
   }
 
   return "Missing target";
+}
+
+function categoryMonthlyBudgetComparisonStatusLabel(
+  status: ChargeInspectorCategoryMonthlyBudgetComparison["status"],
+) {
+  if (status === "over-target") {
+    return "Over target";
+  }
+
+  if (status === "within-target") {
+    return "Within target";
+  }
+
+  return "No target";
 }
 
 function budgetAutomationJudgmentTone(
@@ -1259,85 +1296,43 @@ function automationReviewDecisionKey(
   ].join("|");
 }
 
-function CategoryMonthlySummaryRow({
-  row,
-}: {
-  row: ChargeInspectorCategoryMonthlySummary;
-}) {
-  return (
-    <tr data-testid="charge-inspector-category-monthly-row">
-      <td className="py-2 pr-3 font-medium text-seed-950">{row.month}</td>
-      <td className="px-3 py-2 text-earth-800">{row.label}</td>
-      <td className="px-3 py-2 tabular-nums text-earth-800">
-        {row.debitTotalLabel}
-      </td>
-      <td className="px-3 py-2 tabular-nums text-earth-800">
-        {row.creditTotalLabel}
-      </td>
-      <td className="px-3 py-2 text-right tabular-nums text-earth-800">
-        {row.transactionCount.toLocaleString("en-US")}
-      </td>
-      <td className="py-2 pl-3 text-xs text-earth-600">
-        {row.ruleIds.join(", ") || "none"}
-      </td>
-    </tr>
-  );
-}
+function buildAutomationTargetPresets(
+  comparisons: ChargeInspectorCategoryMonthlyBudgetComparison[],
+) {
+  const presets = new Map<string, AutomationTargetPreset>();
 
-function CategoryMonthlyBudgetComparisonRow({
-  comparison,
-}: {
-  comparison: ChargeInspectorCategoryMonthlyBudgetComparison;
-}) {
-  return (
-    <tr data-testid="charge-inspector-category-monthly-budget-row">
-      <td className="py-2 pr-3 font-medium text-seed-950">
-        {comparison.month}
-      </td>
-      <td className="px-3 py-2 text-earth-800">{comparison.label}</td>
-      <td className="px-3 py-2 tabular-nums text-earth-800">
-        {comparison.actualDebitTotalLabel}
-      </td>
-      <td className="px-3 py-2 tabular-nums text-earth-800">
-        {comparison.targetDebitTotalLabel}
-      </td>
-      <td className="px-3 py-2 text-xs leading-5 text-earth-700">
-        {comparison.varianceAmountLabel}
-        {comparison.status !== "no-target" ? (
-          <span className="ml-1 text-earth-500">
-            ({comparison.variancePercentLabel})
-          </span>
-        ) : null}
-      </td>
-      <td className="py-2 pl-3">
-        <StatusPill
-          label={comparison.statusLabel}
-          tone={comparison.status === "over-target" ? "earth" : "stone"}
-        />
-      </td>
-    </tr>
-  );
+  for (const comparison of comparisons) {
+    if (comparison.actualDebitTotalCents <= 0) {
+      continue;
+    }
+
+    const current = presets.get(comparison.category);
+    if (current && current.sourceMonth >= comparison.month) {
+      continue;
+    }
+
+    presets.set(comparison.category, {
+      amountLabel: comparison.actualDebitTotalLabel,
+      sourceMonth: comparison.month,
+      value: comparison.actualDebitTotalLabel,
+    });
+  }
+
+  return presets;
 }
 
 function CategorySummaryRow({
-  budgetComparison,
-  budgetTargetInput,
   category,
-  onBudgetTargetChange,
   onStatusChange,
   status,
 }: {
-  budgetComparison: ChargeInspectorCategoryBudgetComparison | null;
-  budgetTargetInput: string;
   category: ChargeInspectorCategorySummary;
-  onBudgetTargetChange: (category: string, value: string) => void;
   onStatusChange: (
     category: string,
     status: ChargeInspectorCategoryReviewStatus,
   ) => void;
   status: ChargeInspectorCategoryReviewStatus;
 }) {
-  const targetInputResult = parseCategoryBudgetTargetInput(budgetTargetInput);
   return (
     <tr data-testid="charge-inspector-category-row">
       <td className="py-2 pr-3 font-medium text-seed-950">
@@ -1384,55 +1379,6 @@ function CategorySummaryRow({
       </td>
       <td className="px-3 py-2 tabular-nums text-earth-800">
         {category.creditTotalLabel}
-      </td>
-      <td className="px-3 py-2">
-        <input
-          aria-label={`Review target for ${category.label}`}
-          aria-invalid={targetInputResult.errorMessage ? "true" : "false"}
-          className="h-9 w-32 rounded-md border border-stone-300 bg-white px-2 text-sm tabular-nums text-earth-900 outline-none placeholder:text-earth-400 focus:border-seed-500 focus:ring-2 focus:ring-seed-500"
-          data-testid="charge-inspector-category-budget-target"
-          inputMode="decimal"
-          maxLength={14}
-          onChange={(event) =>
-            onBudgetTargetChange(category.category, event.target.value)
-          }
-          placeholder="$0.00"
-          type="text"
-          value={budgetTargetInput}
-        />
-        {targetInputResult.errorMessage ? (
-          <p
-            className="mt-1 max-w-36 text-xs leading-5 text-amber-800"
-            data-testid="charge-inspector-category-budget-error"
-          >
-            {targetInputResult.errorMessage}
-          </p>
-        ) : null}
-      </td>
-      <td
-        className="px-3 py-2 text-xs leading-5 text-earth-700"
-        data-testid="charge-inspector-category-budget-comparison"
-      >
-        {budgetComparison ? (
-          <div className="space-y-1">
-            <StatusPill
-              label={budgetComparison.statusLabel}
-              tone={
-                budgetComparison.status === "over-target"
-                  ? "earth"
-                  : "seed"
-              }
-            />
-            <div className="font-semibold tabular-nums text-seed-950">
-              {budgetComparison.varianceAmountLabel}
-            </div>
-            <div className="tabular-nums text-earth-600">
-              Target {budgetComparison.targetDebitTotalLabel}
-            </div>
-          </div>
-        ) : (
-          <span className="text-earth-500">No target</span>
-        )}
       </td>
       <td className="px-3 py-2 text-right tabular-nums text-earth-800">
         {category.transactionCount.toLocaleString("en-US")}
@@ -1504,21 +1450,6 @@ function summarizeCategoryReviewStatuses(
       return counts;
     },
     { confirmed: 0, needsReview: 0 },
-  );
-}
-
-function summarizeCategoryBudgetComparisons(
-  comparisons: ChargeInspectorCategoryBudgetComparison[],
-) {
-  return comparisons.reduce(
-    (counts, comparison) => {
-      counts.targets += 1;
-      if (comparison.status === "over-target") {
-        counts.overTarget += 1;
-      }
-      return counts;
-    },
-    { overTarget: 0, targets: 0 },
   );
 }
 
