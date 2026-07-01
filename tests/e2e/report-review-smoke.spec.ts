@@ -296,6 +296,125 @@ test.describe("private report review smoke", () => {
     ).toHaveCount(0);
   });
 
+  test("snapshot monthly tab supports category targets and transaction overrides", async ({
+    page,
+  }) => {
+    await page.goto(`${reportReviewPath}#snapshot`);
+
+    await expect(page.getByTestId("snapshot-monthly-trend")).toBeVisible();
+    await expect(page.getByTestId("snapshot-monthly-mixed-chart"))
+      .toBeVisible();
+    const aprilChartMonth = page.locator(
+      '[data-testid="snapshot-monthly-chart-month"][data-month="2026-04"]',
+    );
+    await aprilChartMonth.hover();
+    await expect(page.getByTestId("snapshot-monthly-chart-hover-label"))
+      .toContainText("2026-04");
+    await aprilChartMonth.click();
+
+    const monthlyTab = page.getByTestId("snapshot-monthly-tab");
+    await expect(monthlyTab).toBeVisible();
+    await expect(
+      page.getByTestId("snapshot-expense-month-table-current")
+        .getByRole("heading", { name: "Selected month (2026-04)" }),
+    ).toBeVisible();
+
+    await page.locator(
+      '[data-testid="snapshot-monthly-chart-month"][data-month="2026-05"]',
+    ).click();
+    await expect(monthlyTab).toContainText("Income 2026-05");
+    await expect(monthlyTab).toContainText("Expenses 2026-05");
+    await expect(monthlyTab).toContainText("Current assets");
+    const currentMonthTable = page.getByTestId(
+      "snapshot-expense-month-table-current",
+    );
+    await expect(currentMonthTable.getByRole("heading", {
+      name: "Current month (2026-05)",
+    })).toBeVisible();
+    await expect(
+      page.getByTestId("snapshot-expense-month-table-previous")
+        .getByRole("heading", { name: "Previous month (2026-04)" }),
+    ).toBeVisible();
+
+    const subscriptionsRow = currentMonthTable
+      .locator(
+        '[data-testid="snapshot-expense-category-row"][data-category="subscriptions"]',
+      );
+    await subscriptionsRow
+      .getByRole("button", { name: "Edit Subscriptions target" })
+      .click();
+    const targetReferenceList = currentMonthTable.getByTestId(
+      "snapshot-expense-target-reference-list",
+    );
+    await expect(targetReferenceList).toContainText("Previous");
+    await expect(
+      targetReferenceList.getByTestId(
+        "snapshot-expense-target-reference-transaction",
+      ),
+    ).toHaveCount(3);
+    await expect(targetReferenceList).toContainText("2026-05");
+    await expect(targetReferenceList).toContainText("2026-04");
+    await expect(targetReferenceList).toContainText("$15.99");
+
+    const groceriesRow = currentMonthTable
+      .locator(
+        '[data-testid="snapshot-expense-category-row"][data-category="groceries"]',
+      );
+
+    await expect(groceriesRow).toContainText("$130.56");
+    await expect(groceriesRow).toContainText("Not set");
+    await groceriesRow
+      .getByRole("button", { name: "Edit Groceries target" })
+      .click();
+    await expect(
+      groceriesRow.getByTestId("snapshot-expense-category-target"),
+    ).toBeVisible();
+    const groceriesTargetReferenceRow = currentMonthTable.locator(
+      '[data-testid="snapshot-expense-target-reference-row"][data-category="groceries"]',
+    );
+    await expect(groceriesTargetReferenceRow).toBeVisible();
+    await expect(groceriesTargetReferenceRow).toContainText(
+      "Previous monthly totals",
+    );
+    await expect(groceriesTargetReferenceRow).toContainText("2026-04");
+    await expect(groceriesTargetReferenceRow).toContainText("$0");
+    await groceriesRow
+      .getByTestId("snapshot-expense-category-target")
+      .fill("140");
+    await expect(
+      groceriesRow.getByTestId("snapshot-expense-category-target"),
+    ).toHaveValue("140");
+    await groceriesRow
+      .getByTestId("snapshot-expense-category-target-save")
+      .click();
+    await expect(groceriesRow).toContainText("$140");
+
+    await groceriesRow
+      .getByTestId("snapshot-expense-category-toggle")
+      .click();
+    const transactionList = currentMonthTable.getByTestId(
+      "snapshot-expense-transaction-list-row",
+    );
+    await expect(transactionList).toBeVisible();
+    await expect(
+      transactionList.getByTestId("snapshot-expense-transaction-row"),
+    ).toHaveCount(2);
+    const firstCategorySelect = transactionList
+      .getByTestId("snapshot-expense-transaction-category")
+      .first();
+    await expect(firstCategorySelect).toHaveValue("groceries");
+    const firstCategorySave = transactionList
+      .getByTestId("snapshot-expense-transaction-category-save")
+      .first();
+    await expect(firstCategorySave).toBeDisabled();
+    await firstCategorySelect.selectOption("dining");
+    await expect(firstCategorySelect).toHaveValue("dining");
+    await expect(firstCategorySave).toBeEnabled();
+    await firstCategorySave.click();
+    await expect(firstCategorySave).toBeDisabled();
+    await expect(transactionList).toContainText("Saved as Dining");
+  });
+
   test("screen tabs support click, keyboard movement, and hash updates", async ({
     page,
   }) => {
@@ -339,150 +458,12 @@ test.describe("private report review smoke", () => {
 
     await expect(
       page.getByTestId("charge-inspector-monthly-spending-summary"),
-    ).toBeVisible();
-    await expect(page.getByTestId("charge-inspector-monthly-row"))
-      .toHaveCount(3);
-    await expect(page.getByText("$4,510.10 net inflow")).toBeVisible();
+    ).toHaveCount(0);
     await expect(page.getByTestId("charge-inspector-category-summary"))
-      .toBeVisible();
-    await expect(page.getByTestId("charge-inspector-category-row"))
-      .toHaveCount(11);
-
-    const groceriesCategory = page
-      .getByTestId("charge-inspector-category-row")
-      .filter({ hasText: "Groceries" });
-    await expect(groceriesCategory.getByText("Groceries", { exact: true }))
-      .toBeVisible();
-    await expect(groceriesCategory.getByText("$130.56")).toBeVisible();
-    await expect(page.getByText("0 confirmed")).toBeVisible();
-    await expect(page.getByText("0 needs review")).toBeVisible();
-    const automationReviewQueue = page.getByTestId(
-      "charge-inspector-budget-automation-review-queue",
-    );
-    await expect(automationReviewQueue).toBeVisible();
+      .toHaveCount(0);
     await expect(
-      automationReviewQueue.getByText("Rows to review"),
-    ).toBeVisible();
-    await expect(
-      automationReviewQueue.getByTestId(
-        "charge-inspector-budget-automation-review-queue-row",
-      ),
-    ).toHaveCount(15);
-    await expect(automationReviewQueue).toContainText("Missing context");
-    await expect(automationReviewQueue).toContainText("2026-05 Groceries");
-    await expect(automationReviewQueue).toContainText("No target");
-    await expect(automationReviewQueue).toContainText(
-      "do not approve automation",
-    );
-    await expect(automationReviewQueue).toContainText("15 unreviewed");
-    await expect(automationReviewQueue).toContainText("0 reviewed");
-    const groceriesAutomationReviewRow = automationReviewQueue
-      .getByTestId("charge-inspector-budget-automation-review-queue-row")
-      .filter({ hasText: "2026-05 Groceries" });
-    await expect(groceriesAutomationReviewRow).toContainText(
-      "Candidate $130.56 from 2026-05",
-    );
-    await groceriesAutomationReviewRow
-      .getByTestId("charge-inspector-category-budget-target-preset")
-      .click();
-    await expect(
-      groceriesAutomationReviewRow.getByTestId(
-        "charge-inspector-category-budget-target",
-      ),
-    ).toHaveValue("$130.56");
-    await expect(groceriesAutomationReviewRow).toContainText("Within target");
-    await expect(groceriesAutomationReviewRow).toContainText(
-      "Target $130.56",
-    );
-    await groceriesAutomationReviewRow
-      .getByTestId("charge-inspector-category-budget-target")
-      .fill("$100.00");
-    await expect(
-      automationReviewQueue.getByTestId(
-        "charge-inspector-budget-automation-review-queue-row",
-      ),
-    ).toHaveCount(17);
-    await expect(page.getByText("3 visible monthly target rows")).toBeVisible();
-    await expect(page.getByText("1 visible monthly over")).toBeVisible();
-    await expect(automationReviewQueue).toContainText("Needs human review");
-    await expect(groceriesAutomationReviewRow).toContainText("$30.56 over");
-    await expect(groceriesAutomationReviewRow).toContainText("Over target");
-    await expect(groceriesAutomationReviewRow).toContainText("Target $100.00");
-    await expect(automationReviewQueue).toContainText("17 unreviewed");
-    await groceriesAutomationReviewRow
-      .getByRole("radio", { exact: true, name: "Reviewed" })
-      .click();
-    await expect(
-      groceriesAutomationReviewRow.getByRole("radio", {
-        exact: true,
-        name: "Reviewed",
-      }),
-    ).toHaveAttribute("aria-checked", "true");
-    await expect(automationReviewQueue).toContainText("16 unreviewed");
-    await expect(automationReviewQueue).toContainText("1 reviewed");
-    await groceriesAutomationReviewRow
-      .getByTestId("charge-inspector-category-budget-target")
-      .fill("$200.00");
-    await expect(groceriesAutomationReviewRow).toContainText("Within target");
-    await expect(groceriesAutomationReviewRow).toContainText("Target $200.00");
-    await expect(
-      groceriesAutomationReviewRow.getByRole("radio", {
-        exact: true,
-        name: "Unreviewed",
-      }),
-    ).toHaveAttribute("aria-checked", "true");
-    await expect(automationReviewQueue).toContainText("17 unreviewed");
-    await expect(automationReviewQueue).toContainText("0 reviewed");
-    await groceriesAutomationReviewRow
-      .getByTestId("charge-inspector-category-budget-target")
-      .fill("$100.00");
-    await expect(groceriesAutomationReviewRow).toContainText("Over target");
-    await expect(groceriesAutomationReviewRow).toContainText("Target $100.00");
-    await expect(
-      groceriesAutomationReviewRow.getByRole("radio", {
-        exact: true,
-        name: "Unreviewed",
-      }),
-    ).toHaveAttribute("aria-checked", "true");
-    await expect(automationReviewQueue).toContainText("17 unreviewed");
-    await expect(automationReviewQueue).toContainText("0 reviewed");
-    await groceriesAutomationReviewRow
-      .getByRole("radio", { name: "Needs context" })
-      .click();
-    await expect(automationReviewQueue).toContainText("0 reviewed");
-    await expect(automationReviewQueue).toContainText("1 needs context");
-    await groceriesAutomationReviewRow
-      .getByRole("radio", { name: "Unreviewed" })
-      .click();
-    await expect(automationReviewQueue).toContainText("17 unreviewed");
-    await groceriesCategory.locator("summary").click();
-    await expect(groceriesCategory.getByText("Corner Grocer").first())
-      .toBeVisible();
-    await expect(
-      groceriesCategory.getByText("Rule: category.groceries.grocer_text.v0"),
-    ).toHaveCount(2);
-    await expect(
-      page.getByTestId("ai-explanation-disabled-charge_inspector_category_evidence"),
-    ).toBeVisible();
-    await groceriesCategory.getByRole("radio", { name: "Confirm" }).click();
-    await expect(page.getByText("1 confirmed")).toBeVisible();
-    await expect(
-      groceriesCategory.getByRole("radio", { name: "Confirm" }),
-    ).toHaveAttribute("aria-checked", "true");
-
-    const feesCategory = page
-      .getByTestId("charge-inspector-category-row")
-      .filter({ hasText: "Fees" });
-    await feesCategory.getByRole("radio", { name: "Needs review" }).click();
-    await expect(page.getByText("1 needs review")).toBeVisible();
-    await expect(
-      feesCategory.getByRole("radio", { name: "Needs review" }),
-    ).toHaveAttribute("aria-checked", "true");
-
-    await groceriesCategory
-      .getByRole("radio", { name: "Unreviewed" })
-      .click();
-    await expect(page.getByText("0 confirmed")).toBeVisible();
+      page.getByTestId("charge-inspector-budget-automation-review-queue"),
+    ).toHaveCount(0);
 
     const recurringBoard = page.getByTestId(
       "charge-inspector-recurring-payment-board",
@@ -544,12 +525,6 @@ test.describe("private report review smoke", () => {
 
     await page.goto(`${reportReviewPath}#charge-inspector`);
 
-    const groceriesCategory = page
-      .getByTestId("charge-inspector-category-row")
-      .filter({ hasText: "Groceries" });
-    await groceriesCategory.getByRole("radio", { name: "Confirm" }).click();
-    await expect(page.getByText("1 confirmed")).toBeVisible();
-
     await page.getByTestId("charge-inspector-csv-file").setInputFiles({
       buffer: Buffer.from(
         [
@@ -568,41 +543,14 @@ test.describe("private report review smoke", () => {
       .toBeVisible();
     await expect(page.getByText("Platform CSV review")).toBeVisible();
     await expect(metricValue(page, "rows")).toHaveText("2");
-    await expect(page.getByTestId("charge-inspector-monthly-row"))
-      .toHaveCount(1);
-    await expect(page.getByTestId("charge-inspector-category-row"))
-      .toHaveCount(1);
     await expect(
-      page.getByTestId("charge-inspector-budget-automation-review-queue-row"),
-    ).toHaveCount(1);
+      page.getByTestId("charge-inspector-monthly-spending-summary"),
+    ).toHaveCount(0);
+    await expect(page.getByTestId("charge-inspector-category-summary"))
+      .toHaveCount(0);
     await expect(
       page.getByTestId("charge-inspector-budget-automation-review-queue"),
-    ).toContainText("Missing context");
-    await expect(
-      page.getByTestId("charge-inspector-category-monthly-summary"),
-    ).toContainText("transaction_category_monthly_summary_v0");
-    await expect(
-      page
-        .getByTestId("charge-inspector-category-row")
-        .filter({ hasText: "Dining" })
-        .getByText("Dining", { exact: true }),
-    ).toBeVisible();
-    await expect(page.getByText("0 confirmed")).toBeVisible();
-    await expect(page.getByText("0 needs review")).toBeVisible();
-    await expect(page.getByText("0 visible monthly target rows")).toBeVisible();
-    await expect(page.getByText("0 visible monthly over")).toBeVisible();
-    await expect(
-      page
-        .getByTestId("charge-inspector-category-row")
-        .filter({ hasText: "Dining" })
-        .getByRole("radio", { name: "Unreviewed" }),
-    ).toHaveAttribute("aria-checked", "true");
-    const uploadedDiningCategory = page
-      .getByTestId("charge-inspector-category-row")
-      .filter({ hasText: "Dining" });
-    await uploadedDiningCategory.locator("summary").click();
-    await expect(uploadedDiningCategory.getByText("Uploaded Coffee"))
-      .toBeVisible();
+    ).toHaveCount(0);
     await expect(
       page.getByTestId(
         "ai-explanation-panel-charge_inspector_monthly_spending_summary",
@@ -622,7 +570,8 @@ test.describe("private report review smoke", () => {
     await expect(
       page.getByTestId("charge-inspector-recurring-payment-board"),
     ).toHaveCount(0);
-    await expect(page.getByText("$42.50 outflow")).toBeVisible();
+    await expect(page.getByTestId("charge-inspector-recurring-empty"))
+      .toBeVisible();
     expect(submittedCsv).toContain("Uploaded Coffee");
   });
 

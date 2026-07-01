@@ -115,6 +115,7 @@ export function SnapshotScreen({
           <AssetPortfolioSection
             activePortfolioEdit={activePortfolioEdit}
             activeProfileField={activeProfileField}
+            chargeInspector={report.chargeInspector}
             decisionReadiness={report.decisionReadiness}
             errorMessage={errorMessage}
             onAddAsset={addAssetAndEdit}
