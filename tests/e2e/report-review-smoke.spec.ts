@@ -495,7 +495,7 @@ test.describe("private report review smoke", () => {
     await expect(goalPreview).toBeVisible();
     await expect(goalPreview).toContainText("User priority #1");
     await expect(goalPreview).toContainText("Wedding fund");
-    await expect(goalPreview).toContainText("This preview follows the order");
+    await expect(goalPreview).toContainText("Follows your Goals order");
   });
 
   test("screen tabs support click, keyboard movement, and hash updates", async ({

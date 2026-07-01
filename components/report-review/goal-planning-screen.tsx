@@ -56,19 +56,17 @@ export function GoalPlanningScreen({
         eyebrow="Goals"
         id="goal-planning-heading"
         title="Goal planning workspace"
-        description="Plan multiple savings goals with manual, in-session inputs. The order below is your priority order; the app does not rank or recommend which goal should come first."
+        description="Edit goals and set your own priority order."
       />
 
       <div className={reviewPanelClass("space-y-5 p-4 sm:p-5")}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <h3 className="text-sm font-semibold text-seed-950">
-              User-ordered goal list
+              Goal order
             </h3>
             <p className="mt-1 max-w-3xl text-sm leading-6 text-earth-700">
-              Values stay in this browser session. Use Move up and Move down to
-              express your own priority; those controls are not automation or
-              advice.
+              Move rows to set priority. Values stay in this session.
             </p>
           </div>
           <button
@@ -96,30 +94,37 @@ export function GoalPlanningScreen({
           ))}
         </div>
 
-        <div className="grid gap-3 border-t border-stone-200 pt-4 md:grid-cols-2">
-          <BoundaryBlock
-            title="What this does"
-            items={[
-              "Calculates remaining amount, progress, and monthly math from the values you enter.",
-              "Uses your row order as the priority shown in Snapshot.",
-              "Keeps edits in the current browser session only.",
-            ]}
-          />
-          <BoundaryBlock
-            title="What this does not do"
-            items={[
-              "Does not save goals, connect accounts, or automate transfers.",
-              "Does not recommend which goal should be first.",
-              "Does not send local goal state to the AI explanation route.",
-            ]}
-          />
-        </div>
+        <GoalPlanningLimits
+          items={[
+            "Calculates remaining amount, progress, and monthly math from the values you enter.",
+            "Uses your row order as the priority shown in Snapshot.",
+            "Keeps edits in the current browser session only.",
+            "Does not save goals, connect accounts, automate transfers, recommend priority, or send local goal state to AI.",
+          ]}
+        />
       </div>
     </section>
   );
 }
 
 export type GoalMoveDirection = "up" | "down";
+
+function GoalPlanningLimits({ items }: { items: string[] }) {
+  return (
+    <details className={reviewSubtlePanelClass("border-t-0 p-3")}>
+      <summary className="cursor-pointer text-sm font-semibold text-seed-950 outline-none focus:ring-2 focus:ring-seed-500">
+        Planning limits
+      </summary>
+      <ul className="mt-2 space-y-2 text-sm leading-6 text-earth-700">
+        {items.map((item) => (
+          <li className="ml-4 list-disc" key={item}>
+            {item}
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+}
 
 function GoalPlanningRowEditor({
   canMoveDown,
@@ -172,7 +177,7 @@ function GoalPlanningRowEditor({
             />
           </div>
           <p className="mt-1 text-sm leading-6 text-earth-700">
-            As of {asOfMonth}. Target month math uses the entered month only.
+            As of {asOfMonth}.
           </p>
         </div>
 
@@ -415,27 +420,12 @@ function GoalMetric({
   value: string;
 }) {
   return (
-    <div className={reviewSubtlePanelClass("p-3")}>
+    <div className={reviewSubtlePanelClass("p-3")} title={detail}>
       <dt className="text-sm font-medium text-earth-700">{label}</dt>
       <dd className="mt-1 text-lg font-semibold tabular-nums text-seed-950">
         {value}
       </dd>
-      <dd className="mt-2 text-xs leading-5 text-earth-600">{detail}</dd>
-    </div>
-  );
-}
-
-function BoundaryBlock({ title, items }: { title: string; items: string[] }) {
-  return (
-    <div className={reviewSubtlePanelClass("p-3")}>
-      <h3 className="text-sm font-semibold text-seed-950">{title}</h3>
-      <ul className="mt-2 space-y-2 text-sm leading-6 text-earth-700">
-        {items.map((item) => (
-          <li className="ml-4 list-disc" key={item}>
-            {item}
-          </li>
-        ))}
-      </ul>
+      <dd className="sr-only">{detail}</dd>
     </div>
   );
 }

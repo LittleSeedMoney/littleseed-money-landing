@@ -169,8 +169,7 @@ export function AssetPortfolioSection({
             Current portfolio snapshot
           </h2>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-earth-700">
-            The report interprets the current assets, liabilities, liquidity,
-            and decision-slice readiness from this in-session snapshot.
+            Review current balances, monthly activity, and your first goal.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -908,7 +907,7 @@ function SnapshotGoalPreview({
             {summary.name}
           </h4>
           <p className="mt-1 text-sm leading-6 text-earth-700">
-            This preview follows the order you set on the Goals screen.
+            Follows your Goals order.
           </p>
         </div>
         <StatusPill label="In-session goal" tone="seed" />
@@ -1041,10 +1040,7 @@ function SnapshotMonthlyTab({
           Monthly activity
         </h3>
         <p className="mt-1 max-w-3xl text-sm leading-6 text-earth-700">
-          Income, expenses, and current assets share this monthly workspace.
-          Category targets and category changes stay in this browser session;
-          they do not update saved budgets, category rules, or future
-          transactions.
+          Review monthly income, expenses, assets, targets, and category edits.
         </p>
       </div>
 
