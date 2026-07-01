@@ -1281,20 +1281,20 @@ function ExpenseMonthTable({
                           </button>
                         </div>
                       ) : (
-                        <div className="grid gap-1.5">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-earth-500">
-                              {sessionTargetInput
+                        <div className="flex items-center gap-1.5">
+                          <SnapshotTargetValue
+                            status={targetStatus}
+                            value={
+                              sessionTargetInput
                                 ? displayMoneyValue(sessionTargetInput)
-                                : "No target"}
-                            </span>
-                            <EditIconButton
-                              isCompact
-                              label={`Edit ${row.label} target`}
-                              onClick={() => onEditCategory(row.category)}
-                            />
-                          </div>
-                          <SnapshotTargetStatusBadge status={targetStatus} />
+                                : "No target"
+                            }
+                          />
+                          <EditIconButton
+                            isCompact
+                            label={`Edit ${row.label} target`}
+                            onClick={() => onEditCategory(row.category)}
+                          />
                         </div>
                       )}
                     </td>
@@ -1488,10 +1488,12 @@ type SnapshotTargetStatus =
   | { kind: "over-target"; label: string }
   | { kind: "invalid-target"; label: "Invalid target" };
 
-function SnapshotTargetStatusBadge({
+function SnapshotTargetValue({
   status,
+  value,
 }: {
   status: SnapshotTargetStatus;
+  value: string;
 }) {
   const className = {
     "invalid-target": "border-rose-200 bg-rose-50 text-rose-800",
@@ -1502,10 +1504,13 @@ function SnapshotTargetStatusBadge({
 
   return (
     <span
-      className={`inline-flex min-h-6 w-fit items-center rounded-md border px-2 text-xs font-semibold ${className}`}
-      data-testid="snapshot-expense-category-target-status"
+      aria-label={`Target ${value}; ${status.label}`}
+      className={`inline-flex min-h-7 w-fit items-center rounded-md border px-2 text-sm font-semibold tabular-nums ${className}`}
+      data-status={status.kind}
+      data-testid="snapshot-expense-category-target-value"
+      title={status.label}
     >
-      {status.label}
+      {value}
     </span>
   );
 }

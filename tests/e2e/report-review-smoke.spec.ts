@@ -395,8 +395,9 @@ test.describe("private report review smoke", () => {
       .click();
     await expect(groceriesRow).toContainText("$140");
     await expect(
-      groceriesRow.getByTestId("snapshot-expense-category-target-status"),
-    ).toContainText("Within target");
+      groceriesRow.getByTestId("snapshot-expense-category-target-value"),
+    ).toHaveAttribute("data-status", "within-target");
+    await expect(groceriesRow).not.toContainText("Within target");
 
     await groceriesRow
       .getByTestId("snapshot-expense-category-toggle")
@@ -436,8 +437,8 @@ test.describe("private report review smoke", () => {
       currentMonthTable.getByTestId("snapshot-expense-transaction-list-row"),
     ).toContainText("Applied as Dining for this session");
     await expect(
-      groceriesRow.getByTestId("snapshot-expense-category-target-status"),
-    ).toContainText("Within target");
+      groceriesRow.getByTestId("snapshot-expense-category-target-value"),
+    ).toHaveAttribute("data-status", "within-target");
   });
 
   test("screen tabs support click, keyboard movement, and hash updates", async ({
