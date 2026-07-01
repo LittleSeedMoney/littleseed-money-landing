@@ -48,15 +48,13 @@ export function FindingsSection({
                       {finding.title}
                     </h3>
                   </div>
-                  <p className="mt-2 text-sm leading-6 text-earth-700">
-                    {finding.summary}
-                  </p>
                 </div>
                 <StatusPill label="Education only" tone="seed" />
               </div>
             </summary>
 
             <div className="grid gap-4 border-t border-stone-200 px-4 pb-4 pt-3 md:grid-cols-2 sm:px-5">
+              <FindingInfoList title="Summary" items={[finding.summary]} />
               <FindingInfoList
                 title="Why it matters"
                 items={[finding.whyItMatters]}

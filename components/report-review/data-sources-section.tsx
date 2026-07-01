@@ -89,8 +89,6 @@ function DataSourceCard({ source }: { source: ReviewDataSource }) {
         />
       </div>
 
-      <p className="mt-3 text-sm leading-6 text-earth-700">{source.summary}</p>
-
       <dl className="mt-4 grid gap-3 text-sm">
         <MetaItem label="Freshness" value={source.freshnessLabel} />
         <div>
@@ -110,8 +108,11 @@ function DataSourceCard({ source }: { source: ReviewDataSource }) {
 
       <details className={reviewDisclosureClass("mt-4 bg-white p-3")}>
         <summary className={reviewDisclosureSummaryClass()}>
-          Boundaries
+          Details
         </summary>
+        <p className="mt-3 text-sm leading-6 text-earth-700">
+          {source.summary}
+        </p>
         <p className="mt-3 text-sm leading-6 text-earth-700">{source.detail}</p>
         <ul className="mt-3 space-y-2 text-sm leading-6 text-earth-700">
           {source.limitations.map((limitation) => (
@@ -137,12 +138,18 @@ function MixedSourcePolicy({
           <h3 className="text-sm font-semibold text-seed-950">
             Mixed-source handling
           </h3>
-          <p className="mt-1 max-w-3xl text-sm leading-6 text-earth-700">
-            {reconciliation.summary}
-          </p>
         </div>
         <StatusPill label="Account-level" tone="earth" />
       </div>
+
+      <details className={reviewDisclosureClass("mt-4 bg-white p-3")}>
+        <summary className={reviewDisclosureSummaryClass()}>
+          Policy summary
+        </summary>
+        <p className="mt-3 max-w-3xl text-sm leading-6 text-earth-700">
+          {reconciliation.summary}
+        </p>
+      </details>
 
       <div className="mt-4 grid gap-4 xl:grid-cols-2">
         <PolicyRuleGroup
@@ -155,11 +162,16 @@ function MixedSourcePolicy({
         />
       </div>
 
-      <dl className="mt-4 grid gap-3 md:grid-cols-3">
-        {reconciliation.resolution.map((item) => (
-          <PolicyItem key={item.id} label={item.label} value={item.value} />
-        ))}
-      </dl>
+      <details className={reviewDisclosureClass("mt-4 bg-white p-3")}>
+        <summary className={reviewDisclosureSummaryClass()}>
+          Resolution
+        </summary>
+        <dl className="mt-3 grid gap-3 md:grid-cols-3">
+          {reconciliation.resolution.map((item) => (
+            <PolicyItem key={item.id} label={item.label} value={item.value} />
+          ))}
+        </dl>
+      </details>
     </div>
   );
 }

@@ -168,9 +168,8 @@ export function AssetPortfolioSection({
           >
             Current portfolio snapshot
           </h2>
-          <p className="mt-2 max-w-3xl text-sm leading-6 text-earth-700">
-            The report interprets the current assets, liabilities, liquidity,
-            and decision-slice readiness from this in-session snapshot.
+          <p className="sr-only">
+            Review current balances, monthly activity, and your first goal.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -278,7 +277,7 @@ function SnapshotTrendPanel({
           >
             Monthly trend
           </h3>
-          <p className="mt-1 text-sm leading-6 text-earth-700">
+          <p className="sr-only">
             Income and expenses use posted-date month aggregates. Asset values
             use the current snapshot until historical asset snapshots are
             available.
@@ -907,9 +906,6 @@ function SnapshotGoalPreview({
           >
             {summary.name}
           </h4>
-          <p className="mt-1 text-sm leading-6 text-earth-700">
-            This preview follows the order you set on the Goals screen.
-          </p>
         </div>
         <StatusPill label="In-session goal" tone="seed" />
       </div>
@@ -1040,11 +1036,8 @@ function SnapshotMonthlyTab({
         >
           Monthly activity
         </h3>
-        <p className="mt-1 max-w-3xl text-sm leading-6 text-earth-700">
-          Income, expenses, and current assets share this monthly workspace.
-          Category targets and category changes stay in this browser session;
-          they do not update saved budgets, category rules, or future
-          transactions.
+        <p className="sr-only">
+          Review monthly income, expenses, assets, targets, and category edits.
         </p>
       </div>
 
@@ -1748,7 +1741,7 @@ function GroupHeader({
         <h3 className="text-sm font-semibold text-seed-950" id={headingId}>
           {title}
         </h3>
-        <p className="mt-0.5 text-sm leading-6 text-earth-700">
+        <p className="sr-only">
           {description}
         </p>
       </div>
@@ -2454,7 +2447,7 @@ function MinusIcon({ className }: { className: string }) {
 
 function PortfolioMetricCard({ metric }: { metric: SummaryMetric }) {
   return (
-    <article className={reviewSubtlePanelClass("p-3")}>
+    <article className={reviewSubtlePanelClass("p-3")} title={metric.detail}>
       <div className="flex items-start justify-between gap-3">
         <h3 className="text-sm font-medium text-earth-700">{metric.label}</h3>
         <ProvenanceTag provenance={metric.provenance} />
@@ -2462,7 +2455,7 @@ function PortfolioMetricCard({ metric }: { metric: SummaryMetric }) {
       <p className="mt-2 text-xl font-semibold tabular-nums text-seed-950">
         {metric.value}
       </p>
-      <p className="mt-1 text-sm leading-6 text-earth-700">{metric.detail}</p>
+      <p className="sr-only">{metric.detail}</p>
     </article>
   );
 }
@@ -2495,7 +2488,7 @@ function DecisionReadinessCard({
           <h3 className="mt-1 text-lg font-semibold text-seed-950">
             {decisionReadiness.title}
           </h3>
-          <p className="mt-2 text-sm leading-6 text-earth-700">
+          <p className="sr-only">
             {decisionReadiness.explanation}
           </p>
         </div>

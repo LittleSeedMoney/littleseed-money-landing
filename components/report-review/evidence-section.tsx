@@ -3,6 +3,8 @@ import type { EvidenceSource } from "@/data/report-review-sample";
 import {
   InfoList,
   MetaItem,
+  reviewDisclosureClass,
+  reviewDisclosureSummaryClass,
   reviewPanelClass,
   ReviewSectionHeading,
 } from "./shared";
@@ -47,10 +49,15 @@ function EvidenceCard({ source }: { source: EvidenceSource }) {
       <dl className="mt-4 text-sm">
         <MetaItem label="Reviewed" value={source.reviewedOn} />
       </dl>
-      <p className="mt-4 text-sm leading-6 text-earth-800">{source.supports}</p>
-      <div className="mt-4">
+      <details className={reviewDisclosureClass("mt-4 p-3")}>
+        <summary className={reviewDisclosureSummaryClass()}>
+          Details
+        </summary>
+        <p className="mt-3 text-sm leading-6 text-earth-800">
+          {source.supports}
+        </p>
         <InfoList title="Limitations" items={source.limitations} />
-      </div>
+      </details>
     </article>
   );
 }
