@@ -1,3 +1,5 @@
+import { parseMoneyCents } from "./snapshot-monthly-draft";
+
 export const GOAL_PLANNING_AS_OF_MONTH = "2026-07";
 
 export type GoalPlanningType =
@@ -255,6 +257,13 @@ export function formatGoalPlanningMonthCount(value: number | null) {
   return `${value} months`;
 }
 
+export function currentGoalPlanningAsOfMonth(now = new Date()) {
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+
+  return `${year}-${month}`;
+}
+
 function parseRequiredNonNegativeDecimal(
   value: string,
   label: string,
@@ -267,14 +276,15 @@ function parseRequiredNonNegativeDecimal(
     return null;
   }
 
-  const parsed = Number(trimmed);
+  const normalized = trimmed.replace(/[$,\s]/g, "");
+  const parsedCents = normalized === "" ? null : parseMoneyCents(trimmed);
 
-  if (!Number.isFinite(parsed) || parsed < 0) {
+  if (parsedCents === null || parsedCents < 0) {
     validationMessages.push(`${label} must be a non-negative number.`);
     return null;
   }
 
-  return parsed;
+  return parsedCents / 100;
 }
 
 function parseOptionalMonth(

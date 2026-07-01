@@ -21,6 +21,7 @@ import {
   type ManualProfileValues,
 } from "@/lib/report-review/manual-profile";
 import {
+  currentGoalPlanningAsOfMonth,
   defaultGoalPlanningRows,
   summarizeGoalPlan,
   type GoalPlanningRow,
@@ -47,6 +48,9 @@ export function ReportReviewWorkspace({
   const [report, setReport] = useState(initialReport);
   const [values, setValues] = useState(defaultManualProfileValues);
   const [goalRows, setGoalRows] = useState(defaultGoalPlanningRows);
+  const [goalPlanningAsOfMonth] = useState(() =>
+    currentGoalPlanningAsOfMonth(),
+  );
   const [selectedPreset, setSelectedPreset] = useState<
     ManualProfilePresetId | "custom"
   >("sample");
@@ -68,7 +72,10 @@ export function ReportReviewWorkspace({
     () => new Map(report.evidenceSources.map((source) => [source.id, source])),
     [report.evidenceSources],
   );
-  const goalSummaries = useMemo(() => summarizeGoalPlan(goalRows), [goalRows]);
+  const goalSummaries = useMemo(
+    () => summarizeGoalPlan(goalRows, goalPlanningAsOfMonth),
+    [goalPlanningAsOfMonth, goalRows],
+  );
   const topGoalSummary = goalSummaries[0] ?? null;
 
   useEffect(() => {
@@ -310,6 +317,7 @@ export function ReportReviewWorkspace({
         aiEnabled={aiEnabled}
         errorMessage={errorMessage}
         generatedAt={generatedAt}
+        goalPlanningAsOfMonth={goalPlanningAsOfMonth}
         goalRows={goalRows}
         onAddAsset={addAssetRow}
         onAddDebt={addDebtRow}

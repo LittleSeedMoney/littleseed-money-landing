@@ -70,6 +70,7 @@ const {
   formatSavingGoalDraftMoney,
 } = require("../lib/report-review/saving-goal-draft.ts");
 const {
+  currentGoalPlanningAsOfMonth,
   defaultGoalPlanningRows,
   summarizeGoalPlan,
   summarizeGoalPlanningRow,
@@ -1850,6 +1851,34 @@ test("goal planning workspace supports a reached entered target", () => {
   assert.equal(summary.monthlyNeededForTarget, 0);
   assert.equal(summary.monthsAtCurrentContribution, 0);
   assert.equal(summary.status, "reached");
+});
+
+test("goal planning workspace derives a current as-of month", () => {
+  assert.equal(
+    currentGoalPlanningAsOfMonth(new Date(2027, 1, 15)),
+    "2027-02",
+  );
+});
+
+test("goal planning workspace accepts currency formatted money inputs", () => {
+  const [row] = defaultGoalPlanningRows();
+  const summary = summarizeGoalPlanningRow(
+    {
+      ...row,
+      currentSaved: "12,000.50",
+      monthlyContribution: "$600",
+      targetAmount: "$20,000",
+    },
+    1,
+    "2026-07",
+  );
+
+  assert.equal(summary.targetAmountValue, 20000);
+  assert.equal(summary.currentSavedValue, 12000.5);
+  assert.equal(summary.monthlyContributionValue, 600);
+  assert.equal(summary.remainingAmount, 7999.5);
+  assert.equal(summary.monthsAtCurrentContribution, 14);
+  assert.deepEqual(summary.validationMessages, []);
 });
 
 test("goal planning workspace rejects target months before the as-of month", () => {

@@ -6,7 +6,6 @@ import {
   formatGoalPlanningMoney,
   formatGoalPlanningMonthCount,
   formatGoalPlanningPercent,
-  GOAL_PLANNING_AS_OF_MONTH,
   GOAL_PLANNING_TYPE_LABELS,
   summarizeGoalPlan,
   type GoalPlanningRow,
@@ -23,12 +22,14 @@ import {
 } from "./shared";
 
 export function GoalPlanningScreen({
+  asOfMonth,
   goalRows,
   onAddGoal,
   onGoalMove,
   onGoalRemove,
   onGoalUpdate,
 }: {
+  asOfMonth: string;
   goalRows: GoalPlanningRow[];
   onAddGoal: () => void;
   onGoalMove: (id: string, direction: GoalMoveDirection) => void;
@@ -39,7 +40,10 @@ export function GoalPlanningScreen({
     value: GoalPlanningRow[T],
   ) => void;
 }) {
-  const summaries = useMemo(() => summarizeGoalPlan(goalRows), [goalRows]);
+  const summaries = useMemo(
+    () => summarizeGoalPlan(goalRows, asOfMonth),
+    [asOfMonth, goalRows],
+  );
 
   return (
     <section
@@ -86,6 +90,7 @@ export function GoalPlanningScreen({
               onGoalMove={onGoalMove}
               onGoalRemove={onGoalRemove}
               onGoalUpdate={onGoalUpdate}
+              asOfMonth={asOfMonth}
               summary={summary}
             />
           ))}
@@ -123,6 +128,7 @@ function GoalPlanningRowEditor({
   onGoalMove,
   onGoalRemove,
   onGoalUpdate,
+  asOfMonth,
   summary,
 }: {
   canMoveDown: boolean;
@@ -135,6 +141,7 @@ function GoalPlanningRowEditor({
     field: T,
     value: GoalPlanningRow[T],
   ) => void;
+  asOfMonth: string;
   summary: GoalPlanningSummary;
 }) {
   function updateField<T extends keyof GoalPlanningRow>(
@@ -165,8 +172,7 @@ function GoalPlanningRowEditor({
             />
           </div>
           <p className="mt-1 text-sm leading-6 text-earth-700">
-            As of {GOAL_PLANNING_AS_OF_MONTH}. Target month math uses the
-            entered month only.
+            As of {asOfMonth}. Target month math uses the entered month only.
           </p>
         </div>
 

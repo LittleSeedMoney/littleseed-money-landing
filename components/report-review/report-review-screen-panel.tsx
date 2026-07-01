@@ -33,6 +33,7 @@ export function ReportReviewScreenPanel({
   aiEnabled,
   errorMessage,
   generatedAt,
+  goalPlanningAsOfMonth,
   goalRows,
   onAddAsset,
   onAddDebt,
@@ -58,6 +59,7 @@ export function ReportReviewScreenPanel({
   aiEnabled: boolean;
   errorMessage: string;
   generatedAt: string;
+  goalPlanningAsOfMonth: string;
   goalRows: GoalPlanningRow[];
   onAddAsset: () => string;
   onAddDebt: () => string;
@@ -124,6 +126,7 @@ export function ReportReviewScreenPanel({
   if (activeScreen === "goals") {
     return (
       <GoalPlanningScreen
+        asOfMonth={goalPlanningAsOfMonth}
         goalRows={goalRows}
         onAddGoal={onAddGoal}
         onGoalMove={onGoalMove}
