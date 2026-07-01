@@ -15,6 +15,7 @@ import type {
   ManualProfileScalarField,
   ManualProfileValues,
 } from "@/lib/report-review/manual-profile";
+import type { GoalPlanningSummary } from "@/lib/report-review/goal-planning";
 
 import { AssetPortfolioSection } from "./asset-portfolio-section";
 import { DataSourcesSection } from "./data-sources-section";
@@ -25,7 +26,6 @@ import {
   type PortfolioEditTarget,
   type ManualRequestState,
 } from "./manual-input-section";
-import { SavingGoalDraftSection } from "./saving-goal-draft-section";
 import {
   reviewPanelClass,
   ReviewSectionHeading,
@@ -48,6 +48,7 @@ export function SnapshotScreen({
   requestState,
   selectedPreset,
   sourceById,
+  topGoalSummary,
   values,
 }: {
   errorMessage: string;
@@ -79,6 +80,7 @@ export function SnapshotScreen({
   requestState: ManualRequestState;
   selectedPreset: ManualProfilePresetId | "custom";
   sourceById: Map<string, ReportReviewSample["evidenceSources"][number]>;
+  topGoalSummary: GoalPlanningSummary | null;
   values: ManualProfileValues;
 }) {
   const [activePortfolioEdit, setActivePortfolioEdit] =
@@ -135,9 +137,9 @@ export function SnapshotScreen({
             statusLabel={
               selectedPreset === "custom" ? "Custom snapshot" : "Preset snapshot"
             }
+            topGoalSummary={topGoalSummary}
             values={values}
           />
-          <SavingGoalDraftSection />
           <InputsSection dataCompleteness={report.dataCompleteness} />
         </>
       ) : (

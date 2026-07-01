@@ -8,12 +8,20 @@ import type {
   ManualProfileScalarField,
   ManualProfileValues,
 } from "@/lib/report-review/manual-profile";
+import type {
+  GoalPlanningRow,
+  GoalPlanningSummary,
+} from "@/lib/report-review/goal-planning";
 import type { ReportReviewScreenId } from "@/lib/report-review/report-review-screens";
 
 import { ChargeInspectorSection } from "./charge-inspector-section";
 import { EducationSection } from "./education-section";
 import { EvidenceSection } from "./evidence-section";
 import { FindingsSection } from "./findings-section";
+import {
+  GoalPlanningScreen,
+  type GoalMoveDirection,
+} from "./goal-planning-screen";
 import type { ManualRequestState } from "./manual-input-section";
 import { OverviewSection } from "./overview-section";
 import { ReportSections } from "./report-sections";
@@ -25,10 +33,15 @@ export function ReportReviewScreenPanel({
   aiEnabled,
   errorMessage,
   generatedAt,
+  goalRows,
   onAddAsset,
   onAddDebt,
+  onAddGoal,
   onAssetUpdate,
   onDebtUpdate,
+  onGoalMove,
+  onGoalRemove,
+  onGoalUpdate,
   onRemoveAsset,
   onRemoveDebt,
   onSubmit,
@@ -38,14 +51,17 @@ export function ReportReviewScreenPanel({
   requestState,
   selectedPreset,
   sourceById,
+  topGoalSummary,
   values,
 }: {
   activeScreen: ReportReviewScreenId;
   aiEnabled: boolean;
   errorMessage: string;
   generatedAt: string;
+  goalRows: GoalPlanningRow[];
   onAddAsset: () => string;
   onAddDebt: () => string;
+  onAddGoal: () => void;
   onAssetUpdate: <T extends keyof ManualAssetValue>(
     id: string,
     field: T,
@@ -55,6 +71,13 @@ export function ReportReviewScreenPanel({
     id: string,
     field: T,
     value: ManualDebtValue[T],
+  ) => void;
+  onGoalMove: (id: string, direction: GoalMoveDirection) => void;
+  onGoalRemove: (id: string) => void;
+  onGoalUpdate: <T extends keyof GoalPlanningRow>(
+    id: string,
+    field: T,
+    value: GoalPlanningRow[T],
   ) => void;
   onRemoveAsset: (id: string) => void;
   onRemoveDebt: (id: string) => void;
@@ -71,6 +94,7 @@ export function ReportReviewScreenPanel({
   requestState: ManualRequestState;
   selectedPreset: ManualProfilePresetId | "custom";
   sourceById: Map<string, ReportReviewSample["evidenceSources"][number]>;
+  topGoalSummary: GoalPlanningSummary | null;
   values: ManualProfileValues;
 }) {
   if (activeScreen === "snapshot") {
@@ -91,7 +115,20 @@ export function ReportReviewScreenPanel({
         requestState={requestState}
         selectedPreset={selectedPreset}
         sourceById={sourceById}
+        topGoalSummary={topGoalSummary}
         values={values}
+      />
+    );
+  }
+
+  if (activeScreen === "goals") {
+    return (
+      <GoalPlanningScreen
+        goalRows={goalRows}
+        onAddGoal={onAddGoal}
+        onGoalMove={onGoalMove}
+        onGoalRemove={onGoalRemove}
+        onGoalUpdate={onGoalUpdate}
       />
     );
   }

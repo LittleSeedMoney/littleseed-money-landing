@@ -21,6 +21,11 @@ import {
   type ManualProfileValues,
 } from "@/lib/report-review/manual-profile";
 import {
+  defaultGoalPlanningRows,
+  summarizeGoalPlan,
+  type GoalPlanningRow,
+} from "@/lib/report-review/goal-planning";
+import {
   reportReviewScreenFromHash,
   type ReportReviewScreenId,
 } from "@/lib/report-review/report-review-screens";
@@ -41,6 +46,7 @@ export function ReportReviewWorkspace({
 }) {
   const [report, setReport] = useState(initialReport);
   const [values, setValues] = useState(defaultManualProfileValues);
+  const [goalRows, setGoalRows] = useState(defaultGoalPlanningRows);
   const [selectedPreset, setSelectedPreset] = useState<
     ManualProfilePresetId | "custom"
   >("sample");
@@ -62,6 +68,8 @@ export function ReportReviewWorkspace({
     () => new Map(report.evidenceSources.map((source) => [source.id, source])),
     [report.evidenceSources],
   );
+  const goalSummaries = useMemo(() => summarizeGoalPlan(goalRows), [goalRows]);
+  const topGoalSummary = goalSummaries[0] ?? null;
 
   useEffect(() => {
     function syncScreenFromHash() {
@@ -218,6 +226,73 @@ export function ReportReviewWorkspace({
     setRequestState("idle");
   }
 
+  function updateGoalValue<T extends keyof GoalPlanningRow>(
+    id: string,
+    field: T,
+    value: GoalPlanningRow[T],
+  ) {
+    setGoalRows((current) =>
+      current.map((goal) =>
+        goal.id === id ? { ...goal, [field]: value } : goal,
+      ),
+    );
+  }
+
+  function addGoalRow() {
+    setGoalRows((current) => {
+      const nextIndex = current.length + 1;
+
+      return [
+        ...current,
+        {
+          currentSaved: "0.00",
+          id: createManualRowId("goal"),
+          monthlyContribution: "0.00",
+          name: `New goal ${nextIndex}`,
+          targetAmount: "0.00",
+          targetMonth: "",
+          type: "custom",
+        },
+      ];
+    });
+  }
+
+  function removeGoalRow(id: string) {
+    setGoalRows((current) => {
+      if (current.length === 1) {
+        return current;
+      }
+
+      return current.filter((goal) => goal.id !== id);
+    });
+  }
+
+  function moveGoalRow(id: string, direction: "up" | "down") {
+    setGoalRows((current) => {
+      const index = current.findIndex((goal) => goal.id === id);
+
+      if (index < 0) {
+        return current;
+      }
+
+      const nextIndex = direction === "up" ? index - 1 : index + 1;
+
+      if (nextIndex < 0 || nextIndex >= current.length) {
+        return current;
+      }
+
+      const nextRows = [...current];
+      const [movedGoal] = nextRows.splice(index, 1);
+
+      if (!movedGoal) {
+        return current;
+      }
+
+      nextRows.splice(nextIndex, 0, movedGoal);
+      return nextRows;
+    });
+  }
+
   function selectScreen(screen: ReportReviewScreenId) {
     setActiveScreen(screen);
     window.history.replaceState(null, "", `#${screen}`);
@@ -235,10 +310,15 @@ export function ReportReviewWorkspace({
         aiEnabled={aiEnabled}
         errorMessage={errorMessage}
         generatedAt={generatedAt}
+        goalRows={goalRows}
         onAddAsset={addAssetRow}
         onAddDebt={addDebtRow}
+        onAddGoal={addGoalRow}
         onAssetUpdate={updateAssetValue}
         onDebtUpdate={updateDebtValue}
+        onGoalMove={moveGoalRow}
+        onGoalRemove={removeGoalRow}
+        onGoalUpdate={updateGoalValue}
         onRemoveAsset={removeAssetRow}
         onRemoveDebt={removeDebtRow}
         onSubmit={submitManualProfile}
@@ -248,6 +328,7 @@ export function ReportReviewWorkspace({
         requestState={requestState}
         selectedPreset={selectedPreset}
         sourceById={sourceById}
+        topGoalSummary={topGoalSummary}
         values={values}
       />
     </ReportReviewShell>

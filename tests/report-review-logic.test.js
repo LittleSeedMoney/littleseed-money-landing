@@ -70,6 +70,11 @@ const {
   formatSavingGoalDraftMoney,
 } = require("../lib/report-review/saving-goal-draft.ts");
 const {
+  defaultGoalPlanningRows,
+  summarizeGoalPlan,
+  summarizeGoalPlanningRow,
+} = require("../lib/report-review/goal-planning.ts");
+const {
   centsToInputValue,
   deriveSnapshotMonthlyDraftRows,
   parseMoneyCents,
@@ -1818,6 +1823,51 @@ test("saving goal draft stays inside the product boundary", () => {
   assert.doesNotMatch(copy, /credit card/i);
 });
 
+test("goal planning workspace summarizes user ordered goals", () => {
+  const summaries = summarizeGoalPlan(defaultGoalPlanningRows(), "2026-07");
+
+  assert.equal(summaries.length, 4);
+  assert.equal(summaries[0].name, "Emergency fund");
+  assert.equal(summaries[0].priority, 1);
+  assert.equal(summaries[0].remainingAmount, 8000);
+  assert.equal(summaries[0].progressPercent, 60);
+  assert.equal(summaries[0].monthsUntilTarget, 6);
+  assert.equal(summaries[0].monthlyNeededForTarget, 8000 / 6);
+  assert.equal(summaries[0].monthsAtCurrentContribution, 14);
+  assert.equal(summaries[0].status, "needs_more_monthly_input");
+});
+
+test("goal planning workspace supports a reached entered target", () => {
+  const [row] = defaultGoalPlanningRows();
+  const summary = summarizeGoalPlanningRow(
+    { ...row, currentSaved: "21000.00" },
+    1,
+    "2026-07",
+  );
+
+  assert.equal(summary.remainingAmount, 0);
+  assert.equal(summary.progressPercent, 100);
+  assert.equal(summary.monthlyNeededForTarget, 0);
+  assert.equal(summary.monthsAtCurrentContribution, 0);
+  assert.equal(summary.status, "reached");
+});
+
+test("goal planning workspace rejects target months before the as-of month", () => {
+  const [row] = defaultGoalPlanningRows();
+  const summary = summarizeGoalPlanningRow(
+    { ...row, targetMonth: "2026-06" },
+    1,
+    "2026-07",
+  );
+
+  assert.equal(summary.status, "needs_valid_inputs");
+  assert.equal(summary.monthsUntilTarget, null);
+  assert.match(
+    summary.validationMessages.join(" "),
+    /Target month cannot be before the current month/,
+  );
+});
+
 test("charge inspector sample covers every current finding type", () => {
   const summary = summarizeChargeInspectorReview(chargeInspectorSampleReview);
 
@@ -2367,14 +2417,15 @@ test("charge inspector copy stays inside review-only boundaries", () => {
 test("report review screen hash mapping preserves legacy section links", () => {
   assert.deepEqual(
     reportReviewScreens.map((screen) => screen.id),
-    ["snapshot", "report", "charge-inspector", "education"],
+    ["snapshot", "goals", "report", "charge-inspector", "education"],
   );
   assert.equal(reportReviewScreenFromHash("#snapshot"), "snapshot");
+  assert.equal(reportReviewScreenFromHash("#goals"), "goals");
   assert.equal(reportReviewScreenFromHash("#inputs"), "snapshot");
   assert.equal(reportReviewScreenFromHash("#manual-input"), "snapshot");
   assert.equal(reportReviewScreenFromHash("#findings"), "report");
   assert.equal(reportReviewScreenFromHash("#portfolio"), "snapshot");
-  assert.equal(reportReviewScreenFromHash("#saving-goal-draft"), "snapshot");
+  assert.equal(reportReviewScreenFromHash("#saving-goal-draft"), "goals");
   assert.equal(reportReviewScreenFromHash("#charge-inspector"), "charge-inspector");
   assert.equal(reportReviewScreenFromHash("#evidence"), "education");
   assert.equal(reportReviewScreenFromHash("#unknown"), "report");
@@ -2385,7 +2436,8 @@ test("report review keyboard navigation follows the tab order", () => {
     reportReviewScreenFromKeyboard("report", "ArrowRight"),
     "charge-inspector",
   );
-  assert.equal(reportReviewScreenFromKeyboard("report", "ArrowLeft"), "snapshot");
+  assert.equal(reportReviewScreenFromKeyboard("report", "ArrowLeft"), "goals");
+  assert.equal(reportReviewScreenFromKeyboard("goals", "ArrowLeft"), "snapshot");
   assert.equal(
     reportReviewScreenFromKeyboard("education", "ArrowRight"),
     "snapshot",
