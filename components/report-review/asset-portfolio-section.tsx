@@ -49,6 +49,7 @@ import {
 import {
   EducationTopicLink,
   ProvenanceTag,
+  ReviewDisclosure,
   reviewDisclosureClass,
   reviewDisclosureSummaryClass,
   reviewInlineDisclosureSummaryClass,
@@ -226,7 +227,7 @@ export function AssetPortfolioSection({
         ) : null}
       </div>
 
-      <DecisionReadinessCard
+      <SnapshotDecisionDetails
         decisionReadiness={decisionReadiness}
         sourceById={sourceById}
       />
@@ -2471,7 +2472,7 @@ function PortfolioNoteCard({ note }: { note: PortfolioNote }) {
   );
 }
 
-function DecisionReadinessCard({
+function SnapshotDecisionDetails({
   decisionReadiness,
   sourceById,
 }: {
@@ -2479,24 +2480,50 @@ function DecisionReadinessCard({
   sourceById: ReadonlyMap<string, EvidenceSource>;
 }) {
   return (
-    <article className={reviewPanelClass("p-5")}>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <p className="text-sm font-medium uppercase tracking-[0.16em] text-seed-700">
-            First decision slice
-          </p>
-          <h3 className="mt-1 text-lg font-semibold text-seed-950">
-            {decisionReadiness.title}
-          </h3>
-          <p className="sr-only">
-            {decisionReadiness.explanation}
-          </p>
+    <ReviewDisclosure
+      className="overflow-hidden p-0"
+      summary={
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-seed-700">
+              Decision details
+            </p>
+            <h3 className="mt-1 text-sm font-semibold text-seed-950">
+              {decisionReadiness.title}
+            </h3>
+            <p className="sr-only">{decisionReadiness.explanation}</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <StatusPill label={decisionReadiness.status} tone="stone" />
+            <span className="self-center text-sm font-semibold text-seed-700">
+              Details
+            </span>
+          </div>
         </div>
-        <StatusPill label={decisionReadiness.status} tone="stone" />
+      }
+      variant="panel"
+    >
+      <div className="border-t border-stone-200 p-4">
+        <DecisionReadinessContent
+          decisionReadiness={decisionReadiness}
+          sourceById={sourceById}
+        />
       </div>
+    </ReviewDisclosure>
+  );
+}
 
+function DecisionReadinessContent({
+  decisionReadiness,
+  sourceById,
+}: {
+  decisionReadiness: DecisionReadiness;
+  sourceById: ReadonlyMap<string, EvidenceSource>;
+}) {
+  return (
+    <>
       {decisionReadiness.resultMetrics.length > 0 ? (
-        <div className="mt-5 border-t border-stone-200 pt-4">
+        <div>
           <h4 className="text-sm font-semibold text-seed-950">
             Decision output
           </h4>
@@ -2624,7 +2651,7 @@ function DecisionReadinessCard({
           ))}
         </ul>
       </details>
-    </article>
+    </>
   );
 }
 

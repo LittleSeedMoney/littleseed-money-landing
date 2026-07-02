@@ -127,19 +127,62 @@ export function ReviewDisclosure({
   className,
   summary,
   summaryClassName,
+  variant = "default",
 }: {
   children: ReactNode;
   className?: string;
   summary: ReactNode;
   summaryClassName?: string;
+  variant?: "default" | "panel";
 }) {
+  const disclosureClass =
+    variant === "panel"
+      ? reviewPanelClass(joinClasses("group", className))
+      : reviewDisclosureClass(joinClasses("group", className));
+  const summaryClasses =
+    variant === "panel"
+      ? reviewAccordionSummaryClass(
+          joinClasses(
+            "flex items-center justify-between gap-3",
+            summaryClassName,
+          ),
+        )
+      : reviewDisclosureSummaryClass(
+          joinClasses(
+            "flex list-none items-center justify-between gap-3 [&::-webkit-details-marker]:hidden",
+            summaryClassName,
+          ),
+        );
+
   return (
-    <details className={reviewDisclosureClass(className)}>
-      <summary className={reviewDisclosureSummaryClass(summaryClassName)}>
-        {summary}
+    <details className={disclosureClass}>
+      <summary className={summaryClasses}>
+        <div className="min-w-0 flex-1">{summary}</div>
+        <DisclosureChevron />
       </summary>
       {children}
     </details>
+  );
+}
+
+function DisclosureChevron() {
+  return (
+    <span
+      aria-hidden="true"
+      className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-seed-700 transition-transform group-open:rotate-90"
+    >
+      <svg
+        className="h-4 w-4"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+        viewBox="0 0 24 24"
+      >
+        <path d="m9 18 6-6-6-6" />
+      </svg>
+    </span>
   );
 }
 
