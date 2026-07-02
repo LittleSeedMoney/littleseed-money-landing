@@ -319,8 +319,17 @@ test.describe("private report review AI panel", () => {
 async function openFirstAiPanel(page: Page) {
   await page.goto(`${reportReviewPath}#report`);
 
-  // Report & findings is a Money detail disclosure now; open it first.
-  await page.getByText("Report & findings", { exact: true }).click();
+  // Report & findings is a Money detail disclosure. Deep-linking to #report
+  // auto-opens it; ensure it is open without toggling it back closed.
+  const reportDetails = page
+    .locator("details")
+    .filter({ has: page.locator("#report-findings-details") })
+    .first();
+  await reportDetails.waitFor();
+  if (!(await reportDetails.evaluate((el: HTMLDetailsElement) => el.open))) {
+    await reportDetails.locator("summary").first().click();
+  }
+  await expect(reportDetails).toHaveJSProperty("open", true);
 
   const firstFinding = page.getByTestId("report-finding-card").first();
   await firstFinding.locator("> summary").click();

@@ -386,17 +386,6 @@ function SnapshotOverviewTab({
         </div>
 
         <div className="mt-4 space-y-4">
-          <ProfileSnapshotCard
-            activeField={activeField}
-            errorMessage={errorMessage}
-            onCancelEdit={onCancelEdit}
-            onFieldEdit={onFieldEdit}
-            onSubmit={onProfileSubmit}
-            onUpdate={onProfileUpdate}
-            requestState={requestState}
-            values={values}
-          />
-
           <SnapshotGoalPreview summary={topGoalSummary} />
 
           <PortfolioSnapshotList
@@ -498,6 +487,34 @@ function SnapshotOverviewTab({
           />
         </div>
       </div>
+
+      <ReviewDisclosure
+        summary={
+          <div>
+            <h3 className="text-sm font-semibold text-seed-950">
+              Your profile inputs
+            </h3>
+            <p className="mt-0.5 text-xs text-earth-600">
+              Age, income, and the other values you entered — open to review or
+              edit them.
+            </p>
+          </div>
+        }
+        variant="panel"
+      >
+        <div className="border-t border-stone-200 p-4">
+          <ProfileSnapshotCard
+            activeField={activeField}
+            errorMessage={errorMessage}
+            onCancelEdit={onCancelEdit}
+            onFieldEdit={onFieldEdit}
+            onSubmit={onProfileSubmit}
+            onUpdate={onProfileUpdate}
+            requestState={requestState}
+            values={values}
+          />
+        </div>
+      </ReviewDisclosure>
 
       <div className="grid gap-3 md:grid-cols-2">
         {portfolio.notes.map((note) => (

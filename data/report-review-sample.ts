@@ -878,8 +878,10 @@ export const reportReviewSample: ReportReviewSample = {
         body: "Emergency coverage uses cash-like balances only. Invested or restricted assets remain visible but are not treated as emergency cash.",
       },
     ],
-    // The final point must reconcile with the portfolio totals shown on the
-    // same screen: total assets ($68,000) minus total liabilities ($35,000).
+    // The trend ends at the latest month that also has monthly transaction
+    // detail (2026-05), so the chart's endpoint is selectable and its final
+    // value reconciles with the portfolio totals shown on the same screen:
+    // total assets ($68,000) minus total liabilities ($35,000) = $33,000.
     netWorthTrend: [
       { month: "2025-07", value: 26800 },
       { month: "2025-08", value: 27600 },
@@ -890,9 +892,8 @@ export const reportReviewSample: ReportReviewSample = {
       { month: "2026-01", value: 30200 },
       { month: "2026-02", value: 30800 },
       { month: "2026-03", value: 31400 },
-      { month: "2026-04", value: 31900 },
-      { month: "2026-05", value: 32100 },
-      { month: "2026-06", value: 33000 },
+      { month: "2026-04", value: 32000 },
+      { month: "2026-05", value: 33000 },
     ],
     netWorthTarget: 40000,
   },

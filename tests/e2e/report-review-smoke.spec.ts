@@ -118,11 +118,12 @@ test.describe("private report review smoke", () => {
   }) => {
     await page.goto(`${reportReviewPath}#report`);
 
-    // Report & findings is a Money detail disclosure now; open it first.
-    await page.getByText("Report & findings", { exact: true }).click();
+    // Report & findings is a Money detail disclosure. Deep-linking to #report
+    // auto-opens it; ensure it is open without toggling it back closed.
+    await ensureReportFindingsOpen(page);
 
     const firstFinding = page.getByTestId("report-finding-card").first();
-    await firstFinding.locator("summary").click();
+    await firstFinding.locator("> summary").click();
 
     await expect(
       firstFinding.getByText("AI explanation unavailable"),
@@ -180,6 +181,9 @@ test.describe("private report review smoke", () => {
     });
 
     await page.goto(`${reportReviewPath}#snapshot`);
+
+    // Profile inputs are now tucked into a collapsed disclosure on Overview.
+    await page.getByText("Your profile inputs", { exact: true }).click();
 
     const profileCard = page.locator(
       'form[aria-labelledby="profile-values-heading"]',
@@ -331,8 +335,9 @@ test.describe("private report review smoke", () => {
     await page.goto(`${reportReviewPath}#snapshot`);
 
     // The net-worth hero chart replaced the old monthly mixed chart as the
-    // month selector; only months with monthly transaction detail are
-    // clickable, and the asset-type breakdown stays as plain cards.
+    // month selector; every month on the chart has monthly transaction detail
+    // (the trend ends at the latest data month), and the asset-type breakdown
+    // stays as cards.
     await expect(page.getByTestId("snapshot-asset-breakdown")).toBeVisible();
     await expect(page.getByTestId("snapshot-monthly-mixed-chart"))
       .toHaveCount(0);
@@ -745,6 +750,20 @@ function labelFor(page: Page, text: string) {
 
 function chargeInspectorFindings(page: Page) {
   return page.getByTestId("charge-inspector-finding");
+}
+
+// The "Report & findings" disclosure auto-opens on #report navigation; open it
+// only if it is still closed so we never toggle it back shut.
+async function ensureReportFindingsOpen(page: Page) {
+  const details = page
+    .locator("details")
+    .filter({ has: page.locator("#report-findings-details") })
+    .first();
+  await details.waitFor();
+  if (!(await details.evaluate((el: HTMLDetailsElement) => el.open))) {
+    await details.locator("summary").first().click();
+  }
+  await expect(details).toHaveJSProperty("open", true);
 }
 
 // Charge Inspector is a Money detail disclosure. Deep-linking to

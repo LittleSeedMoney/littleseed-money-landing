@@ -155,8 +155,9 @@ export function ReportReviewScreenPanel({
       {hasReportContent(report) ? (
         <>
           <ReviewDisclosure
+            className="scroll-mt-24"
             summary={
-              <div>
+              <div id="report-findings-details">
                 <h3 className="text-sm font-semibold text-seed-950">
                   Report &amp; findings
                 </h3>

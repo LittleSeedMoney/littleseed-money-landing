@@ -27,6 +27,7 @@ import {
   type GoalPlanningRow,
 } from "@/lib/report-review/goal-planning";
 import {
+  reportReviewRevealTargetForHash,
   reportReviewScreenFromHash,
   type ReportReviewScreenId,
 } from "@/lib/report-review/report-review-screens";
@@ -78,15 +79,52 @@ export function ReportReviewWorkspace({
   );
   const topGoalSummary = goalSummaries[0] ?? null;
 
+  const [revealTarget, setRevealTarget] = useState<{
+    id: string;
+    nonce: number;
+  } | null>(null);
+
   useEffect(() => {
     function syncScreenFromHash() {
-      setActiveScreen(reportReviewScreenFromHash(window.location.hash));
+      const hash = window.location.hash;
+      setActiveScreen(reportReviewScreenFromHash(hash));
+      const target = reportReviewRevealTargetForHash(hash);
+      setRevealTarget(target ? { id: target, nonce: Date.now() } : null);
     }
 
     syncScreenFromHash();
     window.addEventListener("hashchange", syncScreenFromHash);
     return () => window.removeEventListener("hashchange", syncScreenFromHash);
   }, []);
+
+  // After the resolved screen renders, open the deep-linked section (and any
+  // ancestor disclosure) and scroll it into view.
+  useEffect(() => {
+    if (!revealTarget) {
+      return;
+    }
+
+    const frame = requestAnimationFrame(() => {
+      const element = document.getElementById(revealTarget.id);
+      if (!element) {
+        return;
+      }
+
+      for (
+        let node: HTMLElement | null = element;
+        node;
+        node = node.parentElement
+      ) {
+        if (node instanceof HTMLDetailsElement) {
+          node.open = true;
+        }
+      }
+      element.closest("details")?.setAttribute("open", "");
+      element.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [activeScreen, revealTarget]);
 
   async function submitManualProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

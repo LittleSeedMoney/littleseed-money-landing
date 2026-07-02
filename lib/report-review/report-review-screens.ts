@@ -41,6 +41,34 @@ export const reportReviewScreens: ReportReviewScreen[] = [
   },
 ];
 
+/**
+ * DOM element id that a legacy hash should reveal within its resolved screen.
+ * The 3-tab IA folds several old surfaces into the Money screen; deep-linking
+ * to one of them should open/scroll its section, not just select the tab.
+ * Returns null when the hash targets a whole screen (no sub-section to reveal).
+ */
+export function reportReviewRevealTargetForHash(hash: string): string | null {
+  const id = hash.replace(/^#/, "");
+  const map: Record<string, string> = {
+    // former Report surface -> Money "Report & findings" disclosure
+    report: "report-findings-details",
+    overview: "report-findings-details",
+    sections: "report-findings-details",
+    findings: "report-findings-details",
+    // former Charge Inspector surface -> Money disclosure (inner section id)
+    "charge-inspector": "charge-inspector",
+    // former Snapshot surface -> the portfolio snapshot section
+    snapshot: "portfolio",
+    portfolio: "portfolio",
+    inputs: "portfolio",
+    "manual-input": "portfolio",
+    "data-sources": "portfolio",
+    "snapshot-completeness": "portfolio",
+    "validation-checklist": "portfolio",
+  };
+  return map[id] ?? null;
+}
+
 export function reportReviewScreenFromHash(hash: string): ReportReviewScreenId {
   const id = hash.replace(/^#/, "");
   const screen = reportReviewScreens.find(
