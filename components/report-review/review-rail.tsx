@@ -12,7 +12,7 @@ import {
 
 export function ReviewRail({ report }: { report: ReportReviewSample }) {
   return (
-    <aside className="min-w-0">
+    <aside className="min-w-0 lg:sticky lg:top-4 lg:self-start">
       <section
         aria-labelledby="review-state-heading"
         className={reviewPanelClass("p-3")}

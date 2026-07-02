@@ -17,6 +17,8 @@ import {
 type EducationTopicContext = {
   id: string;
   labels: string[];
+  /** Evidence sources cited by the findings/decision slice behind this topic. */
+  sourceIds: string[];
 };
 
 export function EducationSection({
@@ -77,14 +79,24 @@ export function EducationSection({
                 <p className="mt-1.5 text-[11px] text-earth-400">
                   From {context.labels.join(" · ")}
                 </p>
-                {topic.href ? (
-                  <a
-                    className="mt-2 inline-flex rounded-lg text-sm font-medium text-seed-700 underline-offset-4 hover:underline focus:outline-none focus:ring-2 focus:ring-seed-500"
-                    href={topic.href}
-                  >
-                    Open lesson
-                  </a>
-                ) : null}
+                <span className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+                  {topic.href ? (
+                    <a
+                      className="inline-flex rounded-lg text-sm font-medium text-seed-700 underline-offset-4 hover:underline focus:outline-none focus:ring-2 focus:ring-seed-500"
+                      href={topic.href}
+                    >
+                      Open lesson
+                    </a>
+                  ) : null}
+                  {context.sourceIds.length > 0 ? (
+                    <a
+                      className="inline-flex rounded-lg text-sm font-medium text-seed-700 underline-offset-4 hover:underline focus:outline-none focus:ring-2 focus:ring-seed-500"
+                      href={`#evidence-source-${context.sourceIds[0]}`}
+                    >
+                      View source{context.sourceIds.length > 1 ? "s" : ""} ↓
+                    </a>
+                  ) : null}
+                </span>
                 <p className="sr-only">Stable identifier {topic.id}.</p>
               </div>
             </article>
@@ -130,15 +142,24 @@ function educationTopicContexts(
     decisionReadiness.educationTopics,
   ]);
 
-  return topicIds.map((id) => ({
-    id,
-    labels: [
-      ...findings
-        .filter((finding) => finding.educationTopics.includes(id))
-        .map((finding) => `Finding: ${finding.title}`),
-      ...(decisionReadiness.educationTopics.includes(id)
-        ? [`Decision slice: ${decisionReadiness.title}`]
-        : []),
-    ],
-  }));
+  return topicIds.map((id) => {
+    const relatedFindings = findings.filter((finding) =>
+      finding.educationTopics.includes(id),
+    );
+    const fromDecision = decisionReadiness.educationTopics.includes(id);
+
+    return {
+      id,
+      labels: [
+        ...relatedFindings.map((finding) => `Finding: ${finding.title}`),
+        ...(fromDecision ? [`Decision slice: ${decisionReadiness.title}`] : []),
+      ],
+      sourceIds: [
+        ...new Set([
+          ...relatedFindings.flatMap((finding) => finding.evidenceSourceIds),
+          ...(fromDecision ? decisionReadiness.evidenceSourceIds : []),
+        ]),
+      ],
+    };
+  });
 }

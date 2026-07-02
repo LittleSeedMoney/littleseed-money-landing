@@ -34,7 +34,10 @@ export function EvidenceSection({ sources }: { sources: EvidenceSource[] }) {
 
 function EvidenceCard({ source }: { source: EvidenceSource }) {
   return (
-    <article className={reviewPanelClass("p-5")}>
+    <article
+      className={reviewPanelClass("scroll-mt-24 p-5")}
+      id={`evidence-source-${source.id}`}
+    >
       <p className="text-sm font-medium text-seed-700">{source.publisher}</p>
       <h3 className="mt-1 text-base font-semibold text-seed-950">
         <a

@@ -170,11 +170,8 @@ export function AssetPortfolioSection({
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-sm font-medium uppercase tracking-[0.16em] text-seed-700">
-            Workspace snapshot
-          </p>
           <h2
-            className="mt-1 text-2xl font-semibold tracking-normal text-seed-950"
+            className="font-serif text-xl font-bold tracking-normal text-seed-950"
             id="portfolio-heading"
           >
             Current portfolio snapshot
@@ -189,8 +186,6 @@ export function AssetPortfolioSection({
       </div>
 
       <div className={reviewPanelClass("p-4")}>
-        <AssetTypeBreakdown values={values} />
-
         <SnapshotTabs
           activeTab={activeSnapshotTab}
           onTabChange={setActiveSnapshotTab}
@@ -379,6 +374,7 @@ function SnapshotOverviewTab({
 }) {
   return (
     <div className="mt-4 space-y-4">
+      <AssetTypeBreakdown values={values} />
       <div className={reviewDisclosureClass("p-3")}>
         <h3 className="text-sm font-semibold text-seed-950">
           Current snapshot
