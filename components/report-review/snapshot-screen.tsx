@@ -271,9 +271,6 @@ function SnapshotSupportDetails({
               label={`${sources.length.toLocaleString("en-US")} sources`}
               tone="stone"
             />
-            <span className="self-center text-sm font-semibold text-seed-700">
-              Details
-            </span>
           </div>
         </div>
       }

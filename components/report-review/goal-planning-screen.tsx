@@ -16,6 +16,7 @@ import {
 
 import {
   reviewPanelClass,
+  ReviewDisclosure,
   ReviewSectionHeading,
   reviewSubtlePanelClass,
   StatusPill,
@@ -111,10 +112,10 @@ export type GoalMoveDirection = "up" | "down";
 
 function GoalPlanningLimits({ items }: { items: string[] }) {
   return (
-    <details className={reviewSubtlePanelClass("border-t-0 p-3")}>
-      <summary className="cursor-pointer text-sm font-semibold text-seed-950 outline-none focus:ring-2 focus:ring-seed-500">
-        Planning limits
-      </summary>
+    <ReviewDisclosure
+      className="border-t-0 p-3"
+      summary="Planning limits"
+    >
       <ul className="mt-2 space-y-2 text-sm leading-6 text-earth-700">
         {items.map((item) => (
           <li className="ml-4 list-disc" key={item}>
@@ -122,7 +123,7 @@ function GoalPlanningLimits({ items }: { items: string[] }) {
           </li>
         ))}
       </ul>
-    </details>
+    </ReviewDisclosure>
   );
 }
 
@@ -183,28 +184,34 @@ function GoalPlanningRowEditor({
 
         <div className="flex flex-wrap gap-2">
           <button
+            aria-label="Move up"
             className={goalActionClass(canMoveUp)}
             disabled={!canMoveUp}
             onClick={() => onGoalMove(summary.id, "up")}
+            title="Move up"
             type="button"
           >
-            Move up
+            <GoalActionIcon action="up" />
           </button>
           <button
+            aria-label="Move down"
             className={goalActionClass(canMoveDown)}
             disabled={!canMoveDown}
             onClick={() => onGoalMove(summary.id, "down")}
+            title="Move down"
             type="button"
           >
-            Move down
+            <GoalActionIcon action="down" />
           </button>
           <button
+            aria-label="Remove"
             className={goalActionClass(canRemove)}
             disabled={!canRemove}
             onClick={() => onGoalRemove(summary.id)}
+            title="Remove"
             type="button"
           >
-            Remove
+            <GoalActionIcon action="remove" />
           </button>
         </div>
       </div>
@@ -432,13 +439,55 @@ function GoalMetric({
 
 function goalActionClass(enabled: boolean) {
   const base =
-    "min-h-9 rounded-lg border px-3 text-sm font-semibold shadow-sm focus:outline-none focus:ring-2 focus:ring-seed-500";
+    "inline-flex h-9 w-9 items-center justify-center rounded-lg border text-sm font-semibold shadow-sm focus:outline-none focus:ring-2 focus:ring-seed-500";
 
   if (!enabled) {
     return `${base} cursor-not-allowed border-stone-200 bg-stone-100 text-stone-400`;
   }
 
   return `${base} border-stone-300 bg-white text-earth-800 hover:bg-stone-50`;
+}
+
+function GoalActionIcon({
+  action,
+}: {
+  action: "down" | "remove" | "up";
+}) {
+  if (action === "remove") {
+    return (
+      <svg
+        aria-hidden="true"
+        className="h-4 w-4"
+        fill="none"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="2"
+        viewBox="0 0 24 24"
+      >
+        <path d="M5 12h14" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg
+      aria-hidden="true"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth="2"
+      viewBox="0 0 24 24"
+    >
+      {action === "up" ? (
+        <path d="m18 15-6-6-6 6" />
+      ) : (
+        <path d="m6 9 6 6 6-6" />
+      )}
+    </svg>
+  );
 }
 
 function goalStatusTone(status: GoalPlanningStatus) {

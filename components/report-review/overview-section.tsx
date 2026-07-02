@@ -85,26 +85,23 @@ function SourceSummaryStrip({ sources }: { sources: ReviewDataSource[] }) {
   return (
     <div
       aria-label="Review data source summary"
-      className="mt-4 grid gap-2 md:grid-cols-3"
+      className="mt-4 flex flex-wrap gap-2"
     >
       {sources.map((source) => (
-        <div
-          className={reviewSubtlePanelClass("p-3")}
+        <span
+          className="inline-flex min-h-8 items-center gap-2 rounded-full border border-stone-200 bg-stone-50 px-2.5 text-sm font-medium text-earth-800"
           key={source.id}
+          title={source.freshnessLabel}
         >
-          <div className="flex items-start justify-between gap-3">
-            <h3 className="min-w-0 text-sm font-semibold text-seed-950">
-              {source.label}
-            </h3>
-            <StatusPill
-              label={dataSourceStatusLabels[source.status]}
-              tone={dataSourceStatusTone(source.status)}
-            />
-          </div>
-          <p className="mt-2 text-xs leading-5 text-earth-600">
+          <span>{source.label}</span>
+          <StatusPill
+            label={dataSourceStatusLabels[source.status]}
+            tone={dataSourceStatusTone(source.status)}
+          />
+          <span className="sr-only">
             {source.freshnessLabel}
-          </p>
-        </div>
+          </span>
+        </span>
       ))}
     </div>
   );
