@@ -4025,3 +4025,76 @@ function reportPayload(overrides = {}) {
     },
   };
 }
+
+const {
+  buildNetWorthChartGeometry,
+  summarizeNetWorthChange,
+} = require("../lib/report-review/net-worth-chart.ts");
+
+test("net worth chart geometry maps a trend into bounded, ordered points", () => {
+  const trend = [
+    { month: "2026-01", value: 45200 },
+    { month: "2026-02", value: 45800 },
+    { month: "2026-03", value: 46400 },
+    { month: "2026-04", value: 48200 },
+  ];
+  const layout = { width: 600, height: 190, paddingX: 14, paddingTop: 14, paddingBottom: 24 };
+  const geometry = buildNetWorthChartGeometry(trend, layout, 60000);
+
+  assert.equal(geometry.points.length, trend.length);
+  // x is evenly spaced across the inner width and strictly increasing.
+  assert.equal(geometry.points[0].x, 14);
+  assert.equal(geometry.points[geometry.points.length - 1].x, 586);
+  for (let i = 1; i < geometry.points.length; i += 1) {
+    assert.equal(geometry.points[i].x > geometry.points[i - 1].x, true);
+  }
+  // y stays inside the plot band.
+  for (const point of geometry.points) {
+    assert.equal(point.y >= 14 && point.y <= 190 - 24, true);
+  }
+  // higher net worth sits higher on screen (smaller y) than the earliest point.
+  assert.equal(geometry.points[3].y < geometry.points[0].y, true);
+  // endpoint is the last trend point; paths are well formed.
+  assert.deepEqual(
+    { x: geometry.endpoint.x, value: geometry.endpoint.value },
+    { x: 586, value: 48200 },
+  );
+  assert.equal(geometry.linePath.startsWith("M "), true);
+  assert.equal(geometry.areaPath.trim().endsWith("Z"), true);
+  // goal line is inside the plot band because the target is in the domain.
+  assert.equal(geometry.goalY >= 14 && geometry.goalY <= 190 - 24, true);
+});
+
+test("net worth chart geometry needs at least two points", () => {
+  const layout = { width: 600, height: 190 };
+  const single = buildNetWorthChartGeometry([{ month: "2026-01", value: 100 }], layout);
+  assert.deepEqual(single.points, []);
+  assert.equal(single.linePath, "");
+  assert.equal(single.areaPath, "");
+  assert.equal(single.endpoint, null);
+
+  const none = buildNetWorthChartGeometry([], layout, 500);
+  assert.equal(none.goalY, null);
+  assert.equal(none.endpoint, null);
+});
+
+test("net worth change summary reports factual direction and percent", () => {
+  const up = summarizeNetWorthChange([
+    { month: "2025-07", value: 41800 },
+    { month: "2026-06", value: 48200 },
+  ]);
+  assert.deepEqual(up, { first: 41800, last: 48200, delta: 6400, percent: 15, direction: "up" });
+
+  const down = summarizeNetWorthChange([
+    { month: "2026-01", value: 500 },
+    { month: "2026-02", value: 450 },
+  ]);
+  assert.equal(down.direction, "down");
+  assert.equal(down.delta, -50);
+
+  const flat = summarizeNetWorthChange([{ month: "2026-01", value: 900 }]);
+  assert.deepEqual(flat, { first: 900, last: 900, delta: 0, percent: 0, direction: "flat" });
+
+  const empty = summarizeNetWorthChange([]);
+  assert.deepEqual(empty, { first: null, last: null, delta: 0, percent: null, direction: "flat" });
+});

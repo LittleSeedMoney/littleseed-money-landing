@@ -2,6 +2,7 @@ import {
   chargeInspectorSampleReview,
   type ChargeInspectorReview,
 } from "@/lib/report-review/charge-inspector";
+import type { NetWorthTrendPoint } from "@/lib/report-review/net-worth-chart";
 
 export type Provenance =
   | "sample"
@@ -202,6 +203,15 @@ export type ReportReviewSample = {
     assets: SnapshotItem[];
     liabilities: SnapshotItem[];
     notes: PortfolioNote[];
+    /**
+     * Landing-owned sample net-worth history for the current-session chart.
+     * Optional and fixture-only: platform-generated reports do not carry it, so
+     * the chart simply does not render for them. Not persisted; not a platform
+     * contract field.
+     */
+    netWorthTrend?: NetWorthTrendPoint[];
+    /** Optional user-entered net-worth target for the goal line. */
+    netWorthTarget?: number;
   };
   decisionReadiness: DecisionReadiness;
   chargeInspector: ChargeInspectorReview;
@@ -868,6 +878,21 @@ export const reportReviewSample: ReportReviewSample = {
         body: "Emergency coverage uses cash-like balances only. Invested or restricted assets remain visible but are not treated as emergency cash.",
       },
     ],
+    netWorthTrend: [
+      { month: "2025-07", value: 39800 },
+      { month: "2025-08", value: 40600 },
+      { month: "2025-09", value: 40200 },
+      { month: "2025-10", value: 41500 },
+      { month: "2025-11", value: 42100 },
+      { month: "2025-12", value: 41900 },
+      { month: "2026-01", value: 43200 },
+      { month: "2026-02", value: 43800 },
+      { month: "2026-03", value: 44400 },
+      { month: "2026-04", value: 44900 },
+      { month: "2026-05", value: 45100 },
+      { month: "2026-06", value: 46000 },
+    ],
+    netWorthTarget: 60000,
   },
   decisionReadiness: {
     id: "emergency_fund_target_v0",
