@@ -33,13 +33,23 @@ function shortMonth(month: string) {
 export function NetWorthChart({
   trend,
   target = null,
+  selectedMonth = null,
+  selectableMonths = null,
+  onMonthSelect,
 }: {
   trend: NetWorthTrendPoint[];
   target?: number | null;
+  selectedMonth?: string | null;
+  /** Months that have monthly detail; only these get click targets. */
+  selectableMonths?: string[] | null;
+  onMonthSelect?: (month: string) => void;
 }) {
   const [rangeId, setRangeId] = useState<RangeId>("1y");
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const svgRef = useRef<SVGSVGElement | null>(null);
+  const selectable = typeof onMonthSelect === "function";
+  const selectableSet =
+    selectableMonths === null ? null : new Set(selectableMonths);
 
   const rangeTrend = useMemo(() => {
     const months = RANGES.find((range) => range.id === rangeId)?.months ?? null;
@@ -69,6 +79,20 @@ export function NetWorthChart({
 
   const active =
     hoverIndex === null ? null : geometry.points[hoverIndex] ?? null;
+  const selected =
+    selectedMonth === null
+      ? null
+      : geometry.points.find((point) => point.month === selectedMonth) ?? null;
+
+  // Horizontal band boundaries so each month has a full-height click target.
+  function bandFor(index: number) {
+    const point = geometry.points[index];
+    const previous = geometry.points[index - 1];
+    const next = geometry.points[index + 1];
+    const left = previous ? (previous.x + point.x) / 2 : 0;
+    const right = next ? (point.x + next.x) / 2 : VIEW_W;
+    return { left, width: Math.max(0, right - left) };
+  }
 
   function handlePointerMove(event: PointerEvent<SVGSVGElement>) {
     const svg = svgRef.current;
@@ -206,6 +230,45 @@ export function NetWorthChart({
             />
           ) : null}
 
+          {selectable && selectableSet !== null
+            ? geometry.points.map((point) =>
+                selectableSet.has(point.month) &&
+                point.month !== selectedMonth &&
+                point.month !== geometry.endpoint?.month ? (
+                  <circle
+                    cx={point.x}
+                    cy={point.y}
+                    fill="#67894A"
+                    key={`dot-${point.month}`}
+                    r="3.5"
+                    stroke="#fff"
+                    strokeWidth="1.5"
+                  />
+                ) : null,
+              )
+            : null}
+
+          {selected ? (
+            <>
+              <line
+                stroke="#C48A39"
+                strokeWidth="1.5"
+                x1={selected.x}
+                x2={selected.x}
+                y1="6"
+                y2={VIEW_H - 24}
+              />
+              <circle
+                cx={selected.x}
+                cy={selected.y}
+                fill="#C48A39"
+                r="6"
+                stroke="#fff"
+                strokeWidth="2.5"
+              />
+            </>
+          ) : null}
+
           <circle
             cx={geometry.endpoint?.x}
             cy={geometry.endpoint?.y}
@@ -240,6 +303,40 @@ export function NetWorthChart({
               </text>
             ) : null,
           )}
+
+          {selectable
+            ? geometry.points.map((point, index) => {
+                if (selectableSet !== null && !selectableSet.has(point.month)) {
+                  return null;
+                }
+                const band = bandFor(index);
+                const isSelected = point.month === selectedMonth;
+                return (
+                  <rect
+                    aria-label={`Select ${shortMonth(point.month)}`}
+                    aria-pressed={isSelected}
+                    className="cursor-pointer outline-none [&:focus-visible]:fill-[rgba(103,137,74,0.12)]"
+                    data-month={point.month}
+                    data-testid="net-worth-chart-month"
+                    fill="transparent"
+                    height={VIEW_H}
+                    key={`hit-${point.month}`}
+                    onClick={() => onMonthSelect?.(point.month)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        onMonthSelect?.(point.month);
+                      }
+                    }}
+                    role="button"
+                    tabIndex={0}
+                    width={band.width}
+                    x={band.left}
+                    y={0}
+                  />
+                );
+              })
+            : null}
         </svg>
 
         {active ? (

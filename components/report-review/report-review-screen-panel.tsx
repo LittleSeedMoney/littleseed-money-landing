@@ -28,6 +28,7 @@ import { OverviewSection } from "./overview-section";
 import { ReportSections } from "./report-sections";
 import { SnapshotScreen } from "./snapshot-screen";
 import { ReviewDisclosure } from "./shared";
+import { SnapshotViewProvider } from "./snapshot-view-context";
 
 export function ReportReviewScreenPanel({
   activeScreen,
@@ -128,8 +129,9 @@ export function ReportReviewScreenPanel({
   // Money screen: net-worth hero up top, then the editable snapshot, then the
   // report/findings and Charge Inspector detail surfaces consolidated into
   // disclosures so the validation content stays reachable without owning a tab.
+  // The provider lets the hero chart drive the snapshot's month + Monthly tab.
   return (
-    <>
+    <SnapshotViewProvider>
       <MoneyHero portfolio={report.assetPortfolio} />
       <SnapshotScreen
         errorMessage={errorMessage}
@@ -194,7 +196,7 @@ export function ReportReviewScreenPanel({
           </ReviewDisclosure>
         </>
       ) : null}
-    </>
+    </SnapshotViewProvider>
   );
 }
 

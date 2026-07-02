@@ -330,16 +330,17 @@ test.describe("private report review smoke", () => {
   }) => {
     await page.goto(`${reportReviewPath}#snapshot`);
 
-    await expect(page.getByTestId("snapshot-monthly-trend")).toBeVisible();
+    // The net-worth hero chart replaced the old monthly mixed chart as the
+    // month selector; only months with monthly transaction detail are
+    // clickable, and the asset-type breakdown stays as plain cards.
+    await expect(page.getByTestId("snapshot-asset-breakdown")).toBeVisible();
     await expect(page.getByTestId("snapshot-monthly-mixed-chart"))
-      .toBeVisible();
-    const aprilChartMonth = page.locator(
-      '[data-testid="snapshot-monthly-chart-month"][data-month="2026-04"]',
-    );
-    await aprilChartMonth.hover();
-    await expect(page.getByTestId("snapshot-monthly-chart-hover-label"))
-      .toContainText("2026-04");
-    await aprilChartMonth.click();
+      .toHaveCount(0);
+    await expect(page.getByTestId("net-worth-chart-month")).toHaveCount(3);
+
+    await page.locator(
+      '[data-testid="net-worth-chart-month"][data-month="2026-04"]',
+    ).click();
 
     const monthlyTab = page.getByTestId("snapshot-monthly-tab");
     await expect(monthlyTab).toBeVisible();
@@ -349,7 +350,7 @@ test.describe("private report review smoke", () => {
     ).toBeVisible();
 
     await page.locator(
-      '[data-testid="snapshot-monthly-chart-month"][data-month="2026-05"]',
+      '[data-testid="net-worth-chart-month"][data-month="2026-05"]',
     ).click();
     await expect(monthlyTab).toContainText("Income 2026-05");
     await expect(monthlyTab).toContainText("Expenses 2026-05");

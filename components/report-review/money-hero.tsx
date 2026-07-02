@@ -7,6 +7,7 @@ import {
 } from "@/lib/report-review/net-worth-chart";
 
 import { NetWorthChart } from "./net-worth-chart";
+import { useSnapshotView } from "./snapshot-view-context";
 
 /**
  * Money screen hero. Presentation-only and current-session only.
@@ -22,6 +23,7 @@ export function MoneyHero({
 }: {
   portfolio: ReportReviewSample["assetPortfolio"];
 }) {
+  const snapshotView = useSnapshotView();
   const trend: NetWorthTrendPoint[] = portfolio.netWorthTrend ?? [];
   const hasChart = trend.length > 1;
 
@@ -33,7 +35,15 @@ export function MoneyHero({
   return (
     <div className="space-y-4" data-testid="money-hero">
       {hasChart ? (
-        <NetWorthChart target={portfolio.netWorthTarget ?? null} trend={trend} />
+        <NetWorthChart
+          onMonthSelect={snapshotView?.selectMonth}
+          selectableMonths={
+            snapshotView ? (snapshotView.availableMonths ?? []) : null
+          }
+          selectedMonth={snapshotView?.selectedMonth ?? null}
+          target={portfolio.netWorthTarget ?? null}
+          trend={trend}
+        />
       ) : null}
 
       {composition ? (
