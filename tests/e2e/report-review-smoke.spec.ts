@@ -179,10 +179,14 @@ test.describe("private report review smoke", () => {
     const profileCard = page.locator(
       'form[aria-labelledby="profile-values-heading"]',
     );
+    const householdInfo = page.getByTestId("snapshot-household-info");
 
+    await expect(householdInfo).toBeVisible();
+    await expect(profileCard).toBeHidden();
+    await householdInfo.locator("summary").click();
     await expect(profileCard).toBeVisible();
     await expect(
-      profileCard.getByRole("button", { name: "Save profile" }),
+      profileCard.getByRole("button", { name: "Save info" }),
     ).toHaveCount(0);
     await expect(profileCard.locator("input, select")).toHaveCount(0);
     await expect(page.getByText("Scenario presets")).toHaveCount(0);
@@ -197,7 +201,7 @@ test.describe("private report review smoke", () => {
       .getByRole("button", { name: "Edit Monthly take-home income" })
       .click();
 
-    await expect(profileCard.getByRole("button", { name: "Save profile" }))
+    await expect(profileCard.getByRole("button", { name: "Save info" }))
       .toBeVisible();
     await expect(profileCard.locator("input, select")).toHaveCount(1);
     const takeHomeIncomeInput = profileCard.getByRole("spinbutton", {
@@ -212,10 +216,10 @@ test.describe("private report review smoke", () => {
     await expect(profileCard.getByText("Dependents")).toHaveCount(0);
 
     await takeHomeIncomeInput.fill("5300");
-    await profileCard.getByRole("button", { name: "Save profile" }).click();
+    await profileCard.getByRole("button", { name: "Save info" }).click();
 
     await expect(
-      profileCard.getByRole("button", { name: "Save profile" }),
+      profileCard.getByRole("button", { name: "Save info" }),
     ).toHaveCount(0);
     await expect(profileCard.locator("input, select")).toHaveCount(0);
     await expect(profileCard.getByText("$5,300")).toBeVisible();

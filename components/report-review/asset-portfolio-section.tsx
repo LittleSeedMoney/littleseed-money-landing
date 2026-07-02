@@ -759,17 +759,6 @@ function SnapshotOverviewTab({
         </div>
 
         <div className="mt-4 space-y-4">
-          <ProfileSnapshotCard
-            activeField={activeField}
-            errorMessage={errorMessage}
-            onCancelEdit={onCancelEdit}
-            onFieldEdit={onFieldEdit}
-            onSubmit={onProfileSubmit}
-            onUpdate={onProfileUpdate}
-            requestState={requestState}
-            values={values}
-          />
-
           <SnapshotGoalPreview summary={topGoalSummary} />
 
           <PortfolioSnapshotList
@@ -877,6 +866,75 @@ function SnapshotOverviewTab({
           <PortfolioNoteCard key={note.id} note={note} />
         ))}
       </div>
+
+      <HouseholdInfoDisclosure
+        activeField={activeField}
+        errorMessage={errorMessage}
+        onCancelEdit={onCancelEdit}
+        onFieldEdit={onFieldEdit}
+        onSubmit={onProfileSubmit}
+        onUpdate={onProfileUpdate}
+        requestState={requestState}
+        values={values}
+      />
+    </div>
+  );
+}
+
+function HouseholdInfoDisclosure({
+  activeField,
+  errorMessage,
+  onCancelEdit,
+  onFieldEdit,
+  onSubmit,
+  onUpdate,
+  requestState,
+  values,
+}: {
+  activeField: ManualProfileScalarField | null;
+  errorMessage: string;
+  onCancelEdit: () => void;
+  onFieldEdit: (field: ManualProfileScalarField) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onUpdate: (
+    field: ManualProfileScalarField,
+    event: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => void;
+  requestState: "error" | "idle" | "submitting";
+  values: ManualProfileValues;
+}) {
+  return (
+    <div data-testid="snapshot-household-info">
+      <ReviewDisclosure
+        summary={
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="text-sm font-semibold text-seed-950">
+                Household info
+              </h3>
+              <p className="sr-only">
+                Age, income, expenses, job stability, and target context used
+                for this checkup.
+              </p>
+            </div>
+            <StatusPill label="Edit inputs" tone="stone" />
+          </div>
+        }
+        variant="panel"
+      >
+        <div className="border-t border-stone-200 p-3">
+          <ProfileSnapshotCard
+            activeField={activeField}
+            errorMessage={errorMessage}
+            onCancelEdit={onCancelEdit}
+            onFieldEdit={onFieldEdit}
+            onSubmit={onSubmit}
+            onUpdate={onUpdate}
+            requestState={requestState}
+            values={values}
+          />
+        </div>
+      </ReviewDisclosure>
     </div>
   );
 }
@@ -1657,7 +1715,7 @@ function ProfileSnapshotCard({
   return (
     <form
       aria-labelledby="profile-values-heading"
-      className={reviewSubtlePanelClass("min-w-0 p-3")}
+      className="min-w-0"
       onSubmit={onSubmit}
     >
       <GroupHeader
@@ -1676,15 +1734,15 @@ function ProfileSnapshotCard({
                 disabled={isSubmitting}
                 type="submit"
               >
-                {isSubmitting ? "Saving profile" : "Save profile"}
+                {isSubmitting ? "Saving info" : "Save info"}
               </button>
             </>
           ) : null
         }
-        description="Age, income, expenses, job stability, and target context."
+        description="Values used to calculate this checkup."
         headingId="profile-values-heading"
-        statusLabel={isEditing ? "Editing" : "Profile"}
-        title="Profile values"
+        statusLabel={isEditing ? "Editing" : "Inputs"}
+        title="Household inputs"
       />
       <dl className="mt-3 grid gap-x-6 gap-y-4 rounded-md border border-stone-200 bg-white p-3 sm:grid-cols-2 xl:grid-cols-4">
         {profileSummaryItems(values).map((item) => (
