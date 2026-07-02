@@ -57,7 +57,7 @@ export function ReportReviewWorkspace({
   const [requestState, setRequestState] = useState<ManualRequestState>("idle");
   const [errorMessage, setErrorMessage] = useState("");
   const [activeScreen, setActiveScreen] =
-    useState<ReportReviewScreenId>("report");
+    useState<ReportReviewScreenId>("money");
 
   const generatedAt = useMemo(
     () =>

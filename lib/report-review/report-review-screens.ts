@@ -1,9 +1,4 @@
-export type ReportReviewScreenId =
-  | "snapshot"
-  | "goals"
-  | "report"
-  | "charge-inspector"
-  | "education";
+export type ReportReviewScreenId = "money" | "goals" | "learn";
 
 export type ReportReviewScreen = {
   id: ReportReviewScreenId;
@@ -13,15 +8,24 @@ export type ReportReviewScreen = {
 
 export const reportReviewScreens: ReportReviewScreen[] = [
   {
-    id: "snapshot",
-    label: "Snapshot",
+    id: "money",
+    label: "Money",
     legacyAnchors: [
+      // former Snapshot surface
+      "snapshot",
       "data-sources",
       "inputs",
       "manual-input",
       "portfolio",
       "snapshot-completeness",
       "validation-checklist",
+      // former Report surface (now a Money detail disclosure)
+      "report",
+      "overview",
+      "sections",
+      "findings",
+      // former Charge Inspector surface (now a Money detail disclosure)
+      "charge-inspector",
     ],
   },
   {
@@ -30,18 +34,9 @@ export const reportReviewScreens: ReportReviewScreen[] = [
     legacyAnchors: ["saving-goal-draft"],
   },
   {
-    id: "report",
-    label: "Report",
-    legacyAnchors: ["overview", "sections", "findings"],
-  },
-  {
-    id: "charge-inspector",
-    label: "Charge Inspector",
-    legacyAnchors: ["charge-inspector"],
-  },
-  {
-    id: "education",
-    label: "Education",
+    id: "learn",
+    label: "Learn",
+    // former Education + Evidence surfaces, merged
     legacyAnchors: ["education", "evidence"],
   },
 ];
@@ -51,7 +46,7 @@ export function reportReviewScreenFromHash(hash: string): ReportReviewScreenId {
   const screen = reportReviewScreens.find(
     (item) => item.id === id || item.legacyAnchors.includes(id),
   );
-  return screen?.id ?? "report";
+  return screen?.id ?? "money";
 }
 
 export function reportReviewScreenFromKeyboard(

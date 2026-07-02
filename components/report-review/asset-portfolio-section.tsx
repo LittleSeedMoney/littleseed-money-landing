@@ -57,7 +57,6 @@ import {
   reviewSubtlePanelClass,
   StatusPill,
 } from "./shared";
-import { NetWorthChart } from "./net-worth-chart";
 import {
   PortfolioSnapshotAssetEditForm,
   PortfolioSnapshotDebtEditForm,
@@ -753,14 +752,6 @@ function SnapshotOverviewTab({
         <h3 className="text-sm font-semibold text-seed-950">
           Current snapshot
         </h3>
-        {portfolio.netWorthTrend && portfolio.netWorthTrend.length > 1 ? (
-          <div className="mt-3">
-            <NetWorthChart
-              target={portfolio.netWorthTarget ?? null}
-              trend={portfolio.netWorthTrend}
-            />
-          </div>
-        ) : null}
         <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {portfolio.totals.map((metric) => (
             <PortfolioMetricCard key={metric.id} metric={metric} />

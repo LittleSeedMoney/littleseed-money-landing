@@ -2446,41 +2446,44 @@ test("charge inspector copy stays inside review-only boundaries", () => {
 test("report review screen hash mapping preserves legacy section links", () => {
   assert.deepEqual(
     reportReviewScreens.map((screen) => screen.id),
-    ["snapshot", "goals", "report", "charge-inspector", "education"],
+    ["money", "goals", "learn"],
   );
-  assert.equal(reportReviewScreenFromHash("#snapshot"), "snapshot");
+  // 3-tab IA: former Snapshot/Report/Charge Inspector all resolve to Money.
+  assert.equal(reportReviewScreenFromHash("#money"), "money");
+  assert.equal(reportReviewScreenFromHash("#snapshot"), "money");
   assert.equal(reportReviewScreenFromHash("#goals"), "goals");
-  assert.equal(reportReviewScreenFromHash("#inputs"), "snapshot");
-  assert.equal(reportReviewScreenFromHash("#manual-input"), "snapshot");
-  assert.equal(reportReviewScreenFromHash("#findings"), "report");
-  assert.equal(reportReviewScreenFromHash("#portfolio"), "snapshot");
+  assert.equal(reportReviewScreenFromHash("#inputs"), "money");
+  assert.equal(reportReviewScreenFromHash("#manual-input"), "money");
+  assert.equal(reportReviewScreenFromHash("#findings"), "money");
+  assert.equal(reportReviewScreenFromHash("#portfolio"), "money");
+  assert.equal(reportReviewScreenFromHash("#report"), "money");
   assert.equal(reportReviewScreenFromHash("#saving-goal-draft"), "goals");
-  assert.equal(reportReviewScreenFromHash("#charge-inspector"), "charge-inspector");
-  assert.equal(reportReviewScreenFromHash("#evidence"), "education");
-  assert.equal(reportReviewScreenFromHash("#unknown"), "report");
+  assert.equal(reportReviewScreenFromHash("#charge-inspector"), "money");
+  // former Education + Evidence merge into Learn.
+  assert.equal(reportReviewScreenFromHash("#education"), "learn");
+  assert.equal(reportReviewScreenFromHash("#evidence"), "learn");
+  assert.equal(reportReviewScreenFromHash("#unknown"), "money");
 });
 
 test("report review keyboard navigation follows the tab order", () => {
   assert.equal(
-    reportReviewScreenFromKeyboard("report", "ArrowRight"),
-    "charge-inspector",
+    reportReviewScreenFromKeyboard("money", "ArrowRight"),
+    "goals",
   );
-  assert.equal(reportReviewScreenFromKeyboard("report", "ArrowLeft"), "goals");
-  assert.equal(reportReviewScreenFromKeyboard("goals", "ArrowLeft"), "snapshot");
+  assert.equal(reportReviewScreenFromKeyboard("money", "ArrowLeft"), "learn");
+  assert.equal(reportReviewScreenFromKeyboard("goals", "ArrowLeft"), "money");
+  assert.equal(reportReviewScreenFromKeyboard("goals", "ArrowRight"), "learn");
   assert.equal(
-    reportReviewScreenFromKeyboard("education", "ArrowRight"),
-    "snapshot",
+    reportReviewScreenFromKeyboard("learn", "ArrowRight"),
+    "money",
   );
   assert.equal(
-    reportReviewScreenFromKeyboard("snapshot", "ArrowLeft"),
-    "education",
+    reportReviewScreenFromKeyboard("money", "ArrowLeft"),
+    "learn",
   );
-  assert.equal(reportReviewScreenFromKeyboard("charge-inspector", "Home"), "snapshot");
-  assert.equal(
-    reportReviewScreenFromKeyboard("charge-inspector", "End"),
-    "education",
-  );
-  assert.equal(reportReviewScreenFromKeyboard("charge-inspector", "Tab"), null);
+  assert.equal(reportReviewScreenFromKeyboard("learn", "Home"), "money");
+  assert.equal(reportReviewScreenFromKeyboard("money", "End"), "learn");
+  assert.equal(reportReviewScreenFromKeyboard("goals", "Tab"), null);
 });
 
 test("report review sample exposes charge inspector review data", () => {

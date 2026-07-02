@@ -9,7 +9,7 @@ import {
 } from "@/lib/report-review/report-review-screens";
 
 export function ReportReviewNav({
-  activeScreen = "report",
+  activeScreen = "money",
   onScreenSelect,
 }: {
   activeScreen?: ReportReviewScreenId;
