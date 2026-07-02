@@ -60,14 +60,15 @@ export function GoalPlanningScreen({
         description="Edit goals and set your own priority order."
       />
 
-      <div className={reviewPanelClass("space-y-5 p-4 sm:p-5")}>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div className={reviewPanelClass("space-y-4 p-4 sm:p-5")}>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
-            <h3 className="text-sm font-semibold text-seed-950">
-              Goal order
+            <h3 className="font-serif text-base font-bold text-seed-950">
+              Your goals
             </h3>
-            <p className="sr-only">
-              Move rows to set priority. Values stay in this session.
+            <p className="mt-0.5 text-xs text-earth-600">
+              Use the arrows to set your own order. The order is your choice —
+              nothing here ranks or recommends.
             </p>
           </div>
           <button
@@ -79,7 +80,7 @@ export function GoalPlanningScreen({
           </button>
         </div>
 
-        <div className="space-y-4">
+        <div className="divide-y divide-stone-100">
           {summaries.map((summary, index) => (
             <GoalPlanningRowEditor
               canMoveDown={index < summaries.length - 1}
@@ -157,19 +158,29 @@ function GoalPlanningRowEditor({
     onGoalUpdate(summary.id, field, event.target.value as GoalPlanningRow[T]);
   }
 
+  const progress =
+    summary.progressPercent === null
+      ? null
+      : Math.max(0, Math.min(100, summary.progressPercent));
+
   return (
     <article
-      className="rounded-lg border border-stone-200 bg-stone-50/80 p-3 shadow-sm"
+      className="py-4 first:pt-1 last:pb-1"
       data-goal-id={summary.id}
       data-testid="goal-planning-row"
     >
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-        <div className="min-w-0">
+      <div className="flex items-start gap-3.5">
+        <span
+          aria-hidden="true"
+          className="mt-0.5 flex h-7 w-7 flex-none items-center justify-center rounded-full border border-seed-100 bg-seed-50 text-xs font-extrabold text-seed-700"
+        >
+          {summary.priority}
+        </span>
+        <span className="sr-only">Priority {summary.priority}</span>
+
+        <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-md border border-seed-200 bg-white px-2 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-seed-800">
-              Priority {summary.priority}
-            </span>
-            <h3 className="text-base font-semibold text-seed-950">
+            <h3 className="text-[15px] font-bold text-seed-950">
               {summary.name}
             </h3>
             <StatusPill
@@ -177,12 +188,34 @@ function GoalPlanningRowEditor({
               tone={goalStatusTone(summary.status)}
             />
           </div>
-          <p className="sr-only">
-            As of {asOfMonth}.
+          <p className="mt-0.5 text-xs text-earth-600">
+            {goalSubline(summary)}
           </p>
+          {progress !== null ? (
+            <div
+              aria-hidden="true"
+              className="mt-2 h-[7px] overflow-hidden rounded-full bg-stone-100"
+            >
+              <span
+                className={`block h-full rounded-full ${
+                  goalStatusTone(summary.status) === "earth"
+                    ? "bg-earth-500"
+                    : "bg-seed-500"
+                }`}
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          ) : null}
+          <p className="sr-only">As of {asOfMonth}.</p>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        {progress !== null ? (
+          <span className="mt-0.5 flex-none font-serif text-lg font-bold tabular-nums text-seed-950">
+            {formatGoalPlanningPercent(summary.progressPercent)}
+          </span>
+        ) : null}
+
+        <div className="flex flex-none flex-col gap-1 sm:flex-row">
           <button
             aria-label="Move up"
             className={goalActionClass(canMoveUp)}
@@ -216,7 +249,61 @@ function GoalPlanningRowEditor({
         </div>
       </div>
 
-      <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+      {summary.validationMessages.length > 0 ? (
+        <div
+          className="ml-[42px] mt-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950"
+          role="alert"
+        >
+          {summary.validationMessages.join(" ")}
+        </div>
+      ) : null}
+
+      <ReviewDisclosure className="ml-[42px] mt-3 p-3" summary="Edit details">
+        <GoalPlanningRowFields
+          summary={summary}
+          updateField={updateField}
+        />
+      </ReviewDisclosure>
+    </article>
+  );
+}
+
+function goalSubline(summary: GoalPlanningSummary) {
+  const parts: string[] = [];
+  if (summary.currentSavedValue !== null && summary.targetAmountValue !== null) {
+    parts.push(
+      `${formatGoalPlanningMoney(summary.currentSavedValue)} of ${formatGoalPlanningMoney(summary.targetAmountValue)}`,
+    );
+  }
+  if (summary.remainingAmount !== null) {
+    parts.push(`${formatGoalPlanningMoney(summary.remainingAmount)} to go`);
+  }
+  if (summary.monthlyContributionValue !== null) {
+    parts.push(
+      `${formatGoalPlanningMoney(summary.monthlyContributionValue)}/mo`,
+    );
+  }
+  if (summary.monthsAtCurrentContribution !== null) {
+    parts.push(
+      `~${formatGoalPlanningMonthCount(summary.monthsAtCurrentContribution)}`,
+    );
+  }
+  return parts.join(" · ");
+}
+
+function GoalPlanningRowFields({
+  summary,
+  updateField,
+}: {
+  summary: GoalPlanningSummary;
+  updateField: <T extends keyof GoalPlanningRow>(
+    field: T,
+    event: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => void;
+}) {
+  return (
+    <>
+      <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-6">
         <GoalTextField
           label="Goal name"
           onChange={(event) => updateField("name", event)}
@@ -251,15 +338,6 @@ function GoalPlanningRowEditor({
         />
       </div>
 
-      {summary.validationMessages.length > 0 ? (
-        <div
-          className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950"
-          role="alert"
-        >
-          {summary.validationMessages.join(" ")}
-        </div>
-      ) : null}
-
       <dl className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <GoalMetric
           detail="Target amount minus current saved."
@@ -290,7 +368,7 @@ function GoalPlanningRowEditor({
           }
         />
       </dl>
-    </article>
+    </>
   );
 }
 

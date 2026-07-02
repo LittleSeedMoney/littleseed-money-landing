@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReportReviewSample } from "@/data/report-review-sample";
+import type { GoalPlanningSummary } from "@/lib/report-review/goal-planning";
 import {
   formatNetWorthMoney,
   type NetWorthTrendPoint,
@@ -12,18 +13,22 @@ import { useSnapshotView } from "./snapshot-view-context";
 /**
  * Money screen hero. Presentation-only and current-session only.
  *
- * Promotes the net-worth trend chart to the top of the default screen and adds
- * a factual "what you own / what you owe" composition bar derived from the
- * already-computed portfolio totals. Nothing here is advice: every figure is a
- * reported/calculated value that also appears — with provenance and
- * disclosures — in the snapshot totals below.
+ * Net-worth chart, a factual "what you own / what you owe" composition bar,
+ * and at-a-glance tiles. Every figure and status word is a deterministic
+ * restatement of a value that already appears — with provenance and
+ * disclosures — elsewhere on this surface. Status words are descriptive
+ * ("Below target range"), never directive; missing values hide a tile rather
+ * than being treated as zero.
  */
 export function MoneyHero({
-  portfolio,
+  report,
+  topGoalSummary,
 }: {
-  portfolio: ReportReviewSample["assetPortfolio"];
+  report: ReportReviewSample;
+  topGoalSummary: GoalPlanningSummary | null;
 }) {
   const snapshotView = useSnapshotView();
+  const portfolio = report.assetPortfolio;
   const trend: NetWorthTrendPoint[] = portfolio.netWorthTrend ?? [];
   const hasChart = trend.length > 1;
 
@@ -31,6 +36,12 @@ export function MoneyHero({
   const owe = totalFor(portfolio, "total_liabilities");
   const composition =
     own !== null && owe !== null ? { own, owe, net: own - owe } : null;
+
+  const tiles = [
+    emergencyFundTile(report.decisionReadiness),
+    spendingTile(report.chargeInspector),
+    topGoalTile(topGoalSummary),
+  ].filter((tile): tile is HeroTile => tile !== null);
 
   return (
     <div className="space-y-4" data-testid="money-hero">
@@ -67,14 +78,225 @@ export function MoneyHero({
             </div>
           )}
           <CompositionBar own={composition.own} owe={composition.owe} />
-          <p className="mt-4 text-[11px] text-earth-400">
-            Balances are this session&rsquo;s sample values — nothing here is
-            saved.
-          </p>
         </section>
       ) : null}
+
+      {tiles.length > 0 ? (
+        <div
+          className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
+          data-testid="money-hero-tiles"
+        >
+          {tiles.map((tile) => (
+            <HeroTileCard key={tile.id} tile={tile} />
+          ))}
+        </div>
+      ) : null}
+
+      <p className="text-[11px] text-earth-400">
+        Nothing here is saved. This stays in your browser for this session.
+      </p>
     </div>
   );
+}
+
+type HeroTile = {
+  id: string;
+  label: string;
+  value: string;
+  valueUnit?: string;
+  chip: { label: string; tone: "seed" | "earth" | "stone" };
+  band?: {
+    /** 0..1 position of the marker along the band. */
+    position: number;
+    leftLabel: string;
+    rightLabel: string;
+  };
+  detail: string;
+};
+
+function HeroTileCard({ tile }: { tile: HeroTile }) {
+  return (
+    <section
+      aria-label={tile.label}
+      className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm"
+      data-testid={`money-hero-tile-${tile.id}`}
+      title={tile.detail}
+    >
+      <p className="text-xs font-semibold text-earth-600">{tile.label}</p>
+      <p className="mt-1.5 font-serif text-[26px] font-bold leading-none tabular-nums text-seed-950">
+        {tile.value}
+        {tile.valueUnit ? (
+          <span className="ml-1.5 font-sans text-xs font-semibold text-earth-500">
+            {tile.valueUnit}
+          </span>
+        ) : null}
+      </p>
+      <p className="mt-2.5">
+        <span className={tileChipClass(tile.chip.tone)}>
+          <span
+            aria-hidden="true"
+            className="inline-block h-1.5 w-1.5 rounded-full bg-current"
+          />
+          {tile.chip.label}
+        </span>
+      </p>
+      {tile.band ? (
+        <div className="mt-3">
+          <div className="relative h-1.5 rounded-full bg-gradient-to-r from-earth-200 via-seed-100 to-seed-300">
+            <span
+              aria-hidden="true"
+              className="absolute top-1/2 h-3.5 w-0.5 -translate-y-1/2 rounded-full bg-seed-950"
+              style={{
+                left: `${Math.round(clamp01(tile.band.position) * 100)}%`,
+              }}
+            />
+          </div>
+          <div className="mt-1 flex justify-between text-[10px] font-medium text-earth-400">
+            <span>{tile.band.leftLabel}</span>
+            <span>{tile.band.rightLabel}</span>
+          </div>
+        </div>
+      ) : null}
+      <p className="sr-only">{tile.detail}</p>
+    </section>
+  );
+}
+
+function tileChipClass(tone: "seed" | "earth" | "stone") {
+  const base =
+    "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-bold";
+  if (tone === "seed") {
+    return `${base} bg-seed-100 text-seed-800`;
+  }
+  if (tone === "earth") {
+    return `${base} bg-earth-100 text-earth-800`;
+  }
+  return `${base} bg-stone-100 text-earth-700`;
+}
+
+/**
+ * Emergency-fund coverage tile from the existing Emergency Fund Target v0
+ * decision-readiness metrics. Status words describe position against the
+ * source-backed 3–6 month educational range; they do not tell the user what
+ * to do.
+ */
+function emergencyFundTile(
+  decisionReadiness: ReportReviewSample["decisionReadiness"],
+): HeroTile | null {
+  const coverage = decisionReadiness.resultMetrics.find(
+    (metric) => metric.id === "current_months_covered",
+  );
+  const range = decisionReadiness.resultMetrics.find(
+    (metric) => metric.id === "target_months_range",
+  );
+  const months = coverage ? parseLeadingNumber(coverage.value) : null;
+  const bounds = range ? parseMonthRange(range.value) : null;
+  if (months === null || bounds === null) {
+    return null;
+  }
+
+  const [low, high] = bounds;
+  const chip =
+    months < low
+      ? { label: "Below target range", tone: "earth" as const }
+      : months <= high
+        ? { label: "In target range", tone: "seed" as const }
+        : { label: "Above target range", tone: "seed" as const };
+
+  return {
+    id: "emergency-fund",
+    label: "Emergency fund",
+    value: months.toLocaleString("en-US", { maximumFractionDigits: 1 }),
+    valueUnit: "months",
+    chip,
+    band: {
+      position: months / high,
+      leftLabel: "0",
+      rightLabel: `${high} mo`,
+    },
+    detail: `${coverage?.detail ?? ""} Target range: ${range?.value ?? ""} (${range?.detail ?? ""})`.trim(),
+  };
+}
+
+/**
+ * Latest-month spending tile from the Charge Inspector monthly category
+ * totals; the chip states the factual change against the previous month.
+ */
+function spendingTile(
+  chargeInspector: ReportReviewSample["chargeInspector"],
+): HeroTile | null {
+  const totalsByMonth = new Map<string, number>();
+  for (const row of chargeInspector.categoryMonthlySummary) {
+    totalsByMonth.set(
+      row.month,
+      (totalsByMonth.get(row.month) ?? 0) + row.debitTotalCents,
+    );
+  }
+  const months = [...totalsByMonth.keys()].sort();
+  const latest = months[months.length - 1];
+  if (!latest) {
+    return null;
+  }
+  const latestCents = totalsByMonth.get(latest) ?? 0;
+  const previous = months[months.length - 2];
+  const previousCents = previous ? (totalsByMonth.get(previous) ?? null) : null;
+
+  let chip: HeroTile["chip"];
+  if (previousCents === null) {
+    chip = { label: `In ${latest}`, tone: "stone" };
+  } else {
+    const deltaCents = latestCents - previousCents;
+    chip =
+      deltaCents > 0
+        ? { label: `Up ${moneyFromCents(deltaCents)} vs ${previous}`, tone: "earth" }
+        : deltaCents < 0
+          ? {
+              label: `Down ${moneyFromCents(-deltaCents)} vs ${previous}`,
+              tone: "seed",
+            }
+          : { label: `Same as ${previous}`, tone: "stone" };
+  }
+
+  return {
+    id: "spending",
+    label: `Spending ${latest}`,
+    value: moneyFromCents(latestCents),
+    chip,
+    detail:
+      "Total categorized debits for the latest reviewed month, from the current Charge Inspector response. Comparison is against the previous reviewed month.",
+  };
+}
+
+/**
+ * Top-priority goal tile from the user's own goal order; the status word is
+ * the goal workspace's deterministic status label.
+ */
+function topGoalTile(summary: GoalPlanningSummary | null): HeroTile | null {
+  if (!summary || summary.progressPercent === null) {
+    return null;
+  }
+
+  return {
+    id: "top-goal",
+    label: `Goal #1 · ${summary.name}`,
+    value: `${Math.round(summary.progressPercent)}%`,
+    chip: {
+      label: summary.statusLabel,
+      tone:
+        summary.status === "reached" || summary.status === "on_track_for_month"
+          ? "seed"
+          : summary.status === "needs_more_monthly_input"
+            ? "earth"
+            : "stone",
+    },
+    band: {
+      position: summary.progressPercent / 100,
+      leftLabel: "0%",
+      rightLabel: "100%",
+    },
+    detail:
+      "Progress on your first-priority goal: current saved divided by target amount, from the values you entered. Priority order is your choice.",
+  };
 }
 
 function CompositionBar({ own, owe }: { own: number; owe: number }) {
@@ -143,4 +365,39 @@ function totalFor(
   }
   const parsed = Number(cleaned);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function parseLeadingNumber(value: string): number | null {
+  const match = value.match(/^(\d+(?:\.\d+)?)/);
+  if (!match) {
+    return null;
+  }
+  const parsed = Number(match[1]);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+/** Parse "3 to 6 months" into [3, 6]. */
+function parseMonthRange(value: string): [number, number] | null {
+  const match = value.match(/(\d+(?:\.\d+)?)\s*to\s*(\d+(?:\.\d+)?)/);
+  if (!match) {
+    return null;
+  }
+  const low = Number(match[1]);
+  const high = Number(match[2]);
+  if (!Number.isFinite(low) || !Number.isFinite(high) || high <= 0) {
+    return null;
+  }
+  return [low, high];
+}
+
+function moneyFromCents(cents: number): string {
+  return new Intl.NumberFormat("en-US", {
+    currency: "USD",
+    maximumFractionDigits: 0,
+    style: "currency",
+  }).format(Math.round(cents / 100));
+}
+
+function clamp01(value: number) {
+  return Math.max(0, Math.min(1, value));
 }

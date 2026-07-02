@@ -132,7 +132,7 @@ export function ReportReviewScreenPanel({
   // The provider lets the hero chart drive the snapshot's month + Monthly tab.
   return (
     <SnapshotViewProvider>
-      <MoneyHero portfolio={report.assetPortfolio} />
+      <MoneyHero report={report} topGoalSummary={topGoalSummary} />
       <SnapshotScreen
         errorMessage={errorMessage}
         hasReportContent={hasReportContent(report)}
