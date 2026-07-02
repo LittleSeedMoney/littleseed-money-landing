@@ -43,6 +43,30 @@ export function MoneyHero({
     topGoalTile(topGoalSummary),
   ].filter((tile): tile is HeroTile => tile !== null);
 
+  // Deep-links: each tile opens the surface that explains its number.
+  const tileActions: Record<string, (() => void) | undefined> = {
+    "emergency-fund": () => {
+      const anchor = document.getElementById("decision-details");
+      anchor?.closest("details")?.setAttribute("open", "");
+      anchor?.scrollIntoView({ behavior: "smooth", block: "center" });
+    },
+    spending:
+      snapshotView && tiles.find((tile) => tile.id === "spending")?.month
+        ? () => {
+            const month = tiles.find((tile) => tile.id === "spending")?.month;
+            if (month) {
+              snapshotView.selectMonth(month);
+            }
+            document
+              .getElementById("portfolio")
+              ?.scrollIntoView({ behavior: "smooth" });
+          }
+        : undefined,
+    "top-goal": () => {
+      window.location.hash = "goals";
+    },
+  };
+
   return (
     <div className="space-y-4" data-testid="money-hero">
       {hasChart ? (
@@ -87,7 +111,11 @@ export function MoneyHero({
           data-testid="money-hero-tiles"
         >
           {tiles.map((tile) => (
-            <HeroTileCard key={tile.id} tile={tile} />
+            <HeroTileCard
+              key={tile.id}
+              onActivate={tileActions[tile.id]}
+              tile={tile}
+            />
           ))}
         </div>
       ) : null}
@@ -111,18 +139,30 @@ type HeroTile = {
     leftLabel: string;
     rightLabel: string;
   };
+  /** Small muted context line under the chip (e.g. "3 months reviewed"). */
+  caption?: string;
+  /** Machine month backing the tile, used by deep-link actions. */
+  month?: string;
   detail: string;
 };
 
-function HeroTileCard({ tile }: { tile: HeroTile }) {
-  return (
-    <section
-      aria-label={tile.label}
-      className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm"
-      data-testid={`money-hero-tile-${tile.id}`}
-      title={tile.detail}
-    >
-      <p className="text-xs font-semibold text-earth-600">{tile.label}</p>
+function HeroTileCard({
+  onActivate,
+  tile,
+}: {
+  onActivate?: () => void;
+  tile: HeroTile;
+}) {
+  const body = (
+    <>
+      <p className="flex items-start justify-between gap-2 text-xs font-semibold text-earth-600">
+        {tile.label}
+        {onActivate ? (
+          <span aria-hidden="true" className="text-earth-300">
+            ›
+          </span>
+        ) : null}
+      </p>
       <p className="mt-1.5 font-serif text-[26px] font-bold leading-none tabular-nums text-seed-950">
         {tile.value}
         {tile.valueUnit ? (
@@ -140,6 +180,9 @@ function HeroTileCard({ tile }: { tile: HeroTile }) {
           {tile.chip.label}
         </span>
       </p>
+      {tile.caption ? (
+        <p className="mt-1.5 text-[10.5px] text-earth-400">{tile.caption}</p>
+      ) : null}
       {tile.band ? (
         <div className="mt-3">
           <div className="relative h-1.5 rounded-full bg-gradient-to-r from-earth-200 via-seed-100 to-seed-300">
@@ -158,6 +201,31 @@ function HeroTileCard({ tile }: { tile: HeroTile }) {
         </div>
       ) : null}
       <p className="sr-only">{tile.detail}</p>
+    </>
+  );
+
+  if (onActivate) {
+    return (
+      <button
+        className="rounded-2xl border border-stone-200 bg-white p-4 text-left shadow-sm transition hover:border-seed-200 hover:shadow focus:outline-none focus:ring-2 focus:ring-seed-500"
+        data-testid={`money-hero-tile-${tile.id}`}
+        onClick={onActivate}
+        title={tile.detail}
+        type="button"
+      >
+        {body}
+      </button>
+    );
+  }
+
+  return (
+    <section
+      aria-label={tile.label}
+      className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm"
+      data-testid={`money-hero-tile-${tile.id}`}
+      title={tile.detail}
+    >
+      {body}
     </section>
   );
 }
@@ -241,30 +309,48 @@ function spendingTile(
   const previous = months[months.length - 2];
   const previousCents = previous ? (totalsByMonth.get(previous) ?? null) : null;
 
+  // The chip states the change factually in a neutral tone — more or less
+  // spending is not framed as good or bad.
   let chip: HeroTile["chip"];
-  if (previousCents === null) {
-    chip = { label: `In ${latest}`, tone: "stone" };
+  if (previousCents === null || !previous) {
+    chip = { label: `In ${monthName(latest)}`, tone: "stone" };
   } else {
     const deltaCents = latestCents - previousCents;
     chip =
       deltaCents > 0
-        ? { label: `Up ${moneyFromCents(deltaCents)} vs ${previous}`, tone: "earth" }
+        ? {
+            label: `Up ${moneyFromCents(deltaCents)} vs ${monthName(previous)}`,
+            tone: "stone",
+          }
         : deltaCents < 0
           ? {
-              label: `Down ${moneyFromCents(-deltaCents)} vs ${previous}`,
-              tone: "seed",
+              label: `Down ${moneyFromCents(-deltaCents)} vs ${monthName(previous)}`,
+              tone: "stone",
             }
-          : { label: `Same as ${previous}`, tone: "stone" };
+          : { label: `Same as ${monthName(previous)}`, tone: "stone" };
   }
 
   return {
     id: "spending",
-    label: `Spending ${latest}`,
+    label: `Spending in ${monthName(latest)}`,
     value: moneyFromCents(latestCents),
     chip,
+    caption: `${months.length} ${months.length === 1 ? "month" : "months"} of transactions reviewed`,
+    month: latest,
     detail:
-      "Total categorized debits for the latest reviewed month, from the current Charge Inspector response. Comparison is against the previous reviewed month.",
+      "Total categorized debits for the latest reviewed month, from the current Charge Inspector response. Comparison is against the previous reviewed month, which may cover fewer transactions.",
   };
+}
+
+const MONTH_NAMES = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+/** "2026-05" → "May"; falls back to the raw value if unparseable. */
+function monthName(month: string) {
+  const index = Number(month.split("-")[1]) - 1;
+  return MONTH_NAMES[index] ?? month;
 }
 
 /**

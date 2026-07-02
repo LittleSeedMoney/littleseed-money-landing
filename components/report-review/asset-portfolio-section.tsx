@@ -2115,7 +2115,7 @@ function SnapshotDecisionDetails({
       className="overflow-hidden p-0"
       summary={
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
+          <div id="decision-details">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-seed-700">
               Decision details
             </p>
