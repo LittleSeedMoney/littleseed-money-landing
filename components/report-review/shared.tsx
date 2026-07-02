@@ -115,8 +115,12 @@ export function StatusPill({
 
   return (
     <span
-      className={`inline-flex min-h-7 items-center self-start rounded-md border px-2.5 text-xs font-semibold ${toneClass}`}
+      className={`inline-flex min-h-6 items-center gap-1.5 self-start rounded-full border px-2 text-xs font-semibold ${toneClass}`}
     >
+      <span
+        aria-hidden="true"
+        className="h-1.5 w-1.5 rounded-full bg-current opacity-70"
+      />
       {label}
     </span>
   );

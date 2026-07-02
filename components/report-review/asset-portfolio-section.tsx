@@ -2495,9 +2495,6 @@ function SnapshotDecisionDetails({
           </div>
           <div className="flex flex-wrap gap-2">
             <StatusPill label={decisionReadiness.status} tone="stone" />
-            <span className="self-center text-sm font-semibold text-seed-700">
-              Details
-            </span>
           </div>
         </div>
       }
