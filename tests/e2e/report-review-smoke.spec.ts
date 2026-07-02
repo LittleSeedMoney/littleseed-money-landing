@@ -4,31 +4,26 @@ import { reportReviewSample } from "../../data/report-review-sample";
 
 const reportReviewPath = "/private/report-review";
 
+// 3-tab IA: former Snapshot/Report/Charge Inspector all live under Money;
+// Education + Evidence merge into Learn. Legacy hashes resolve to these three.
 const smokeScreens = [
   {
-    hash: "snapshot",
+    hash: "money",
     heading: "Current portfolio snapshot",
-    tab: "Snapshot",
+    screen: "money",
+    tab: "Money",
   },
   {
     hash: "goals",
     heading: "Goal planning workspace",
+    screen: "goals",
     tab: "Goals",
   },
   {
-    hash: "report",
-    heading: "Financial health report review",
-    tab: "Report",
-  },
-  {
-    hash: "charge-inspector",
-    heading: "Charge Inspector",
-    tab: "Charge Inspector",
-  },
-  {
-    hash: "education",
+    hash: "learn",
     heading: "Education topics",
-    tab: "Education",
+    screen: "learn",
+    tab: "Learn",
   },
 ] as const;
 
@@ -53,7 +48,7 @@ test.describe("private report review smoke", () => {
     for (const screen of smokeScreens) {
       await page.goto(`${reportReviewPath}#${screen.hash}`);
 
-      const panel = page.locator(`#report-review-screen-${screen.hash}`);
+      const panel = page.locator(`#report-review-screen-${screen.screen}`);
 
       await expect(panel).toBeVisible();
       await expect(
@@ -69,13 +64,20 @@ test.describe("private report review smoke", () => {
     }
   });
 
-  test("legacy input and portfolio links open the snapshot screen", async ({
+  test("legacy snapshot, input, and report links open the Money screen", async ({
     page,
   }) => {
-    for (const legacyHash of ["inputs", "manual-input", "portfolio"]) {
+    for (const legacyHash of [
+      "snapshot",
+      "inputs",
+      "manual-input",
+      "portfolio",
+      "report",
+      "charge-inspector",
+    ]) {
       await page.goto(`${reportReviewPath}#${legacyHash}`);
 
-      const panel = page.locator("#report-review-screen-snapshot");
+      const panel = page.locator("#report-review-screen-money");
 
       await expect(panel).toBeVisible();
       await expect(
@@ -84,7 +86,7 @@ test.describe("private report review smoke", () => {
           name: "Current portfolio snapshot",
         }),
       ).toBeVisible();
-      await expect(page.getByRole("tab", { name: "Snapshot" })).toHaveAttribute(
+      await expect(page.getByRole("tab", { name: "Money" })).toHaveAttribute(
         "aria-selected",
         "true",
       );
@@ -116,8 +118,12 @@ test.describe("private report review smoke", () => {
   }) => {
     await page.goto(`${reportReviewPath}#report`);
 
+    // Report & findings is a Money detail disclosure. Deep-linking to #report
+    // auto-opens it; ensure it is open without toggling it back closed.
+    await ensureReportFindingsOpen(page);
+
     const firstFinding = page.getByTestId("report-finding-card").first();
-    await firstFinding.locator("summary").click();
+    await firstFinding.locator("> summary").click();
 
     await expect(
       firstFinding.getByText("AI explanation unavailable"),
@@ -175,6 +181,9 @@ test.describe("private report review smoke", () => {
     });
 
     await page.goto(`${reportReviewPath}#snapshot`);
+
+    // Profile inputs are now tucked into a collapsed disclosure on Overview.
+    await page.getByText("Your profile inputs", { exact: true }).click();
 
     const profileCard = page.locator(
       'form[aria-labelledby="profile-values-heading"]',
@@ -325,16 +334,18 @@ test.describe("private report review smoke", () => {
   }) => {
     await page.goto(`${reportReviewPath}#snapshot`);
 
-    await expect(page.getByTestId("snapshot-monthly-trend")).toBeVisible();
+    // The net-worth hero chart replaced the old monthly mixed chart as the
+    // month selector; every month on the chart has monthly transaction detail
+    // (the trend ends at the latest data month), and the asset-type breakdown
+    // stays as cards.
+    await expect(page.getByTestId("snapshot-asset-breakdown")).toBeVisible();
     await expect(page.getByTestId("snapshot-monthly-mixed-chart"))
-      .toBeVisible();
-    const aprilChartMonth = page.locator(
-      '[data-testid="snapshot-monthly-chart-month"][data-month="2026-04"]',
-    );
-    await aprilChartMonth.hover();
-    await expect(page.getByTestId("snapshot-monthly-chart-hover-label"))
-      .toContainText("2026-04");
-    await aprilChartMonth.click();
+      .toHaveCount(0);
+    await expect(page.getByTestId("net-worth-chart-month")).toHaveCount(3);
+
+    await page.locator(
+      '[data-testid="net-worth-chart-month"][data-month="2026-04"]',
+    ).click();
 
     const monthlyTab = page.getByTestId("snapshot-monthly-tab");
     await expect(monthlyTab).toBeVisible();
@@ -344,7 +355,7 @@ test.describe("private report review smoke", () => {
     ).toBeVisible();
 
     await page.locator(
-      '[data-testid="snapshot-monthly-chart-month"][data-month="2026-05"]',
+      '[data-testid="net-worth-chart-month"][data-month="2026-05"]',
     ).click();
     await expect(monthlyTab).toContainText("Income 2026-05");
     await expect(monthlyTab).toContainText("Expenses 2026-05");
@@ -489,7 +500,7 @@ test.describe("private report review smoke", () => {
     await expect(goalRows.first()).toContainText("Wedding fund");
     await expect(goalRows.first()).toContainText("Priority 1");
 
-    await clickTab(page, "Snapshot");
+    await clickTab(page, "Money");
 
     const goalPreview = page.getByTestId("snapshot-goal-preview");
     await expect(goalPreview).toBeVisible();
@@ -501,43 +512,50 @@ test.describe("private report review smoke", () => {
   test("screen tabs support click, keyboard movement, and hash updates", async ({
     page,
   }) => {
-    await page.goto(`${reportReviewPath}#report`);
+    await page.goto(`${reportReviewPath}#goals`);
 
-    await clickTab(page, "Snapshot");
+    // Wait for the initial hash sync to settle before switching tabs, so the
+    // tab click's replaceState isn't racing hydration.
+    await expect(page.getByRole("tab", { name: "Goals" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+
+    await clickTab(page, "Money");
     await expect(
       page.getByRole("heading", { name: "Current portfolio snapshot" }),
     ).toBeVisible();
-    await expect(page).toHaveURL(/#snapshot$/);
+    await expect(page).toHaveURL(/#money$/);
 
-    await clickTab(page, "Report");
-    const reportTab = page.getByRole("tab", { name: "Report" });
-    await reportTab.focus();
+    const moneyTab = page.getByRole("tab", { name: "Money" });
+    await moneyTab.focus();
 
     await page.keyboard.press("ArrowRight");
-    await expect(page.getByRole("tab", { name: "Charge Inspector" }))
-      .toBeFocused();
-    await expect(
-      page.getByRole("tab", { name: "Charge Inspector" }),
-    ).toHaveAttribute("aria-selected", "true");
-    await expect(page).toHaveURL(/#charge-inspector$/);
+    await expect(page.getByRole("tab", { name: "Goals" })).toBeFocused();
+    await expect(page.getByRole("tab", { name: "Goals" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await expect(page).toHaveURL(/#goals$/);
 
     await page.keyboard.press("ArrowLeft");
-    await expect(page.getByRole("tab", { name: "Report" })).toBeFocused();
-    await expect(page).toHaveURL(/#report$/);
-
-    await page.keyboard.press("Home");
-    await expect(page.getByRole("tab", { name: "Snapshot" })).toBeFocused();
-    await expect(page).toHaveURL(/#snapshot$/);
+    await expect(page.getByRole("tab", { name: "Money" })).toBeFocused();
+    await expect(page).toHaveURL(/#money$/);
 
     await page.keyboard.press("End");
-    await expect(page.getByRole("tab", { name: "Education" })).toBeFocused();
-    await expect(page).toHaveURL(/#education$/);
+    await expect(page.getByRole("tab", { name: "Learn" })).toBeFocused();
+    await expect(page).toHaveURL(/#learn$/);
+
+    await page.keyboard.press("Home");
+    await expect(page.getByRole("tab", { name: "Money" })).toBeFocused();
+    await expect(page).toHaveURL(/#money$/);
   });
 
   test("charge inspector can hide one finding and restore from the banner", async ({
     page,
   }) => {
     await page.goto(`${reportReviewPath}#charge-inspector`);
+    await ensureChargeInspectorOpen(page);
 
     await expect(
       page.getByTestId("charge-inspector-monthly-spending-summary"),
@@ -608,6 +626,7 @@ test.describe("private report review smoke", () => {
     );
 
     await page.goto(`${reportReviewPath}#charge-inspector`);
+    await ensureChargeInspectorOpen(page);
 
     await page.getByTestId("charge-inspector-csv-file").setInputFiles({
       buffer: Buffer.from(
@@ -677,6 +696,7 @@ test.describe("private report review smoke", () => {
     );
 
     await page.goto(`${reportReviewPath}#charge-inspector`);
+    await ensureChargeInspectorOpen(page);
 
     await page.getByTestId("charge-inspector-csv-file").setInputFiles({
       buffer: Buffer.alloc(250_001, "a"),
@@ -696,6 +716,7 @@ test.describe("private report review smoke", () => {
     page,
   }) => {
     await page.goto(`${reportReviewPath}#charge-inspector`);
+    await ensureChargeInspectorOpen(page);
 
     const findings = chargeInspectorFindings(page);
     await expect(findings.first()).toBeVisible();
@@ -729,6 +750,35 @@ function labelFor(page: Page, text: string) {
 
 function chargeInspectorFindings(page: Page) {
   return page.getByTestId("charge-inspector-finding");
+}
+
+// The "Report & findings" disclosure auto-opens on #report navigation; open it
+// only if it is still closed so we never toggle it back shut.
+async function ensureReportFindingsOpen(page: Page) {
+  const details = page
+    .locator("details")
+    .filter({ has: page.locator("#report-findings-details") })
+    .first();
+  await details.waitFor();
+  if (!(await details.evaluate((el: HTMLDetailsElement) => el.open))) {
+    await details.locator("summary").first().click();
+  }
+  await expect(details).toHaveJSProperty("open", true);
+}
+
+// Charge Inspector is a Money detail disclosure. Deep-linking to
+// #charge-inspector auto-opens it via native fragment navigation, but that can
+// race hydration — so open it explicitly if it is still closed.
+async function ensureChargeInspectorOpen(page: Page) {
+  const details = page
+    .locator("details")
+    .filter({ has: page.locator("summary", { hasText: "Charge Inspector" }) })
+    .first();
+  await details.waitFor();
+  if (!(await details.evaluate((el: HTMLDetailsElement) => el.open))) {
+    await details.locator("summary").first().click();
+  }
+  await expect(details).toHaveJSProperty("open", true);
 }
 
 function metricValue(page: Page, metric: "hidden" | "rows" | "visible") {

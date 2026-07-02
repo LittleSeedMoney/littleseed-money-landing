@@ -440,16 +440,18 @@ function buildSummary({
   };
 }
 
+// Labels state facts about the entered numbers ("behind your target date"),
+// never instructions about what to do with them.
 function goalPlanningStatusLabel(status: GoalPlanningStatus) {
   const labels: Record<GoalPlanningStatus, string> = {
-    contribution_only: "Contribution timeline only",
-    needs_contribution_or_month: "Needs contribution or month",
-    needs_more_monthly_input: "Below entered month math",
+    contribution_only: "No target date set",
+    needs_contribution_or_month: "Needs monthly amount or date",
+    needs_more_monthly_input: "Behind your target date",
     needs_target: "Needs target amount",
     needs_valid_inputs: "Needs valid inputs",
-    on_track_for_month: "On track for entered month",
-    reached: "Entered target reached",
-    target_month_only: "Target month math only",
+    on_track_for_month: "On pace for your date",
+    reached: "Target reached",
+    target_month_only: "Monthly amount not set",
   };
 
   return labels[status];
