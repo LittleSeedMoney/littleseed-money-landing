@@ -122,8 +122,8 @@ export function MoneyHero({
             Net worth
           </p>
           <p className="mt-2 text-sm text-earth-600">
-            Add your asset and liability balances below to see your net worth
-            and what you own versus owe.
+            Net worth appears here once this review has asset and liability
+            totals. Review or edit the balances below.
           </p>
         </section>
       )}

@@ -382,6 +382,56 @@ test.describe("private report review smoke", () => {
     await expect(page.getByTestId("net-worth-chart-month")).toHaveCount(0);
   });
 
+  test("money hero shows an empty state when the report has no portfolio totals", async ({
+    page,
+  }) => {
+    // A report with no trend and no total-assets/total-liabilities metrics
+    // cannot compute net worth or the own/owe composition at all.
+    const totalslessReport = {
+      ...reportReviewSample,
+      assetPortfolio: {
+        ...reportReviewSample.assetPortfolio,
+        netWorthTrend: undefined,
+        netWorthTarget: undefined,
+        totals: reportReviewSample.assetPortfolio.totals.filter(
+          (metric) =>
+            metric.id !== "total_assets" && metric.id !== "total_liabilities",
+        ),
+      },
+    };
+    await page.route(
+      "**/private/report-review/workspace-report",
+      async (route) => {
+        await route.fulfill({
+          contentType: "application/json",
+          json: { report: totalslessReport },
+          status: 200,
+        });
+      },
+    );
+
+    await page.goto(`${reportReviewPath}#snapshot`);
+    await expect(page.getByTestId("net-worth-chart")).toBeVisible();
+
+    await page.getByText("Your profile inputs", { exact: true }).click();
+    const profileCard = page.locator(
+      'form[aria-labelledby="profile-values-heading"]',
+    );
+    await profileCard
+      .getByRole("button", { name: "Edit Monthly take-home income" })
+      .click();
+    await profileCard
+      .getByRole("spinbutton", { name: "Monthly take-home income" })
+      .fill("5300");
+    await profileCard.getByRole("button", { name: "Save profile" }).click();
+
+    // With no totals, the hero falls back to the empty prompt — no chart and
+    // no composition bar.
+    await expect(page.getByTestId("money-hero-empty")).toBeVisible();
+    await expect(page.getByTestId("money-hero-composition")).toHaveCount(0);
+    await expect(page.getByTestId("net-worth-chart")).toHaveCount(0);
+  });
+
   test("snapshot monthly tab supports category targets and transaction overrides", async ({
     page,
   }) => {
