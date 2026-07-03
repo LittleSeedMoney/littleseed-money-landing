@@ -147,6 +147,33 @@ export function ReportReviewScreenPanel({
   //   6. Review support disclosure
   const hasReport = hasReportContent(report);
 
+  // Rendered inside the Balance details disclosure when there is report content,
+  // or on its own (with its editable-values empty state) when there is not.
+  // Defined once so the two branches cannot drift on the shared prop set.
+  const balanceDetails = (
+    <MoneyBalanceDetails
+      decisionReadiness={report.decisionReadiness}
+      errorMessage={errorMessage}
+      hasReportContent={hasReport}
+      onAddAsset={onAddAsset}
+      onAddDebt={onAddDebt}
+      onAssetUpdate={onAssetUpdate}
+      onDebtUpdate={onDebtUpdate}
+      onRemoveAsset={onRemoveAsset}
+      onRemoveDebt={onRemoveDebt}
+      onPortfolioSubmit={onSubmit}
+      onProfileSubmit={onSubmit}
+      onProfileUpdate={onUpdate}
+      onValuesReset={onValuesReset}
+      portfolio={report.assetPortfolio}
+      requestState={requestState}
+      selectedPreset={selectedPreset}
+      sourceById={sourceById}
+      topGoalSummary={topGoalSummary}
+      values={values}
+    />
+  );
+
   return (
     <SnapshotViewProvider>
       <MoneyHero report={report} topGoalSummary={topGoalSummary} />
@@ -175,7 +202,11 @@ export function ReportReviewScreenPanel({
           </ReviewDisclosure>
           <ReviewDisclosure
             summary={
-              <div>
+              // The fragment target lives on the always-visible summary, not on
+              // the disclosure body, so native fragment navigation to
+              // #charge-inspector does not open a closed <details> before React
+              // hydrates (which would cause an `open` hydration mismatch).
+              <div id="charge-inspector" className="scroll-mt-28">
                 <h3 className="text-sm font-semibold text-seed-950">
                   Charge Inspector
                 </h3>
@@ -191,9 +222,8 @@ export function ReportReviewScreenPanel({
             </div>
           </ReviewDisclosure>
           <ReviewDisclosure
-            className="scroll-mt-24"
             summary={
-              <div id="report-findings-details">
+              <div id="report-findings-details" className="scroll-mt-28">
                 <h3 className="text-sm font-semibold text-seed-950">
                   Report &amp; findings
                 </h3>
@@ -218,9 +248,8 @@ export function ReportReviewScreenPanel({
             </div>
           </ReviewDisclosure>
           <ReviewDisclosure
-            className="scroll-mt-28"
             summary={
-              <div id="portfolio">
+              <div id="portfolio" className="scroll-mt-28">
                 <h3 className="text-sm font-semibold text-seed-950">
                   Balance details
                 </h3>
@@ -233,52 +262,12 @@ export function ReportReviewScreenPanel({
             variant="panel"
           >
             <div className="border-t border-stone-200 p-4">
-              <MoneyBalanceDetails
-                decisionReadiness={report.decisionReadiness}
-                errorMessage={errorMessage}
-                hasReportContent
-                onAddAsset={onAddAsset}
-                onAddDebt={onAddDebt}
-                onAssetUpdate={onAssetUpdate}
-                onDebtUpdate={onDebtUpdate}
-                onRemoveAsset={onRemoveAsset}
-                onRemoveDebt={onRemoveDebt}
-                onPortfolioSubmit={onSubmit}
-                onProfileSubmit={onSubmit}
-                onProfileUpdate={onUpdate}
-                onValuesReset={onValuesReset}
-                portfolio={report.assetPortfolio}
-                requestState={requestState}
-                selectedPreset={selectedPreset}
-                sourceById={sourceById}
-                topGoalSummary={topGoalSummary}
-                values={values}
-              />
+              {balanceDetails}
             </div>
           </ReviewDisclosure>
         </>
       ) : (
-        <MoneyBalanceDetails
-          decisionReadiness={report.decisionReadiness}
-          errorMessage={errorMessage}
-          hasReportContent={false}
-          onAddAsset={onAddAsset}
-          onAddDebt={onAddDebt}
-          onAssetUpdate={onAssetUpdate}
-          onDebtUpdate={onDebtUpdate}
-          onRemoveAsset={onRemoveAsset}
-          onRemoveDebt={onRemoveDebt}
-          onPortfolioSubmit={onSubmit}
-          onProfileSubmit={onSubmit}
-          onProfileUpdate={onUpdate}
-          onValuesReset={onValuesReset}
-          portfolio={report.assetPortfolio}
-          requestState={requestState}
-          selectedPreset={selectedPreset}
-          sourceById={sourceById}
-          topGoalSummary={topGoalSummary}
-          values={values}
-        />
+        balanceDetails
       )}
       <SnapshotSupportDetails
         dataCompleteness={report.dataCompleteness}
