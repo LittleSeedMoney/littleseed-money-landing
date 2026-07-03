@@ -102,8 +102,31 @@ export function MoneyHero({
             </div>
           )}
           <CompositionBar own={composition.own} owe={composition.owe} />
+          {hasChart ? null : (
+            <p
+              className="mt-3 border-t border-stone-100 pt-3 text-[11px] text-earth-400"
+              data-testid="money-hero-no-trend-note"
+            >
+              A month-by-month net-worth trend shows here when this review
+              includes history. This session has a single point in time.
+            </p>
+          )}
         </section>
-      ) : null}
+      ) : (
+        <section
+          aria-label="Net worth"
+          className="rounded-2xl border border-dashed border-stone-300 bg-white p-5 text-center shadow-sm"
+          data-testid="money-hero-empty"
+        >
+          <p className="text-[10.5px] font-bold uppercase tracking-[0.13em] text-earth-500">
+            Net worth
+          </p>
+          <p className="mt-2 text-sm text-earth-600">
+            Net worth appears here once this review has asset and liability
+            totals. Review or edit the balances below.
+          </p>
+        </section>
+      )}
 
       {tiles.length > 0 ? (
         <div
