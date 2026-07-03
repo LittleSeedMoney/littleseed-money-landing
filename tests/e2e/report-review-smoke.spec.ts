@@ -113,6 +113,35 @@ test.describe("private report review smoke", () => {
     await expect(page).toHaveURL(/#saving-goal-draft$/);
   });
 
+  test("at-a-glance answers restate the four questions and deep-link to provenance", async ({
+    page,
+  }) => {
+    await page.goto(`${reportReviewPath}#money`);
+
+    const atAGlance = page.getByTestId("at-a-glance");
+    await expect(atAGlance).toBeVisible();
+
+    // The sample carries all four question metrics, in fixed order.
+    const rows = atAGlance.getByTestId("at-a-glance-row");
+    await expect(rows).toHaveCount(4);
+    await expect(rows.nth(0)).toContainText("Is money left at the end of the month?");
+    await expect(rows.nth(0)).toContainText("$1,280 left");
+    await expect(rows.nth(1)).toContainText("3.46 months");
+    await expect(rows.nth(2)).toContainText("$35,000 debt");
+    await expect(rows.nth(3)).toContainText("$33,000");
+
+    // The debt-pressure provenance link opens the Report & findings disclosure
+    // and reveals that metric's full card (nested inside a collapsed <details>).
+    const metricCard = page.locator("#metric-debt_pressure");
+    await expect(metricCard).not.toBeInViewport();
+    await rows
+      .nth(2)
+      .getByTestId("at-a-glance-provenance-link")
+      .click();
+    await expect(metricCard).toBeVisible();
+    await expect(metricCard).toBeInViewport();
+  });
+
   test("report findings show the AI explanation disabled state by default", async ({
     page,
   }) => {

@@ -6,6 +6,7 @@ import {
   formatNetWorthMoney,
   type NetWorthTrendPoint,
 } from "@/lib/report-review/net-worth-chart";
+import { revealAnchor } from "@/lib/report-review/reveal-anchor";
 
 import { NetWorthChart } from "./net-worth-chart";
 import { useSnapshotView } from "./snapshot-view-context";
@@ -43,26 +44,9 @@ export function MoneyHero({
     topGoalTile(topGoalSummary),
   ].filter((tile): tile is HeroTile => tile !== null);
 
-  // Deep-links: each tile opens the surface that explains its number. Targets
-  // can be nested inside more than one disclosure (for example decision details
-  // inside Balance details), so open every ancestor <details> before scrolling.
-  function revealAnchor(id: string, block: ScrollLogicalPosition = "start") {
-    const anchor = document.getElementById(id);
-    if (!anchor) {
-      return;
-    }
-    for (
-      let node: HTMLElement | null = anchor;
-      node;
-      node = node.parentElement
-    ) {
-      if (node instanceof HTMLDetailsElement) {
-        node.open = true;
-      }
-    }
-    anchor.scrollIntoView({ behavior: "smooth", block });
-  }
-
+  // Deep-links: each tile opens the surface that explains its number, using the
+  // shared revealAnchor so nested disclosures (e.g. decision details inside
+  // Balance details) all open before scrolling.
   // The spending tile and chart month selection both open the spending
   // disclosure (id="spending-detail" lives in its <summary>) and scroll to it.
   function openSpendingDisclosure(month?: string) {
