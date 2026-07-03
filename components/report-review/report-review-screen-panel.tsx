@@ -23,10 +23,12 @@ import {
   type GoalMoveDirection,
 } from "./goal-planning-screen";
 import type { ManualRequestState } from "./manual-input-section";
+import { MoneyHero } from "./money-hero";
 import { OverviewSection } from "./overview-section";
 import { ReportSections } from "./report-sections";
 import { SnapshotScreen } from "./snapshot-screen";
-import { reviewPanelClass, ReviewSectionHeading } from "./shared";
+import { ReviewDisclosure } from "./shared";
+import { SnapshotViewProvider } from "./snapshot-view-context";
 
 export function ReportReviewScreenPanel({
   activeScreen,
@@ -99,8 +101,38 @@ export function ReportReviewScreenPanel({
   topGoalSummary: GoalPlanningSummary | null;
   values: ManualProfileValues;
 }) {
-  if (activeScreen === "snapshot") {
+  if (activeScreen === "goals") {
     return (
+      <GoalPlanningScreen
+        asOfMonth={goalPlanningAsOfMonth}
+        goalRows={goalRows}
+        onAddGoal={onAddGoal}
+        onGoalMove={onGoalMove}
+        onGoalRemove={onGoalRemove}
+        onGoalUpdate={onGoalUpdate}
+      />
+    );
+  }
+
+  if (activeScreen === "learn") {
+    return (
+      <>
+        <EducationSection
+          decisionReadiness={report.decisionReadiness}
+          findings={report.findings}
+        />
+        <EvidenceSection sources={report.evidenceSources} />
+      </>
+    );
+  }
+
+  // Money screen: net-worth hero up top, then the editable snapshot, then the
+  // report/findings and Charge Inspector detail surfaces consolidated into
+  // disclosures so the validation content stays reachable without owning a tab.
+  // The provider lets the hero chart drive the snapshot's month + Monthly tab.
+  return (
+    <SnapshotViewProvider>
+      <MoneyHero report={report} topGoalSummary={topGoalSummary} />
       <SnapshotScreen
         errorMessage={errorMessage}
         hasReportContent={hasReportContent(report)}
@@ -120,67 +152,55 @@ export function ReportReviewScreenPanel({
         topGoalSummary={topGoalSummary}
         values={values}
       />
-    );
-  }
-
-  if (activeScreen === "goals") {
-    return (
-      <GoalPlanningScreen
-        asOfMonth={goalPlanningAsOfMonth}
-        goalRows={goalRows}
-        onAddGoal={onAddGoal}
-        onGoalMove={onGoalMove}
-        onGoalRemove={onGoalRemove}
-        onGoalUpdate={onGoalUpdate}
-      />
-    );
-  }
-
-  if (!hasReportContent(report)) {
-    return <EmptyReportState />;
-  }
-
-  if (activeScreen === "charge-inspector") {
-    return <ChargeInspectorSection review={report.chargeInspector} />;
-  }
-
-  if (activeScreen === "education") {
-    return (
-      <>
-        <EducationSection
-          decisionReadiness={report.decisionReadiness}
-          findings={report.findings}
-        />
-        <EvidenceSection sources={report.evidenceSources} />
-      </>
-    );
-  }
-
-  return (
-    <>
-      <OverviewSection generatedAt={generatedAt} report={report} />
-      <ReportSections sections={report.sections} sourceById={sourceById} />
-      <FindingsSection
-        aiEnabled={aiEnabled}
-        findings={report.findings}
-      />
-    </>
+      {hasReportContent(report) ? (
+        <>
+          <ReviewDisclosure
+            className="scroll-mt-24"
+            summary={
+              <div id="report-findings-details">
+                <h3 className="text-sm font-semibold text-seed-950">
+                  Report &amp; findings
+                </h3>
+                <p className="mt-0.5 text-xs text-earth-600">
+                  Structured answers, evidence levels, and findings for this
+                  session.
+                </p>
+              </div>
+            }
+            variant="panel"
+          >
+            <div className="space-y-4 border-t border-stone-200 p-4">
+              <OverviewSection generatedAt={generatedAt} report={report} />
+              <ReportSections
+                sections={report.sections}
+                sourceById={sourceById}
+              />
+              <FindingsSection aiEnabled={aiEnabled} findings={report.findings} />
+            </div>
+          </ReviewDisclosure>
+          <ReviewDisclosure
+            summary={
+              <div>
+                <h3 className="text-sm font-semibold text-seed-950">
+                  Charge Inspector
+                </h3>
+                <p className="mt-0.5 text-xs text-earth-600">
+                  Recurring-charge review for the current transaction source.
+                </p>
+              </div>
+            }
+            variant="panel"
+          >
+            <div className="border-t border-stone-200 p-4">
+              <ChargeInspectorSection review={report.chargeInspector} />
+            </div>
+          </ReviewDisclosure>
+        </>
+      ) : null}
+    </SnapshotViewProvider>
   );
 }
 
 function hasReportContent(report: ReportReviewSample) {
   return report.summaryMetrics.length > 0 || report.sections.length > 0;
-}
-
-function EmptyReportState() {
-  return (
-    <section className={reviewPanelClass("p-6")}>
-      <ReviewSectionHeading
-        eyebrow="Review state"
-        id="empty-report-state-heading"
-        title="No report data returned"
-        description="The platform response did not include renderable report sections or summary metrics for this session."
-      />
-    </section>
-  );
 }

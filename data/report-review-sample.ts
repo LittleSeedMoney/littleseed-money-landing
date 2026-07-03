@@ -2,6 +2,7 @@ import {
   chargeInspectorSampleReview,
   type ChargeInspectorReview,
 } from "@/lib/report-review/charge-inspector";
+import type { NetWorthTrendPoint } from "@/lib/report-review/net-worth-chart";
 
 export type Provenance =
   | "sample"
@@ -202,6 +203,15 @@ export type ReportReviewSample = {
     assets: SnapshotItem[];
     liabilities: SnapshotItem[];
     notes: PortfolioNote[];
+    /**
+     * Landing-owned sample net-worth history for the current-session chart.
+     * Optional and fixture-only: platform-generated reports do not carry it, so
+     * the chart simply does not render for them. Not persisted; not a platform
+     * contract field.
+     */
+    netWorthTrend?: NetWorthTrendPoint[];
+    /** Optional user-entered net-worth target for the goal line. */
+    netWorthTarget?: number;
   };
   decisionReadiness: DecisionReadiness;
   chargeInspector: ChargeInspectorReview;
@@ -868,6 +878,24 @@ export const reportReviewSample: ReportReviewSample = {
         body: "Emergency coverage uses cash-like balances only. Invested or restricted assets remain visible but are not treated as emergency cash.",
       },
     ],
+    // The trend ends at the latest month that also has monthly transaction
+    // detail (2026-05), so the chart's endpoint is selectable and its final
+    // value reconciles with the portfolio totals shown on the same screen:
+    // total assets ($68,000) minus total liabilities ($35,000) = $33,000.
+    netWorthTrend: [
+      { month: "2025-07", value: 26800 },
+      { month: "2025-08", value: 27600 },
+      { month: "2025-09", value: 27200 },
+      { month: "2025-10", value: 28500 },
+      { month: "2025-11", value: 29100 },
+      { month: "2025-12", value: 28900 },
+      { month: "2026-01", value: 30200 },
+      { month: "2026-02", value: 30800 },
+      { month: "2026-03", value: 31400 },
+      { month: "2026-04", value: 32000 },
+      { month: "2026-05", value: 33000 },
+    ],
+    netWorthTarget: 40000,
   },
   decisionReadiness: {
     id: "emergency_fund_target_v0",

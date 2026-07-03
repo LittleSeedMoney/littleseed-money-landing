@@ -12,7 +12,7 @@ import {
 
 export function ReviewRail({ report }: { report: ReportReviewSample }) {
   return (
-    <aside className="min-w-0">
+    <aside className="min-w-0 lg:sticky lg:top-4 lg:self-start">
       <section
         aria-labelledby="review-state-heading"
         className={reviewPanelClass("p-3")}
@@ -37,7 +37,7 @@ export function ReviewRail({ report }: { report: ReportReviewSample }) {
           {report.dataCompleteness.explanation}
         </p>
         <a
-          href="#snapshot"
+          href="#portfolio"
           className="mt-3 inline-flex rounded-md text-sm font-medium text-seed-700 underline-offset-4 hover:underline focus:outline-none focus:ring-2 focus:ring-seed-500"
         >
           Snapshot context

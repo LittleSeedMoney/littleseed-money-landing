@@ -2446,41 +2446,44 @@ test("charge inspector copy stays inside review-only boundaries", () => {
 test("report review screen hash mapping preserves legacy section links", () => {
   assert.deepEqual(
     reportReviewScreens.map((screen) => screen.id),
-    ["snapshot", "goals", "report", "charge-inspector", "education"],
+    ["money", "goals", "learn"],
   );
-  assert.equal(reportReviewScreenFromHash("#snapshot"), "snapshot");
+  // 3-tab IA: former Snapshot/Report/Charge Inspector all resolve to Money.
+  assert.equal(reportReviewScreenFromHash("#money"), "money");
+  assert.equal(reportReviewScreenFromHash("#snapshot"), "money");
   assert.equal(reportReviewScreenFromHash("#goals"), "goals");
-  assert.equal(reportReviewScreenFromHash("#inputs"), "snapshot");
-  assert.equal(reportReviewScreenFromHash("#manual-input"), "snapshot");
-  assert.equal(reportReviewScreenFromHash("#findings"), "report");
-  assert.equal(reportReviewScreenFromHash("#portfolio"), "snapshot");
+  assert.equal(reportReviewScreenFromHash("#inputs"), "money");
+  assert.equal(reportReviewScreenFromHash("#manual-input"), "money");
+  assert.equal(reportReviewScreenFromHash("#findings"), "money");
+  assert.equal(reportReviewScreenFromHash("#portfolio"), "money");
+  assert.equal(reportReviewScreenFromHash("#report"), "money");
   assert.equal(reportReviewScreenFromHash("#saving-goal-draft"), "goals");
-  assert.equal(reportReviewScreenFromHash("#charge-inspector"), "charge-inspector");
-  assert.equal(reportReviewScreenFromHash("#evidence"), "education");
-  assert.equal(reportReviewScreenFromHash("#unknown"), "report");
+  assert.equal(reportReviewScreenFromHash("#charge-inspector"), "money");
+  // former Education + Evidence merge into Learn.
+  assert.equal(reportReviewScreenFromHash("#education"), "learn");
+  assert.equal(reportReviewScreenFromHash("#evidence"), "learn");
+  assert.equal(reportReviewScreenFromHash("#unknown"), "money");
 });
 
 test("report review keyboard navigation follows the tab order", () => {
   assert.equal(
-    reportReviewScreenFromKeyboard("report", "ArrowRight"),
-    "charge-inspector",
+    reportReviewScreenFromKeyboard("money", "ArrowRight"),
+    "goals",
   );
-  assert.equal(reportReviewScreenFromKeyboard("report", "ArrowLeft"), "goals");
-  assert.equal(reportReviewScreenFromKeyboard("goals", "ArrowLeft"), "snapshot");
+  assert.equal(reportReviewScreenFromKeyboard("money", "ArrowLeft"), "learn");
+  assert.equal(reportReviewScreenFromKeyboard("goals", "ArrowLeft"), "money");
+  assert.equal(reportReviewScreenFromKeyboard("goals", "ArrowRight"), "learn");
   assert.equal(
-    reportReviewScreenFromKeyboard("education", "ArrowRight"),
-    "snapshot",
+    reportReviewScreenFromKeyboard("learn", "ArrowRight"),
+    "money",
   );
   assert.equal(
-    reportReviewScreenFromKeyboard("snapshot", "ArrowLeft"),
-    "education",
+    reportReviewScreenFromKeyboard("money", "ArrowLeft"),
+    "learn",
   );
-  assert.equal(reportReviewScreenFromKeyboard("charge-inspector", "Home"), "snapshot");
-  assert.equal(
-    reportReviewScreenFromKeyboard("charge-inspector", "End"),
-    "education",
-  );
-  assert.equal(reportReviewScreenFromKeyboard("charge-inspector", "Tab"), null);
+  assert.equal(reportReviewScreenFromKeyboard("learn", "Home"), "money");
+  assert.equal(reportReviewScreenFromKeyboard("money", "End"), "learn");
+  assert.equal(reportReviewScreenFromKeyboard("goals", "Tab"), null);
 });
 
 test("report review sample exposes charge inspector review data", () => {
@@ -4025,3 +4028,76 @@ function reportPayload(overrides = {}) {
     },
   };
 }
+
+const {
+  buildNetWorthChartGeometry,
+  summarizeNetWorthChange,
+} = require("../lib/report-review/net-worth-chart.ts");
+
+test("net worth chart geometry maps a trend into bounded, ordered points", () => {
+  const trend = [
+    { month: "2026-01", value: 45200 },
+    { month: "2026-02", value: 45800 },
+    { month: "2026-03", value: 46400 },
+    { month: "2026-04", value: 48200 },
+  ];
+  const layout = { width: 600, height: 190, paddingX: 14, paddingTop: 14, paddingBottom: 24 };
+  const geometry = buildNetWorthChartGeometry(trend, layout, 60000);
+
+  assert.equal(geometry.points.length, trend.length);
+  // x is evenly spaced across the inner width and strictly increasing.
+  assert.equal(geometry.points[0].x, 14);
+  assert.equal(geometry.points[geometry.points.length - 1].x, 586);
+  for (let i = 1; i < geometry.points.length; i += 1) {
+    assert.equal(geometry.points[i].x > geometry.points[i - 1].x, true);
+  }
+  // y stays inside the plot band.
+  for (const point of geometry.points) {
+    assert.equal(point.y >= 14 && point.y <= 190 - 24, true);
+  }
+  // higher net worth sits higher on screen (smaller y) than the earliest point.
+  assert.equal(geometry.points[3].y < geometry.points[0].y, true);
+  // endpoint is the last trend point; paths are well formed.
+  assert.deepEqual(
+    { x: geometry.endpoint.x, value: geometry.endpoint.value },
+    { x: 586, value: 48200 },
+  );
+  assert.equal(geometry.linePath.startsWith("M "), true);
+  assert.equal(geometry.areaPath.trim().endsWith("Z"), true);
+  // goal line is inside the plot band because the target is in the domain.
+  assert.equal(geometry.goalY >= 14 && geometry.goalY <= 190 - 24, true);
+});
+
+test("net worth chart geometry needs at least two points", () => {
+  const layout = { width: 600, height: 190 };
+  const single = buildNetWorthChartGeometry([{ month: "2026-01", value: 100 }], layout);
+  assert.deepEqual(single.points, []);
+  assert.equal(single.linePath, "");
+  assert.equal(single.areaPath, "");
+  assert.equal(single.endpoint, null);
+
+  const none = buildNetWorthChartGeometry([], layout, 500);
+  assert.equal(none.goalY, null);
+  assert.equal(none.endpoint, null);
+});
+
+test("net worth change summary reports factual direction and percent", () => {
+  const up = summarizeNetWorthChange([
+    { month: "2025-07", value: 41800 },
+    { month: "2026-06", value: 48200 },
+  ]);
+  assert.deepEqual(up, { first: 41800, last: 48200, delta: 6400, percent: 15, direction: "up" });
+
+  const down = summarizeNetWorthChange([
+    { month: "2026-01", value: 500 },
+    { month: "2026-02", value: 450 },
+  ]);
+  assert.equal(down.direction, "down");
+  assert.equal(down.delta, -50);
+
+  const flat = summarizeNetWorthChange([{ month: "2026-01", value: 900 }]);
+  assert.deepEqual(flat, { first: 900, last: 900, delta: 0, percent: 0, direction: "flat" });
+
+  const empty = summarizeNetWorthChange([]);
+  assert.deepEqual(empty, { first: null, last: null, delta: 0, percent: null, direction: "flat" });
+});

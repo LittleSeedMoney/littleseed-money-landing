@@ -125,10 +125,16 @@ test.describe("private report review AI panel", () => {
     await expect(page.getByText("targetId is not supported")).toBeVisible();
   });
 
-  test("shows monthly spending AI explanation with monthly context version", async ({
+  // The monthly-spending-summary and category-summary surfaces (and their AI
+  // panels) were removed from the default Charge Inspector view in the copy-
+  // density / UI-simplification phases (#59, #61); the sample review no longer
+  // carries that data, so these panels do not render. Skipped until the CSV
+  // review path that produces those summaries is re-covered by e2e.
+  test.skip("shows monthly spending AI explanation with monthly context version", async ({
     page,
   }) => {
     await page.goto(`${reportReviewPath}#charge-inspector`);
+    await ensureChargeInspectorOpen(page);
 
     const monthlyPanel = page.getByTestId(
       "ai-explanation-panel-charge_inspector_monthly_spending_summary",
@@ -158,7 +164,9 @@ test.describe("private report review AI panel", () => {
     await expect(validatedAnswer.getByText("Streamly Premium")).toHaveCount(0);
   });
 
-  test("sends category review status with category evidence request", async ({
+  // See the note above: the category-evidence Charge Inspector AI panel was
+  // removed from the default sample surface in the UI-simplification phases.
+  test.skip("sends category review status with category evidence request", async ({
     page,
   }) => {
     let requestBody: Record<string, unknown> | null = null;
@@ -230,6 +238,7 @@ test.describe("private report review AI panel", () => {
     });
 
     await page.goto(`${reportReviewPath}#charge-inspector`);
+    await ensureChargeInspectorOpen(page);
 
     const feesCategory = page
       .getByTestId("charge-inspector-category-row")
@@ -310,11 +319,38 @@ test.describe("private report review AI panel", () => {
 async function openFirstAiPanel(page: Page) {
   await page.goto(`${reportReviewPath}#report`);
 
+  // Report & findings is a Money detail disclosure. Deep-linking to #report
+  // auto-opens it; ensure it is open without toggling it back closed.
+  const reportDetails = page
+    .locator("details")
+    .filter({ has: page.locator("#report-findings-details") })
+    .first();
+  await reportDetails.waitFor();
+  if (!(await reportDetails.evaluate((el: HTMLDetailsElement) => el.open))) {
+    await reportDetails.locator("summary").first().click();
+  }
+  await expect(reportDetails).toHaveJSProperty("open", true);
+
   const firstFinding = page.getByTestId("report-finding-card").first();
-  await firstFinding.locator("summary").click();
+  await firstFinding.locator("> summary").click();
   await expect(
     firstFinding.getByTestId("ai-explanation-panel-high_interest_debt_detected"),
   ).toBeVisible();
+}
+
+// Charge Inspector is a Money detail disclosure. Deep-linking to
+// #charge-inspector auto-opens it via native fragment navigation, but that can
+// race hydration — so open it explicitly if it is still closed.
+async function ensureChargeInspectorOpen(page: Page) {
+  const details = page
+    .locator("details")
+    .filter({ has: page.locator("summary", { hasText: "Charge Inspector" }) })
+    .first();
+  await details.waitFor();
+  if (!(await details.evaluate((el: HTMLDetailsElement) => el.open))) {
+    await details.locator("summary").first().click();
+  }
+  await expect(details).toHaveJSProperty("open", true);
 }
 
 function aiPanelAnswer({
