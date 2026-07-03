@@ -109,6 +109,11 @@ const {
   reportReviewScreens,
 } = require("../lib/report-review/report-review-screens.ts");
 const {
+  AT_A_GLANCE_QUESTIONS,
+  atAGlanceMetricAnchor,
+  buildAtAGlanceRows,
+} = require("../lib/report-review/at-a-glance.ts");
+const {
   joinClasses,
 } = require("../components/report-review/class-names.ts");
 
@@ -4100,4 +4105,61 @@ test("net worth change summary reports factual direction and percent", () => {
 
   const empty = summarizeNetWorthChange([]);
   assert.deepEqual(empty, { first: null, last: null, delta: 0, percent: null, direction: "flat" });
+});
+
+test("at-a-glance rows restate the four questions in order from present metrics", () => {
+  const rows = buildAtAGlanceRows(reportReviewSample.summaryMetrics);
+
+  assert.deepEqual(
+    rows.map((row) => row.id),
+    ["money-left", "income-resilience", "debt-pressure", "own-owe"],
+  );
+  assert.deepEqual(
+    rows.map((row) => row.metric.id),
+    ["monthly_cash_flow", "emergency_coverage", "debt_pressure", "net_worth"],
+  );
+  // The row carries the already-computed metric value verbatim — no new math.
+  const cashFlow = rows.find((row) => row.id === "money-left");
+  const sampleCashFlow = reportReviewSample.summaryMetrics.find(
+    (metric) => metric.id === "monthly_cash_flow",
+  );
+  assert.equal(cashFlow.metric.value, sampleCashFlow.value);
+  assert.equal(cashFlow.metric.provenance, sampleCashFlow.provenance);
+});
+
+test("at-a-glance omits a question when its metric is missing, not zero", () => {
+  const withoutDebt = reportReviewSample.summaryMetrics.filter(
+    (metric) => metric.id !== "debt_pressure",
+  );
+  const rows = buildAtAGlanceRows(withoutDebt);
+
+  assert.deepEqual(
+    rows.map((row) => row.id),
+    ["money-left", "income-resilience", "own-owe"],
+  );
+  assert.equal(
+    rows.some((row) => row.id === "debt-pressure"),
+    false,
+  );
+});
+
+test("at-a-glance returns no rows when no answerable metric is present", () => {
+  assert.deepEqual(buildAtAGlanceRows([]), []);
+  assert.deepEqual(
+    buildAtAGlanceRows([
+      { id: "known_contributions", label: "x", value: "y", detail: "", provenance: "user-entered" },
+    ]),
+    [],
+  );
+});
+
+test("at-a-glance metric anchor matches the overview metric card id scheme", () => {
+  assert.equal(atAGlanceMetricAnchor("monthly_cash_flow"), "metric-monthly_cash_flow");
+  // Every question maps to a metric id the anchor helper can target.
+  for (const question of AT_A_GLANCE_QUESTIONS) {
+    assert.equal(
+      atAGlanceMetricAnchor(question.metricId),
+      `metric-${question.metricId}`,
+    );
+  }
 });

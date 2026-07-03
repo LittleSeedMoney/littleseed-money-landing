@@ -113,6 +113,66 @@ test.describe("private report review smoke", () => {
     await expect(page).toHaveURL(/#saving-goal-draft$/);
   });
 
+  test("at-a-glance answers restate the four questions and deep-link to provenance", async ({
+    page,
+  }) => {
+    await page.goto(`${reportReviewPath}#money`);
+
+    // At-a-glance renders twice for responsive placement (mobile narrative vs
+    // desktop rail); exactly one is displayed per viewport. Target the visible one.
+    const atAGlance = page.locator('[data-testid="at-a-glance"]:visible');
+    await expect(atAGlance).toHaveCount(1);
+    await expect(atAGlance).toBeVisible();
+
+    // The sample carries all four question metrics, in fixed order.
+    const rows = atAGlance.getByTestId("at-a-glance-row");
+    await expect(rows).toHaveCount(4);
+    await expect(rows.nth(0)).toContainText("Money left this month");
+    await expect(rows.nth(0)).toContainText("$1,280 left");
+    await expect(rows.nth(1)).toContainText("3.46 months");
+    await expect(rows.nth(2)).toContainText("$35,000 debt");
+    await expect(rows.nth(3)).toContainText("$33,000");
+
+    // The debt-pressure provenance control opens the Report & findings
+    // disclosure and reveals that metric's full card (nested in a collapsed
+    // <details>).
+    const metricCard = page.locator("#metric-debt_pressure");
+    await expect(metricCard).not.toBeInViewport();
+    await rows
+      .nth(2)
+      .getByTestId("at-a-glance-provenance-link")
+      .click();
+    await expect(metricCard).toBeVisible();
+    await expect(metricCard).toBeInViewport();
+  });
+
+  test("money layout offers the left section navigator on wide viewports", async ({
+    page,
+    viewport,
+  }) => {
+    test.skip(
+      !viewport || viewport.width < 1280,
+      "left navigator only renders at xl (>=1280px)",
+    );
+    await page.goto(`${reportReviewPath}#money`);
+
+    const nav = page.getByRole("navigation", { name: "On this page" });
+    await expect(nav).toBeVisible();
+
+    // Jumping to a collapsed disclosure opens it and scrolls it into view.
+    const balance = page.locator("#portfolio");
+    await expect(balance.locator("xpath=ancestor::details[1]")).toHaveJSProperty(
+      "open",
+      false,
+    );
+    await nav.getByRole("button", { name: "Balance details" }).click();
+    await expect(balance.locator("xpath=ancestor::details[1]")).toHaveJSProperty(
+      "open",
+      true,
+    );
+    await expect(balance).toBeInViewport();
+  });
+
   test("report findings show the AI explanation disabled state by default", async ({
     page,
   }) => {

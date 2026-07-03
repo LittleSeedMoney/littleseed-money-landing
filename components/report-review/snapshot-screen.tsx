@@ -28,10 +28,10 @@ export function SnapshotSupportDetails({
 }) {
   return (
     <ReviewDisclosure
-      className="overflow-hidden p-0"
+      className="scroll-mt-24 overflow-hidden p-0"
       summary={
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
+          <div id="review-support">
             <h3 className="text-sm font-semibold text-seed-950">
               Review support
             </h3>

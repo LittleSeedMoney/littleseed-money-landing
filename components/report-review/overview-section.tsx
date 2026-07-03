@@ -117,7 +117,11 @@ function noticeToneClass(tone: ReportReviewSample["connectionNotice"]["tone"]) {
 
 function MetricCard({ metric }: { metric: SummaryMetric }) {
   return (
-    <article className={reviewSubtlePanelClass("p-3")} title={metric.detail}>
+    <article
+      className={reviewSubtlePanelClass("scroll-mt-28 p-3")}
+      id={`metric-${metric.id}`}
+      title={metric.detail}
+    >
       <div className="flex items-start justify-between gap-3">
         <h3 className="text-sm font-semibold text-earth-800">
           {metric.label}
