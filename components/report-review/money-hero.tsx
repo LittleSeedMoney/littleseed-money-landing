@@ -43,23 +43,43 @@ export function MoneyHero({
     topGoalTile(topGoalSummary),
   ].filter((tile): tile is HeroTile => tile !== null);
 
-  // Deep-links: each tile opens the surface that explains its number.
+  // Deep-links: each tile opens the surface that explains its number. Targets
+  // can be nested inside more than one disclosure (for example decision details
+  // inside Balance details), so open every ancestor <details> before scrolling.
+  function revealAnchor(id: string, block: ScrollLogicalPosition = "start") {
+    const anchor = document.getElementById(id);
+    if (!anchor) {
+      return;
+    }
+    for (
+      let node: HTMLElement | null = anchor;
+      node;
+      node = node.parentElement
+    ) {
+      if (node instanceof HTMLDetailsElement) {
+        node.open = true;
+      }
+    }
+    anchor.scrollIntoView({ behavior: "smooth", block });
+  }
+
+  // The spending tile and chart month selection both open the spending
+  // disclosure (id="spending-detail" lives in its <summary>) and scroll to it.
+  function openSpendingDisclosure(month?: string) {
+    if (month) {
+      snapshotView?.selectMonth(month);
+    }
+    revealAnchor("spending-detail");
+  }
+
   const tileActions: Record<string, (() => void) | undefined> = {
-    "emergency-fund": () => {
-      const anchor = document.getElementById("decision-details");
-      anchor?.closest("details")?.setAttribute("open", "");
-      anchor?.scrollIntoView({ behavior: "smooth", block: "center" });
-    },
+    "emergency-fund": () => revealAnchor("decision-details", "center"),
     spending:
       snapshotView && tiles.find((tile) => tile.id === "spending")?.month
         ? () => {
-            const month = tiles.find((tile) => tile.id === "spending")?.month;
-            if (month) {
-              snapshotView.selectMonth(month);
-            }
-            document
-              .getElementById("portfolio")
-              ?.scrollIntoView({ behavior: "smooth" });
+            openSpendingDisclosure(
+              tiles.find((tile) => tile.id === "spending")?.month,
+            );
           }
         : undefined,
     "top-goal": () => {
@@ -71,7 +91,7 @@ export function MoneyHero({
     <div className="space-y-4" data-testid="money-hero">
       {hasChart ? (
         <NetWorthChart
-          onMonthSelect={snapshotView?.selectMonth}
+          onMonthSelect={snapshotView ? openSpendingDisclosure : undefined}
           selectableMonths={
             snapshotView ? (snapshotView.availableMonths ?? []) : null
           }

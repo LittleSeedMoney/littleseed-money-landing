@@ -9,7 +9,7 @@ const reportReviewPath = "/private/report-review";
 const smokeScreens = [
   {
     hash: "money",
-    heading: "Current portfolio snapshot",
+    heading: "This month's spending",
     screen: "money",
     tab: "Money",
   },
@@ -83,7 +83,7 @@ test.describe("private report review smoke", () => {
       await expect(
         panel.getByRole("heading", {
           exact: true,
-          name: "Current portfolio snapshot",
+          name: "This month's spending",
         }),
       ).toBeVisible();
       await expect(page.getByRole("tab", { name: "Money" })).toHaveAttribute(
@@ -182,7 +182,10 @@ test.describe("private report review smoke", () => {
 
     await page.goto(`${reportReviewPath}#snapshot`);
 
-    // Profile inputs are now tucked into a collapsed disclosure on Overview.
+    // Asset/liability lists and profile inputs live in the Balance details
+    // disclosure, collapsed by default in the question-first IA.
+    await ensureBalanceDetailsOpen(page);
+    // Profile inputs are further tucked into a nested collapsed disclosure.
     await page.getByText("Your profile inputs", { exact: true }).click();
 
     const profileCard = page.locator(
@@ -359,6 +362,7 @@ test.describe("private report review smoke", () => {
     await expect(page.getByTestId("net-worth-chart")).toBeVisible();
 
     // Save a manual edit to swap in the trend-less report.
+    await ensureBalanceDetailsOpen(page);
     await page.getByText("Your profile inputs", { exact: true }).click();
     const profileCard = page.locator(
       'form[aria-labelledby="profile-values-heading"]',
@@ -413,6 +417,7 @@ test.describe("private report review smoke", () => {
     await page.goto(`${reportReviewPath}#snapshot`);
     await expect(page.getByTestId("net-worth-chart")).toBeVisible();
 
+    await ensureBalanceDetailsOpen(page);
     await page.getByText("Your profile inputs", { exact: true }).click();
     const profileCard = page.locator(
       'form[aria-labelledby="profile-values-heading"]',
@@ -439,13 +444,16 @@ test.describe("private report review smoke", () => {
 
     // The net-worth hero chart replaced the old monthly mixed chart as the
     // month selector; every month on the chart has monthly transaction detail
-    // (the trend ends at the latest data month), and the asset-type breakdown
-    // stays as cards.
+    // (the trend ends at the latest data month). The asset-type breakdown stays
+    // as cards inside the Balance details disclosure.
+    await ensureBalanceDetailsOpen(page);
     await expect(page.getByTestId("snapshot-asset-breakdown")).toBeVisible();
     await expect(page.getByTestId("snapshot-monthly-mixed-chart"))
       .toHaveCount(0);
     await expect(page.getByTestId("net-worth-chart-month")).toHaveCount(3);
 
+    // Selecting a chart month opens the "This month's spending" disclosure that
+    // holds the monthly table.
     await page.locator(
       '[data-testid="net-worth-chart-month"][data-month="2026-04"]',
     ).click();
@@ -605,6 +613,8 @@ test.describe("private report review smoke", () => {
 
     await clickTab(page, "Money");
 
+    // The goal preview lives in the Balance details Overview, collapsed by default.
+    await ensureBalanceDetailsOpen(page);
     const goalPreview = page.getByTestId("snapshot-goal-preview");
     await expect(goalPreview).toBeVisible();
     await expect(goalPreview).toContainText("User priority #1");
@@ -626,7 +636,7 @@ test.describe("private report review smoke", () => {
 
     await clickTab(page, "Money");
     await expect(
-      page.getByRole("heading", { name: "Current portfolio snapshot" }),
+      page.getByRole("heading", { name: "This month's spending" }),
     ).toBeVisible();
     await expect(page).toHaveURL(/#money$/);
 
@@ -855,32 +865,49 @@ function chargeInspectorFindings(page: Page) {
   return page.getByTestId("charge-inspector-finding");
 }
 
-// The "Report & findings" disclosure auto-opens on #report navigation; open it
-// only if it is still closed so we never toggle it back shut.
+// The "Report & findings" disclosure auto-opens on #report navigation via a
+// reveal effect on rAF; set `open` directly so a toggling click cannot race
+// that effect and close it.
 async function ensureReportFindingsOpen(page: Page) {
   const details = page
     .locator("details")
     .filter({ has: page.locator("#report-findings-details") })
     .first();
   await details.waitFor();
-  if (!(await details.evaluate((el: HTMLDetailsElement) => el.open))) {
-    await details.locator("summary").first().click();
-  }
+  await details.evaluate((el: HTMLDetailsElement) => {
+    el.open = true;
+  });
   await expect(details).toHaveJSProperty("open", true);
 }
 
 // Charge Inspector is a Money detail disclosure. Deep-linking to
-// #charge-inspector auto-opens it via native fragment navigation, but that can
-// race hydration — so open it explicitly if it is still closed.
+// #charge-inspector auto-opens it via a reveal effect on rAF; set `open`
+// directly so a toggling click cannot race that effect and close it.
 async function ensureChargeInspectorOpen(page: Page) {
   const details = page
     .locator("details")
     .filter({ has: page.locator("summary", { hasText: "Charge Inspector" }) })
     .first();
   await details.waitFor();
-  if (!(await details.evaluate((el: HTMLDetailsElement) => el.open))) {
-    await details.locator("summary").first().click();
-  }
+  await details.evaluate((el: HTMLDetailsElement) => {
+    el.open = true;
+  });
+  await expect(details).toHaveJSProperty("open", true);
+}
+
+// Balance details (asset/liability lists, profile inputs, decision details) is a
+// Money detail disclosure, collapsed by default in the question-first IA. Set
+// `open` directly rather than clicking the summary: legacy-hash navigation opens
+// it via a reveal effect on rAF, and a toggling click can race that and close it.
+async function ensureBalanceDetailsOpen(page: Page) {
+  const details = page
+    .locator("details")
+    .filter({ has: page.locator("#portfolio") })
+    .first();
+  await details.waitFor();
+  await details.evaluate((el: HTMLDetailsElement) => {
+    el.open = true;
+  });
   await expect(details).toHaveJSProperty("open", true);
 }
 

@@ -14,6 +14,10 @@ import type {
 } from "@/lib/report-review/goal-planning";
 import type { ReportReviewScreenId } from "@/lib/report-review/report-review-screens";
 
+import {
+  MoneyBalanceDetails,
+  MoneySpendingDetail,
+} from "./asset-portfolio-section";
 import { ChargeInspectorSection } from "./charge-inspector-section";
 import { EducationSection } from "./education-section";
 import { EvidenceSection } from "./evidence-section";
@@ -26,8 +30,8 @@ import type { ManualRequestState } from "./manual-input-section";
 import { MoneyHero } from "./money-hero";
 import { OverviewSection } from "./overview-section";
 import { ReportSections } from "./report-sections";
-import { SnapshotScreen } from "./snapshot-screen";
 import { ReviewDisclosure } from "./shared";
+import { SnapshotSupportDetails } from "./snapshot-screen";
 import { SnapshotViewProvider } from "./snapshot-view-context";
 
 export function ReportReviewScreenPanel({
@@ -126,34 +130,66 @@ export function ReportReviewScreenPanel({
     );
   }
 
-  // Money screen: net-worth hero up top, then the editable snapshot, then the
-  // report/findings and Charge Inspector detail surfaces consolidated into
-  // disclosures so the validation content stays reachable without owning a tab.
-  // The provider lets the hero chart drive the snapshot's month + Monthly tab.
+  // Money screen: question-first narrative. Net-worth hero leads, then the
+  // detail disclosures follow in the order the consumer needs them. The
+  // SnapshotViewProvider lets the hero chart drive month selection in the
+  // spending detail disclosure.
+  //
+  // Narrative order (Phase 5.5.1 skeleton):
+  //   1. Net-worth hero (chart + composition + tiles)
+  //   [5.5.3 slot: asset & liability grouped breakdown]
+  //   [5.5.4 slot: things to look at]
+  //   [5.5.2 slot: at-a-glance answers]
+  //   2. This month's spending disclosure  ← monthly table content
+  //   3. Charge Inspector disclosure
+  //   4. Report & findings disclosure
+  //   5. Balance details disclosure  ← asset/liability lists + profile inputs
+  //   6. Review support disclosure
+  const hasReport = hasReportContent(report);
+
   return (
     <SnapshotViewProvider>
       <MoneyHero report={report} topGoalSummary={topGoalSummary} />
-      <SnapshotScreen
-        errorMessage={errorMessage}
-        hasReportContent={hasReportContent(report)}
-        onAddAsset={onAddAsset}
-        onAddDebt={onAddDebt}
-        onAssetUpdate={onAssetUpdate}
-        onDebtUpdate={onDebtUpdate}
-        onRemoveAsset={onRemoveAsset}
-        onRemoveDebt={onRemoveDebt}
-        onSubmit={onSubmit}
-        onUpdate={onUpdate}
-        onValuesReset={onValuesReset}
-        report={report}
-        requestState={requestState}
-        selectedPreset={selectedPreset}
-        sourceById={sourceById}
-        topGoalSummary={topGoalSummary}
-        values={values}
-      />
-      {hasReportContent(report) ? (
+      {hasReport ? (
         <>
+          <ReviewDisclosure
+            summary={
+              <div id="spending-detail" className="scroll-mt-28">
+                <h3 className="text-sm font-semibold text-seed-950">
+                  This month's spending
+                </h3>
+                <p className="mt-0.5 text-xs text-earth-600">
+                  Monthly income, expenses, and category targets for this
+                  session.
+                </p>
+              </div>
+            }
+            variant="panel"
+          >
+            <div className="border-t border-stone-200 p-4">
+              <MoneySpendingDetail
+                chargeInspector={report.chargeInspector}
+                values={values}
+              />
+            </div>
+          </ReviewDisclosure>
+          <ReviewDisclosure
+            summary={
+              <div>
+                <h3 className="text-sm font-semibold text-seed-950">
+                  Charge Inspector
+                </h3>
+                <p className="mt-0.5 text-xs text-earth-600">
+                  Recurring-charge review for the current transaction source.
+                </p>
+              </div>
+            }
+            variant="panel"
+          >
+            <div className="border-t border-stone-200 p-4">
+              <ChargeInspectorSection review={report.chargeInspector} />
+            </div>
+          </ReviewDisclosure>
           <ReviewDisclosure
             className="scroll-mt-24"
             summary={
@@ -175,28 +211,83 @@ export function ReportReviewScreenPanel({
                 sections={report.sections}
                 sourceById={sourceById}
               />
-              <FindingsSection aiEnabled={aiEnabled} findings={report.findings} />
+              <FindingsSection
+                aiEnabled={aiEnabled}
+                findings={report.findings}
+              />
             </div>
           </ReviewDisclosure>
           <ReviewDisclosure
+            className="scroll-mt-28"
             summary={
-              <div>
+              <div id="portfolio">
                 <h3 className="text-sm font-semibold text-seed-950">
-                  Charge Inspector
+                  Balance details
                 </h3>
                 <p className="mt-0.5 text-xs text-earth-600">
-                  Recurring-charge review for the current transaction source.
+                  Editable asset and liability balances, profile inputs, and
+                  decision details.
                 </p>
               </div>
             }
             variant="panel"
           >
             <div className="border-t border-stone-200 p-4">
-              <ChargeInspectorSection review={report.chargeInspector} />
+              <MoneyBalanceDetails
+                decisionReadiness={report.decisionReadiness}
+                errorMessage={errorMessage}
+                hasReportContent
+                onAddAsset={onAddAsset}
+                onAddDebt={onAddDebt}
+                onAssetUpdate={onAssetUpdate}
+                onDebtUpdate={onDebtUpdate}
+                onRemoveAsset={onRemoveAsset}
+                onRemoveDebt={onRemoveDebt}
+                onPortfolioSubmit={onSubmit}
+                onProfileSubmit={onSubmit}
+                onProfileUpdate={onUpdate}
+                onValuesReset={onValuesReset}
+                portfolio={report.assetPortfolio}
+                requestState={requestState}
+                selectedPreset={selectedPreset}
+                sourceById={sourceById}
+                topGoalSummary={topGoalSummary}
+                values={values}
+              />
             </div>
           </ReviewDisclosure>
         </>
-      ) : null}
+      ) : (
+        <MoneyBalanceDetails
+          decisionReadiness={report.decisionReadiness}
+          errorMessage={errorMessage}
+          hasReportContent={false}
+          onAddAsset={onAddAsset}
+          onAddDebt={onAddDebt}
+          onAssetUpdate={onAssetUpdate}
+          onDebtUpdate={onDebtUpdate}
+          onRemoveAsset={onRemoveAsset}
+          onRemoveDebt={onRemoveDebt}
+          onPortfolioSubmit={onSubmit}
+          onProfileSubmit={onSubmit}
+          onProfileUpdate={onUpdate}
+          onValuesReset={onValuesReset}
+          portfolio={report.assetPortfolio}
+          requestState={requestState}
+          selectedPreset={selectedPreset}
+          sourceById={sourceById}
+          topGoalSummary={topGoalSummary}
+          values={values}
+        />
+      )}
+      <SnapshotSupportDetails
+        dataCompleteness={report.dataCompleteness}
+        dataMode={report.dataMode}
+        reconciliation={report.sourceReconciliation}
+        selectedPreset={selectedPreset}
+        showDataCompleteness={hasReport}
+        sources={report.dataSources}
+      />
     </SnapshotViewProvider>
   );
 }
