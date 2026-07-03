@@ -329,6 +329,59 @@ test.describe("private report review smoke", () => {
     ).toHaveCount(0);
   });
 
+  test("money hero degrades to a single-point net worth when the report has no trend", async ({
+    page,
+  }) => {
+    // A user-entered / platform report carries portfolio totals but no
+    // month-by-month net-worth history, so the chart cannot be shown.
+    const trendlessReport = {
+      ...reportReviewSample,
+      assetPortfolio: {
+        ...reportReviewSample.assetPortfolio,
+        netWorthTrend: undefined,
+        netWorthTarget: undefined,
+      },
+    };
+    await page.route(
+      "**/private/report-review/workspace-report",
+      async (route) => {
+        await route.fulfill({
+          contentType: "application/json",
+          json: { report: trendlessReport },
+          status: 200,
+        });
+      },
+    );
+
+    await page.goto(`${reportReviewPath}#snapshot`);
+
+    // The sample loads with a trend, so the chart is present first.
+    await expect(page.getByTestId("net-worth-chart")).toBeVisible();
+
+    // Save a manual edit to swap in the trend-less report.
+    await page.getByText("Your profile inputs", { exact: true }).click();
+    const profileCard = page.locator(
+      'form[aria-labelledby="profile-values-heading"]',
+    );
+    await profileCard
+      .getByRole("button", { name: "Edit Monthly take-home income" })
+      .click();
+    await profileCard
+      .getByRole("spinbutton", { name: "Monthly take-home income" })
+      .fill("5300");
+    await profileCard.getByRole("button", { name: "Save profile" }).click();
+
+    // The hero degrades gracefully: no chart, but the current net worth and
+    // composition remain with an honest note about the missing trend.
+    await expect(page.getByTestId("net-worth-chart")).toHaveCount(0);
+    const composition = page.getByTestId("money-hero-composition");
+    await expect(composition).toBeVisible();
+    await expect(composition).toContainText("$33,000");
+    await expect(page.getByTestId("money-hero-no-trend-note")).toBeVisible();
+    // No selectable month targets remain without a chart.
+    await expect(page.getByTestId("net-worth-chart-month")).toHaveCount(0);
+  });
+
   test("snapshot monthly tab supports category targets and transaction overrides", async ({
     page,
   }) => {
