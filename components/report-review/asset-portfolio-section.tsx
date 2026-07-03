@@ -20,6 +20,7 @@ import type {
 import type {
   ManualAssetValue,
   ManualDebtValue,
+  ManualProfilePresetId,
   ManualProfileScalarField,
   ManualProfileValues,
 } from "@/lib/report-review/manual-profile";
@@ -54,86 +55,35 @@ import {
   reviewDisclosureSummaryClass,
   reviewInlineDisclosureSummaryClass,
   reviewPanelClass,
+  ReviewSectionHeading,
   reviewSubtlePanelClass,
   StatusPill,
 } from "./shared";
 import {
   PortfolioSnapshotAssetEditForm,
   PortfolioSnapshotDebtEditForm,
+  PortfolioSnapshotGroupEditForm,
   type ManualRequestState,
   type PortfolioEditTarget,
 } from "./manual-input-section";
 import { PortfolioSnapshotList } from "./portfolio-snapshot-list";
 import { useSnapshotView } from "./snapshot-view-context";
 
-export function AssetPortfolioSection({
-  activePortfolioEdit,
-  activeProfileField,
+type SnapshotEditBaseline = {
+  selectedPreset: ManualProfilePresetId | "custom";
+  values: ManualProfileValues;
+};
+
+// Spending detail panel: monthly income/expense tables driven by the
+// SnapshotViewContext so the hero chart's month selection flows through.
+export function MoneySpendingDetail({
   chargeInspector,
-  decisionReadiness,
-  errorMessage,
-  onAddAsset,
-  onAddDebt,
-  onAssetEdit,
-  onAssetUpdate,
-  onCancelEdit,
-  onDebtEdit,
-  onDebtUpdate,
-  onProfileFieldEdit,
-  onProfileSubmit,
-  onProfileUpdate,
-  onPortfolioSubmit,
-  portfolio,
-  requestState,
-  sourceById,
-  statusLabel,
-  topGoalSummary,
   values,
 }: {
-  activePortfolioEdit: PortfolioEditTarget | null;
-  activeProfileField: ManualProfileScalarField | null;
   chargeInspector: ChargeInspectorReview;
-  decisionReadiness: DecisionReadiness;
-  errorMessage: string;
-  onAddAsset: () => void;
-  onAddDebt: () => void;
-  onAssetEdit: (id: string) => void;
-  onAssetUpdate: <T extends keyof ManualAssetValue>(
-    id: string,
-    field: T,
-    value: ManualAssetValue[T],
-  ) => void;
-  onCancelEdit: () => void;
-  onDebtEdit: (id: string) => void;
-  onDebtUpdate: <T extends keyof ManualDebtValue>(
-    id: string,
-    field: T,
-    value: ManualDebtValue[T],
-  ) => void;
-  onProfileFieldEdit: (field: ManualProfileScalarField) => void;
-  onProfileSubmit: (event: FormEvent<HTMLFormElement>) => void;
-  onProfileUpdate: (
-    field: ManualProfileScalarField,
-    event: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
-  ) => void;
-  onPortfolioSubmit: (event: FormEvent<HTMLFormElement>) => void;
-  portfolio: ReportReviewSample["assetPortfolio"];
-  requestState: ManualRequestState;
-  sourceById: ReadonlyMap<string, EvidenceSource>;
-  statusLabel: string;
-  topGoalSummary: GoalPlanningSummary | null;
   values: ManualProfileValues;
 }) {
-  // The net-worth hero chart drives month + tab selection through the shared
-  // Money-screen view context; fall back to local state if no provider wraps us.
   const snapshotView = useSnapshotView();
-  const [localTab, setLocalTab] = useState<SnapshotTabId>("overview");
-  const activeSnapshotTab: SnapshotTabId = snapshotView
-    ? snapshotView.activeTab
-    : localTab;
-  const setActiveSnapshotTab = snapshotView
-    ? snapshotView.setActiveTab
-    : setLocalTab;
 
   const monthlyTrendRows = monthlyFinancialTrendRows(chargeInspector, values);
   const latestSnapshotMonth =
@@ -141,8 +91,7 @@ export function AssetPortfolioSection({
   const setAvailableMonths = snapshotView?.setAvailableMonths;
   const availableMonthsKey = monthlyTrendRows.map((row) => row.month).join(",");
 
-  // Tell the hero chart which months actually have monthly transaction detail
-  // so it only offers those for selection.
+  // Register available months so the hero chart knows which months are selectable.
   useEffect(() => {
     setAvailableMonths?.(availableMonthsKey ? availableMonthsKey.split(",") : []);
   }, [availableMonthsKey, setAvailableMonths]);
@@ -154,6 +103,89 @@ export function AssetPortfolioSection({
       ? requestedMonth
       : latestSnapshotMonth;
 
+  return (
+    <SnapshotMonthlyTab
+      chargeInspector={chargeInspector}
+      selectedMonth={selectedSnapshotMonth}
+      values={values}
+    />
+  );
+}
+
+// Balance details panel: editable asset/liability lists, profile inputs, and
+// decision details. Manages its own inline-edit state.
+export function MoneyBalanceDetails({
+  decisionReadiness,
+  errorMessage,
+  hasReportContent,
+  onAddAsset,
+  onAddDebt,
+  onAssetUpdate,
+  onDebtUpdate,
+  onRemoveAsset,
+  onRemoveDebt,
+  onPortfolioSubmit,
+  onProfileSubmit,
+  onProfileUpdate,
+  onValuesReset,
+  portfolio,
+  requestState,
+  selectedPreset,
+  sourceById,
+  topGoalSummary,
+  values,
+}: {
+  decisionReadiness: DecisionReadiness;
+  errorMessage: string;
+  hasReportContent: boolean;
+  onAddAsset: () => string;
+  onAddDebt: () => string;
+  onAssetUpdate: <T extends keyof ManualAssetValue>(
+    id: string,
+    field: T,
+    value: ManualAssetValue[T],
+  ) => void;
+  onDebtUpdate: <T extends keyof ManualDebtValue>(
+    id: string,
+    field: T,
+    value: ManualDebtValue[T],
+  ) => void;
+  onRemoveAsset: (id: string) => void;
+  onRemoveDebt: (id: string) => void;
+  onPortfolioSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onProfileSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onProfileUpdate: (
+    field: ManualProfileScalarField,
+    event: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => void;
+  onValuesReset: (
+    nextValues: ManualProfileValues,
+    nextPreset: ManualProfilePresetId | "custom",
+  ) => void;
+  portfolio: ReportReviewSample["assetPortfolio"];
+  requestState: ManualRequestState;
+  selectedPreset: ManualProfilePresetId | "custom";
+  sourceById: ReadonlyMap<string, EvidenceSource>;
+  topGoalSummary: GoalPlanningSummary | null;
+  values: ManualProfileValues;
+}) {
+  const [activePortfolioEdit, setActivePortfolioEdit] =
+    useState<PortfolioEditTarget | null>(null);
+  const [activeProfileField, setActiveProfileField] =
+    useState<ManualProfileScalarField | null>(null);
+  const [editBaseline, setEditBaseline] =
+    useState<SnapshotEditBaseline | null>(null);
+  const wasSubmittingRef = useRef(false);
+
+  useEffect(() => {
+    if (wasSubmittingRef.current && requestState === "idle" && !errorMessage) {
+      setEditBaseline(null);
+      setActivePortfolioEdit(null);
+      setActiveProfileField(null);
+    }
+    wasSubmittingRef.current = requestState === "submitting";
+  }, [errorMessage, requestState]);
+
   const assetItems = manualAssetSnapshotItems(values.assets, portfolio.assets);
   const liabilityItems = manualDebtSnapshotItems(
     values.debts,
@@ -162,85 +194,137 @@ export function AssetPortfolioSection({
   const manualAssetIds = new Set(values.assets.map((asset) => asset.id));
   const manualDebtIds = new Set(values.debts.map((debt) => debt.id));
 
-  return (
-    <section
-      id="portfolio"
-      aria-labelledby="portfolio-heading"
-      className="scroll-mt-28 space-y-3"
-    >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h2
-            className="font-serif text-xl font-bold tracking-normal text-seed-950"
-            id="portfolio-heading"
+  if (!hasReportContent) {
+    return (
+      <>
+        <section className={reviewPanelClass("space-y-5 p-4")}>
+          <h3
+            className="text-sm font-semibold text-seed-950"
+            id="assets-edit-heading"
           >
-            Current portfolio snapshot
-          </h2>
-          <p className="sr-only">
-            Review current balances, monthly activity, and your first goal.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <StatusPill label={statusLabel} tone="stone" />
-        </div>
-      </div>
-
-      <div className={reviewPanelClass("p-4")}>
-        <SnapshotTabs
-          activeTab={activeSnapshotTab}
-          onTabChange={setActiveSnapshotTab}
-        />
-
-        {activeSnapshotTab === "overview" ? (
-          <SnapshotOverviewTab
-            activeField={activeProfileField}
-            activePortfolioEdit={activePortfolioEdit}
-            assetItems={assetItems}
+            Assets
+          </h3>
+          <PortfolioSnapshotGroupEditForm
             errorMessage={errorMessage}
-            liabilityItems={liabilityItems}
-            manualAssetIds={manualAssetIds}
-            manualDebtIds={manualDebtIds}
+            group="assets"
+            headingId="assets-edit-heading"
             onAddAsset={onAddAsset}
             onAddDebt={onAddDebt}
-            onAssetEdit={onAssetEdit}
             onAssetUpdate={onAssetUpdate}
-            onCancelEdit={onCancelEdit}
-            onDebtEdit={onDebtEdit}
             onDebtUpdate={onDebtUpdate}
-            onFieldEdit={onProfileFieldEdit}
-            onPortfolioSubmit={onPortfolioSubmit}
-            onProfileSubmit={onProfileSubmit}
-            onProfileUpdate={onProfileUpdate}
-            portfolio={portfolio}
+            onRemoveAsset={onRemoveAsset}
+            onRemoveDebt={onRemoveDebt}
+            onSubmit={onPortfolioSubmit}
             requestState={requestState}
-            topGoalSummary={topGoalSummary}
             values={values}
           />
-        ) : null}
-
-        {activeSnapshotTab === "monthly" ? (
-          <SnapshotMonthlyTab
-            chargeInspector={chargeInspector}
-            selectedMonth={selectedSnapshotMonth}
+          <h3
+            className="text-sm font-semibold text-seed-950"
+            id="liabilities-edit-heading"
+          >
+            Liabilities
+          </h3>
+          <PortfolioSnapshotGroupEditForm
+            errorMessage={errorMessage}
+            group="liabilities"
+            headingId="liabilities-edit-heading"
+            onAddAsset={onAddAsset}
+            onAddDebt={onAddDebt}
+            onAssetUpdate={onAssetUpdate}
+            onDebtUpdate={onDebtUpdate}
+            onRemoveAsset={onRemoveAsset}
+            onRemoveDebt={onRemoveDebt}
+            onSubmit={onPortfolioSubmit}
+            requestState={requestState}
             values={values}
           />
-        ) : null}
-      </div>
+        </section>
+        <section className={reviewPanelClass("p-6")}>
+          <ReviewSectionHeading
+            eyebrow="Snapshot state"
+            id="empty-snapshot-state-heading"
+            title="No snapshot output returned"
+            description="The editable snapshot values are still available, but the platform response did not include renderable snapshot or report output for this session."
+          />
+        </section>
+      </>
+    );
+  }
 
+  return (
+    <>
+      <SnapshotOverviewTab
+        activeField={activeProfileField}
+        activePortfolioEdit={activePortfolioEdit}
+        assetItems={assetItems}
+        errorMessage={errorMessage}
+        liabilityItems={liabilityItems}
+        manualAssetIds={manualAssetIds}
+        manualDebtIds={manualDebtIds}
+        onAddAsset={addAssetAndEdit}
+        onAddDebt={addDebtAndEdit}
+        onAssetEdit={startAssetEditing}
+        onAssetUpdate={onAssetUpdate}
+        onCancelEdit={cancelEditing}
+        onDebtEdit={startDebtEditing}
+        onDebtUpdate={onDebtUpdate}
+        onFieldEdit={startProfileFieldEditing}
+        onPortfolioSubmit={onPortfolioSubmit}
+        onProfileSubmit={onProfileSubmit}
+        onProfileUpdate={onProfileUpdate}
+        portfolio={portfolio}
+        requestState={requestState}
+        topGoalSummary={topGoalSummary}
+        values={values}
+      />
       <SnapshotDecisionDetails
         decisionReadiness={decisionReadiness}
         sourceById={sourceById}
       />
-    </section>
+    </>
   );
+
+  function startAssetEditing(id: string) {
+    setEditBaseline((current) => current ?? { selectedPreset, values });
+    setActivePortfolioEdit({ group: "assets", id });
+    setActiveProfileField(null);
+  }
+
+  function startDebtEditing(id: string) {
+    setEditBaseline((current) => current ?? { selectedPreset, values });
+    setActivePortfolioEdit({ group: "liabilities", id });
+    setActiveProfileField(null);
+  }
+
+  function addAssetAndEdit() {
+    setEditBaseline((current) => current ?? { selectedPreset, values });
+    const id = onAddAsset();
+    setActivePortfolioEdit({ group: "assets", id });
+    setActiveProfileField(null);
+  }
+
+  function addDebtAndEdit() {
+    setEditBaseline((current) => current ?? { selectedPreset, values });
+    const id = onAddDebt();
+    setActivePortfolioEdit({ group: "liabilities", id });
+    setActiveProfileField(null);
+  }
+
+  function startProfileFieldEditing(field: ManualProfileScalarField) {
+    setEditBaseline((current) => current ?? { selectedPreset, values });
+    setActivePortfolioEdit(null);
+    setActiveProfileField(field);
+  }
+
+  function cancelEditing() {
+    if (editBaseline) {
+      onValuesReset(editBaseline.values, editBaseline.selectedPreset);
+    }
+    setEditBaseline(null);
+    setActivePortfolioEdit(null);
+    setActiveProfileField(null);
+  }
 }
-
-type SnapshotTabId = "overview" | "monthly";
-
-const SNAPSHOT_TABS: { id: SnapshotTabId; label: string }[] = [
-  { id: "overview", label: "Overview" },
-  { id: "monthly", label: "Monthly" },
-];
 
 function AssetTypeBreakdown({ values }: { values: ManualProfileValues }) {
   const assetBuckets = assetBucketSummary(values);
@@ -273,44 +357,6 @@ function AssetTypeBreakdown({ values }: { values: ManualProfileValues }) {
         ))}
       </dl>
     </section>
-  );
-}
-
-function SnapshotTabs({
-  activeTab,
-  onTabChange,
-}: {
-  activeTab: SnapshotTabId;
-  onTabChange: (tab: SnapshotTabId) => void;
-}) {
-  return (
-    <div
-      aria-label="Snapshot views"
-      className="mt-4 flex flex-wrap gap-2 border-b border-stone-200"
-      role="tablist"
-    >
-      {SNAPSHOT_TABS.map((tab) => {
-        const isActive = tab.id === activeTab;
-
-        return (
-          <button
-            aria-selected={isActive}
-            className={[
-              "min-h-10 border-b-2 px-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-seed-500",
-              isActive
-                ? "border-seed-700 text-seed-950"
-                : "border-transparent text-earth-700 hover:text-seed-900",
-            ].join(" ")}
-            key={tab.id}
-            onClick={() => onTabChange(tab.id)}
-            role="tab"
-            type="button"
-          >
-            {tab.label}
-          </button>
-        );
-      })}
-    </div>
   );
 }
 

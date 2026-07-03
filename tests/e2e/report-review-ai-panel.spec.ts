@@ -320,15 +320,16 @@ async function openFirstAiPanel(page: Page) {
   await page.goto(`${reportReviewPath}#report`);
 
   // Report & findings is a Money detail disclosure. Deep-linking to #report
-  // auto-opens it; ensure it is open without toggling it back closed.
+  // auto-opens it via a reveal effect on rAF; set `open` directly rather than
+  // clicking the summary so a toggling click cannot race that effect and close it.
   const reportDetails = page
     .locator("details")
     .filter({ has: page.locator("#report-findings-details") })
     .first();
   await reportDetails.waitFor();
-  if (!(await reportDetails.evaluate((el: HTMLDetailsElement) => el.open))) {
-    await reportDetails.locator("summary").first().click();
-  }
+  await reportDetails.evaluate((el: HTMLDetailsElement) => {
+    el.open = true;
+  });
   await expect(reportDetails).toHaveJSProperty("open", true);
 
   const firstFinding = page.getByTestId("report-finding-card").first();
@@ -339,17 +340,17 @@ async function openFirstAiPanel(page: Page) {
 }
 
 // Charge Inspector is a Money detail disclosure. Deep-linking to
-// #charge-inspector auto-opens it via native fragment navigation, but that can
-// race hydration — so open it explicitly if it is still closed.
+// #charge-inspector auto-opens it via a reveal effect on rAF; set `open`
+// directly so a toggling click cannot race that effect and close it.
 async function ensureChargeInspectorOpen(page: Page) {
   const details = page
     .locator("details")
     .filter({ has: page.locator("summary", { hasText: "Charge Inspector" }) })
     .first();
   await details.waitFor();
-  if (!(await details.evaluate((el: HTMLDetailsElement) => el.open))) {
-    await details.locator("summary").first().click();
-  }
+  await details.evaluate((el: HTMLDetailsElement) => {
+    el.open = true;
+  });
   await expect(details).toHaveJSProperty("open", true);
 }
 
