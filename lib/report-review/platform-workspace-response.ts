@@ -35,6 +35,12 @@ export type PlatformReport = {
   debt_risk: {
     total_debt_balance: DecimalValue;
     confirmed_high_interest_balance: DecimalValue;
+    /**
+     * Count of platform-confirmed high-interest debts, derived from the
+     * `confirmed_high_interest_debts` list the platform already returns.
+     * Omitted (never fabricated) when the list is absent.
+     */
+    confirmed_high_interest_account_count?: number;
   };
   long_term_contribution: {
     known_monthly_total_contribution: DecimalValue;
@@ -261,6 +267,14 @@ function parsePlatformReport(value: unknown, path: string): PlatformReport {
         debtRisk.confirmed_high_interest_balance,
         `${path}.debt_risk.confirmed_high_interest_balance`,
       ),
+      // The platform already returns the confirmed high-interest debt list;
+      // carry its count. Missing list -> omitted, never coerced to zero.
+      ...(Array.isArray(debtRisk.confirmed_high_interest_debts)
+        ? {
+            confirmed_high_interest_account_count:
+              debtRisk.confirmed_high_interest_debts.length,
+          }
+        : {}),
     },
     long_term_contribution: {
       known_monthly_total_contribution: expectDecimalValue(

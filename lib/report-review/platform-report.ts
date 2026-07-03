@@ -279,7 +279,7 @@ export function mapPlatformReport(
     sourceReconciliation: defaultSourceReconciliationPolicy,
     summaryMetrics: buildSummaryMetrics(report, snapshot),
     sections: report.sections.map(mapSection),
-    findings: report.findings.map(mapFinding),
+    findings: report.findings.map((finding) => mapFinding(finding, report)),
     evidenceSources: report.evidence_sources.map(mapEvidenceSource),
     dataCompleteness: {
       status: titleCase(report.data_completeness.status),
@@ -819,7 +819,18 @@ function mapSection(section: PlatformReportSection): ReportSection {
   };
 }
 
-function mapFinding(finding: PlatformFinding): Finding {
+function mapFinding(
+  finding: PlatformFinding,
+  report: PlatformReport,
+): Finding {
+  // The high-interest finding carries the platform-asserted account count from
+  // the same response's confirmed high-interest debt list. Absent count stays
+  // absent — never coerced to zero.
+  const accountCount =
+    finding.finding_id === "high_interest_debt_detected"
+      ? report.debt_risk.confirmed_high_interest_account_count
+      : undefined;
+
   return {
     id: finding.finding_id,
     title: finding.title,
@@ -829,6 +840,7 @@ function mapFinding(finding: PlatformFinding): Finding {
     limitations: finding.limitations,
     educationTopics: finding.education_topics,
     evidenceSourceIds: finding.evidence_source_ids,
+    ...(accountCount !== undefined ? { accountCount } : {}),
   };
 }
 

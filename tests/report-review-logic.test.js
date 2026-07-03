@@ -4240,10 +4240,25 @@ function snapshotItem(id, name, category, value) {
 test("things to look at orders finding, then readiness, then spending changes", () => {
   const items = buildThingsToLookAt({
     findings: [
-      { id: "hi_debt", title: "High-interest debt was identified", evidenceSourceIds: ["src1"] },
-      { id: "no_evidence", title: "Unbacked note", evidenceSourceIds: [] },
+      {
+        id: "high_interest_debt_detected",
+        title: "High-interest debt was identified",
+        summary: "A reported balance carries a high interest rate.",
+        accountCount: 1,
+        evidenceSourceIds: ["src1"],
+      },
+      { id: "no_evidence", title: "Unbacked note", summary: "", evidenceSourceIds: [] },
     ],
     decisionReadiness: readinessWithCoverage("2.1 months", "3 to 6 months"),
+    summaryMetrics: [
+      {
+        id: "debt_pressure",
+        label: "Debt pressure",
+        value: "$35,000 debt",
+        detail: "$2,000 meets the high-interest review rule.",
+        provenance: "calculated",
+      },
+    ],
     chargeInspector: {
       categoryMonthlySummary: [
         monthlyCategory("2026-04", "dining", "Dining", 10000),
@@ -4260,16 +4275,22 @@ test("things to look at orders finding, then readiness, then spending changes", 
     items.map((item) => item.kind),
     ["finding", "readiness", "spending-change", "spending-change"],
   );
-  // Evidence-linked finding only (unbacked note is dropped).
-  assert.equal(items[0].observation, "High-interest debt was identified");
+  // Evidence-linked finding only (unbacked note is dropped); the sentence-shaped
+  // title is compacted to a noun phrase, and the mapped debt_pressure metric's
+  // leading dollar amount rides along as the compact detail.
+  assert.equal(items[0].observation, "High-interest debt");
+  assert.equal(items[0].detail, "$2,000 · 1 account");
   assert.equal(items[0].anchor, "report-findings-details");
   // Readiness fires because 2.1 < 3, and links to the decision surface.
-  assert.match(items[1].observation, /Emergency coverage is 2.10 months, below the 3–6 month baseline/);
+  assert.equal(items[1].observation, "Emergency coverage 2.10 months");
+  assert.equal(items[1].detail, "below the 3–6 month baseline");
   assert.equal(items[1].anchor, "decision-details");
-  // Spending changes are ordered by absolute dollar magnitude: utilities (+$30) before dining (+$40)? 
+  // Spending changes are ordered by absolute dollar magnitude:
   // dining delta = $40.00, utilities delta = $30.00 -> dining first.
-  assert.equal(items[2].observation, "Dining up 40% vs 2026-04");
-  assert.equal(items[3].observation, "Utilities up 60% vs 2026-04");
+  assert.equal(items[2].observation, "Dining up 40%");
+  assert.equal(items[2].detail, "+$40 vs 2026-04");
+  assert.equal(items[3].observation, "Utilities up 60%");
+  assert.equal(items[3].detail, "+$30 vs 2026-04");
   assert.equal(items[2].anchor, "spending-detail");
 });
 
@@ -4278,6 +4299,7 @@ test("things to look at keeps emergency coverage quiet when within the baseline 
     findings: [],
     decisionReadiness: readinessWithCoverage("3.46 months", "3 to 6 months"),
     chargeInspector: { categoryMonthlySummary: [] },
+    summaryMetrics: [],
   });
   assert.deepEqual(items, []);
 });
@@ -4286,6 +4308,7 @@ test("things to look at skips a spending change with no prior-month baseline", (
   const items = buildThingsToLookAt({
     findings: [],
     decisionReadiness: readinessWithCoverage("4 months", "3 to 6 months"),
+    summaryMetrics: [],
     chargeInspector: {
       categoryMonthlySummary: [
         // Category only appears in the latest month -> no baseline -> skipped.
@@ -4303,6 +4326,7 @@ test("things to look at applies the documented 20% relative threshold", () => {
   const items = buildThingsToLookAt({
     findings: [],
     decisionReadiness: readinessWithCoverage("4 months", "3 to 6 months"),
+    summaryMetrics: [],
     chargeInspector: {
       categoryMonthlySummary: [
         monthlyCategory("2026-04", "a", "A", 10000),
@@ -4313,8 +4337,8 @@ test("things to look at applies the documented 20% relative threshold", () => {
     },
   });
   assert.deepEqual(
-    items.map((item) => item.observation),
-    ["B up 21% vs 2026-04"],
+    items.map((item) => `${item.observation} — ${item.detail}`),
+    ["B up 21% — +$21 vs 2026-04"],
   );
 });
 
