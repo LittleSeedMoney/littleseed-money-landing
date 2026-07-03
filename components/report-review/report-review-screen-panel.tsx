@@ -18,7 +18,6 @@ import {
   MoneyBalanceDetails,
   MoneySpendingDetail,
 } from "./asset-portfolio-section";
-import { AtAGlanceSection } from "./at-a-glance-section";
 import { ChargeInspectorSection } from "./charge-inspector-section";
 import { EducationSection } from "./education-section";
 import { EvidenceSection } from "./evidence-section";
@@ -140,8 +139,9 @@ export function ReportReviewScreenPanel({
   //   1. Net-worth hero (chart + composition + tiles)
   //   [5.5.3 slot: asset & liability grouped breakdown]
   //   [5.5.4 slot: things to look at]
-  //   1b. At-a-glance answers (Q1–Q4, restated from summaryMetrics)
   //   2. This month's spending disclosure  ← monthly table content
+  // At-a-glance answers (Q1–Q4) render in the right rail (see the shell), not
+  // in this main column.
   //   3. Charge Inspector disclosure
   //   4. Report & findings disclosure
   //   5. Balance details disclosure  ← asset/liability lists + profile inputs
@@ -180,7 +180,6 @@ export function ReportReviewScreenPanel({
       <MoneyHero report={report} topGoalSummary={topGoalSummary} />
       {hasReport ? (
         <>
-          <AtAGlanceSection summaryMetrics={report.summaryMetrics} />
           <ReviewDisclosure
             summary={
               <div id="spending-detail" className="scroll-mt-28">

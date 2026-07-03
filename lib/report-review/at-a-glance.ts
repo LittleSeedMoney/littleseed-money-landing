@@ -13,6 +13,12 @@ export type AtAGlanceQuestion = {
   id: string;
   /** The plain household question this row answers. */
   question: string;
+  /**
+   * Decorative, deterministic glyph for the question. Warmth only — it carries
+   * no status or judgment (a green-leaning seed/earth motif per the design
+   * system), mirroring the decorative topic icons in `education-section.tsx`.
+   */
+  glyph: string;
   /** The `summaryMetrics` id whose value answers the question. */
   metricId: string;
 };
@@ -20,22 +26,26 @@ export type AtAGlanceQuestion = {
 export const AT_A_GLANCE_QUESTIONS: AtAGlanceQuestion[] = [
   {
     id: "money-left",
-    question: "Is money left at the end of the month?",
+    question: "Money left this month",
+    glyph: "🌿",
     metricId: "monthly_cash_flow",
   },
   {
     id: "income-resilience",
-    question: "How long could you handle an income interruption?",
+    question: "Income cushion",
+    glyph: "☂️",
     metricId: "emergency_coverage",
   },
   {
     id: "debt-pressure",
-    question: "How much pressure is debt creating?",
+    question: "Debt on the books",
+    glyph: "⚖️",
     metricId: "debt_pressure",
   },
   {
     id: "own-owe",
-    question: "What do you own and owe?",
+    question: "Net worth",
+    glyph: "🌳",
     metricId: "net_worth",
   },
 ];
@@ -43,6 +53,7 @@ export const AT_A_GLANCE_QUESTIONS: AtAGlanceQuestion[] = [
 export type AtAGlanceRow = {
   id: string;
   question: string;
+  glyph: string;
   metric: SummaryMetric;
 };
 
@@ -60,7 +71,12 @@ export function buildAtAGlanceRows(
   return AT_A_GLANCE_QUESTIONS.reduce<AtAGlanceRow[]>((rows, question) => {
     const metric = metricById.get(question.metricId);
     if (metric) {
-      rows.push({ id: question.id, question: question.question, metric });
+      rows.push({
+        id: question.id,
+        question: question.question,
+        glyph: question.glyph,
+        metric,
+      });
     }
     return rows;
   }, []);

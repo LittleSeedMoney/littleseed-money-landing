@@ -7,13 +7,15 @@ import {
 } from "@/lib/report-review/at-a-glance";
 import { revealAnchor } from "@/lib/report-review/reveal-anchor";
 
-import { ProvenanceTag, reviewPanelClass, reviewSubtlePanelClass } from "./shared";
+import { provenanceLabels, reviewPanelClass } from "./shared";
 
 /**
- * Compact restatement of the four household questions using existing
- * `summaryMetrics`. Each row deep-links to the metric's full provenance card in
- * the Report & findings disclosure. Renders nothing when no answerable metric
- * is present, so a data-less session never shows an empty console.
+ * Compact restatement of the household questions using existing
+ * `summaryMetrics`, sized for the right rail. An emoji-led answer list: the
+ * question is a quiet lead-in and the already-computed value reads as the
+ * answer. Provenance stays visible as light inline text and an info control
+ * deep-links to the metric's full provenance card. Renders nothing when no
+ * answerable metric is present, so a data-less session shows no empty console.
  */
 export function AtAGlanceSection({
   summaryMetrics,
@@ -29,8 +31,9 @@ export function AtAGlanceSection({
   return (
     <section
       aria-labelledby="at-a-glance-heading"
-      className={reviewPanelClass("p-4")}
+      className={reviewPanelClass("scroll-mt-24 p-4")}
       data-testid="at-a-glance"
+      id="at-a-glance"
     >
       <h2
         className="text-sm font-semibold text-seed-950"
@@ -38,15 +41,12 @@ export function AtAGlanceSection({
       >
         At a glance
       </h2>
-      <p className="mt-0.5 text-xs text-earth-600">
-        The questions this review can answer right now, from values already
-        computed for this session.
-      </p>
 
-      <dl className="mt-3 grid gap-2 sm:grid-cols-2">
+      <dl className="mt-2 divide-y divide-stone-100">
         {rows.map((row) => (
           <AtAGlanceRow
             key={row.id}
+            glyph={row.glyph}
             metric={row.metric}
             question={row.question}
             rowId={row.id}
@@ -58,10 +58,12 @@ export function AtAGlanceSection({
 }
 
 function AtAGlanceRow({
+  glyph,
   metric,
   question,
   rowId,
 }: {
+  glyph: string;
   metric: SummaryMetric;
   question: string;
   rowId: string;
@@ -70,29 +72,64 @@ function AtAGlanceRow({
 
   return (
     <div
-      className={reviewSubtlePanelClass("p-3")}
+      className="py-2.5 first:pt-1 last:pb-1"
       data-testid="at-a-glance-row"
       data-question={rowId}
     >
-      <dt className="flex items-start justify-between gap-3">
-        <span className="text-xs font-medium leading-5 text-earth-700">
+      <dt className="flex items-center gap-2">
+        <span
+          aria-hidden="true"
+          className="grid size-7 shrink-0 place-items-center rounded-full bg-seed-50 text-sm"
+        >
+          {glyph}
+        </span>
+        <span className="min-w-0 flex-1 text-xs font-semibold leading-4 text-seed-950">
           {question}
         </span>
-        <ProvenanceTag provenance={metric.provenance} />
       </dt>
-      <dd className="mt-1.5">
-        <span className="block text-lg font-semibold tabular-nums text-seed-950">
-          {metric.value}
+      <dd className="mt-1 pl-9">
+        {/* Value left, info control right — a consistent column across rows so
+            the varying value widths don't leave the row ragged. */}
+        <div className="flex items-center justify-between gap-2">
+          <span className="font-serif text-xl font-bold tabular-nums leading-none text-seed-950">
+            {metric.value}
+          </span>
+          {/* Repeated "what we counted" text is replaced with one accessible
+              icon control (per the Phase 5.22 density pattern); it opens the
+              metric's full provenance card. */}
+          <button
+            aria-label={`What we counted for ${question}`}
+            className="grid size-6 shrink-0 place-items-center rounded-md text-earth-400 outline-none hover:bg-seed-50 hover:text-seed-700 focus:ring-2 focus:ring-seed-500"
+            data-testid="at-a-glance-provenance-link"
+            onClick={() => revealAnchor(anchor)}
+            type="button"
+          >
+            <InfoIcon />
+          </button>
+        </div>
+        {/* Provenance stays disclosed as a light caption under the value,
+            left-aligned so it never wraps against the value. */}
+        <span className="mt-0.5 block text-[11px] font-medium text-earth-500">
+          {provenanceLabels[metric.provenance]}
         </span>
-        <button
-          className="mt-1 inline-flex min-h-7 items-center rounded-md text-xs font-medium text-seed-700 underline-offset-4 outline-none hover:underline focus:ring-2 focus:ring-seed-500"
-          data-testid="at-a-glance-provenance-link"
-          onClick={() => revealAnchor(anchor)}
-          type="button"
-        >
-          What we counted
-        </button>
       </dd>
     </div>
+  );
+}
+
+function InfoIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="size-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      viewBox="0 0 24 24"
+    >
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 11v5" strokeLinecap="round" />
+      <path d="M12 7.75h.01" strokeLinecap="round" />
+    </svg>
   );
 }

@@ -10,7 +10,7 @@ import {
 } from "@/lib/report-review/net-worth-chart";
 
 const VIEW_W = 600;
-const VIEW_H = 190;
+const VIEW_H = 160;
 
 type RangeId = "6m" | "1y" | "all";
 
@@ -127,7 +127,7 @@ export function NetWorthChart({
           <p className="text-[10.5px] font-bold uppercase tracking-[0.13em] text-earth-500">
             Net worth
           </p>
-          <p className="mt-1 font-serif text-3xl font-bold tabular-nums text-seed-950">
+          <p className="mt-1 font-serif text-2xl font-bold tabular-nums text-seed-950">
             {formatNetWorthMoney(change.last)}
           </p>
           <p className="mt-1 text-sm font-semibold text-seed-600">
@@ -173,7 +173,7 @@ export function NetWorthChart({
       <div className="relative mt-3">
         <svg
           aria-label={`Net worth ${changeLabel.toLowerCase()} ${rangeWord}, now ${formatNetWorthMoney(change.last)}`}
-          className="block h-auto w-full overflow-visible"
+          className="block h-32 w-full overflow-visible sm:h-40"
           onPointerLeave={() => setHoverIndex(null)}
           onPointerMove={handlePointerMove}
           preserveAspectRatio="none"

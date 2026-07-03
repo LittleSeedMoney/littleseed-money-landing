@@ -72,7 +72,7 @@ export function MoneyHero({
   };
 
   return (
-    <div className="space-y-4" data-testid="money-hero">
+    <div className="scroll-mt-24 space-y-3" data-testid="money-hero" id="net-worth">
       {hasChart ? (
         <NetWorthChart
           onMonthSelect={snapshotView ? openSpendingDisclosure : undefined}
@@ -212,16 +212,16 @@ function HeroTileCard({
       ) : null}
       {tile.band ? (
         <div className="mt-3">
-          <div className="relative h-1.5 rounded-full bg-gradient-to-r from-earth-200 via-seed-100 to-seed-300">
+          <div className="relative h-2 rounded-full bg-[linear-gradient(to_right,#EFDDB9_0%,#E9EEE0_55%,#4F6D38_100%)]">
             <span
               aria-hidden="true"
-              className="absolute top-1/2 h-3.5 w-0.5 -translate-y-1/2 rounded-full bg-seed-950"
+              className="absolute top-1/2 h-4 w-1 -translate-y-1/2 rounded-full bg-seed-950 ring-2 ring-white"
               style={{
                 left: `${Math.round(clamp01(tile.band.position) * 100)}%`,
               }}
             />
           </div>
-          <div className="mt-1 flex justify-between text-[10px] font-medium text-earth-400">
+          <div className="mt-1 flex justify-between text-[10px] font-medium text-earth-500">
             <span>{tile.band.leftLabel}</span>
             <span>{tile.band.rightLabel}</span>
           </div>
