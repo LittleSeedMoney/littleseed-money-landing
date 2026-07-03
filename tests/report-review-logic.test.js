@@ -118,6 +118,10 @@ const {
   parseSnapshotValue,
 } = require("../lib/report-review/asset-breakdown.ts");
 const {
+  buildThingsToLookAt,
+  SPENDING_CHANGE_THRESHOLD,
+} = require("../lib/report-review/things-to-look-at.ts");
+const {
   joinClasses,
 } = require("../components/report-review/class-names.ts");
 
@@ -4230,5 +4234,112 @@ function snapshotItem(id, name, category, value) {
     liquidity: "cash",
     provenance: "user-entered",
     emergencyEligible: false,
+  };
+}
+
+test("things to look at orders finding, then readiness, then spending changes", () => {
+  const items = buildThingsToLookAt({
+    findings: [
+      { id: "hi_debt", title: "High-interest debt was identified", evidenceSourceIds: ["src1"] },
+      { id: "no_evidence", title: "Unbacked note", evidenceSourceIds: [] },
+    ],
+    decisionReadiness: readinessWithCoverage("2.1 months", "3 to 6 months"),
+    chargeInspector: {
+      categoryMonthlySummary: [
+        monthlyCategory("2026-04", "dining", "Dining", 10000),
+        monthlyCategory("2026-05", "dining", "Dining", 14000), // +40%
+        monthlyCategory("2026-04", "rent", "Rent", 100000),
+        monthlyCategory("2026-05", "rent", "Rent", 103000), // +3%, excluded
+        monthlyCategory("2026-04", "utilities", "Utilities", 5000),
+        monthlyCategory("2026-05", "utilities", "Utilities", 8000), // +60%
+      ],
+    },
+  });
+
+  assert.deepEqual(
+    items.map((item) => item.kind),
+    ["finding", "readiness", "spending-change", "spending-change"],
+  );
+  // Evidence-linked finding only (unbacked note is dropped).
+  assert.equal(items[0].observation, "High-interest debt was identified");
+  assert.equal(items[0].anchor, "report-findings-details");
+  // Readiness fires because 2.1 < 3, and links to the decision surface.
+  assert.match(items[1].observation, /Emergency coverage is 2.10 months, below the 3–6 month baseline/);
+  assert.equal(items[1].anchor, "decision-details");
+  // Spending changes are ordered by absolute dollar magnitude: utilities (+$30) before dining (+$40)? 
+  // dining delta = $40.00, utilities delta = $30.00 -> dining first.
+  assert.equal(items[2].observation, "Dining up 40% vs 2026-04");
+  assert.equal(items[3].observation, "Utilities up 60% vs 2026-04");
+  assert.equal(items[2].anchor, "spending-detail");
+});
+
+test("things to look at keeps emergency coverage quiet when within the baseline range", () => {
+  const items = buildThingsToLookAt({
+    findings: [],
+    decisionReadiness: readinessWithCoverage("3.46 months", "3 to 6 months"),
+    chargeInspector: { categoryMonthlySummary: [] },
+  });
+  assert.deepEqual(items, []);
+});
+
+test("things to look at skips a spending change with no prior-month baseline", () => {
+  const items = buildThingsToLookAt({
+    findings: [],
+    decisionReadiness: readinessWithCoverage("4 months", "3 to 6 months"),
+    chargeInspector: {
+      categoryMonthlySummary: [
+        // Category only appears in the latest month -> no baseline -> skipped.
+        monthlyCategory("2026-05", "travel", "Travel", 40000),
+        monthlyCategory("2026-04", "groceries", "Groceries", 0),
+        monthlyCategory("2026-05", "groceries", "Groceries", 20000), // prior 0 -> skipped
+      ],
+    },
+  });
+  assert.deepEqual(items, []);
+});
+
+test("things to look at applies the documented 20% relative threshold", () => {
+  assert.equal(SPENDING_CHANGE_THRESHOLD, 0.2);
+  const items = buildThingsToLookAt({
+    findings: [],
+    decisionReadiness: readinessWithCoverage("4 months", "3 to 6 months"),
+    chargeInspector: {
+      categoryMonthlySummary: [
+        monthlyCategory("2026-04", "a", "A", 10000),
+        monthlyCategory("2026-05", "a", "A", 11900), // +19% -> below threshold
+        monthlyCategory("2026-04", "b", "B", 10000),
+        monthlyCategory("2026-05", "b", "B", 12100), // +21% -> included
+      ],
+    },
+  });
+  assert.deepEqual(
+    items.map((item) => item.observation),
+    ["B up 21% vs 2026-04"],
+  );
+});
+
+function readinessWithCoverage(currentValue, rangeValue) {
+  return {
+    resultMetrics: [
+      { id: "current_months_covered", label: "Current coverage", value: currentValue, provenance: "calculated", detail: "" },
+      { id: "target_months_range", label: "Baseline months", value: rangeValue, provenance: "source-backed", detail: "" },
+    ],
+  };
+}
+
+function monthlyCategory(month, category, label, debitTotalCents) {
+  return {
+    month,
+    category,
+    label,
+    debitTotalCents,
+    debitTotalLabel: `$${(debitTotalCents / 100).toFixed(2)}`,
+    creditTotalCents: 0,
+    creditTotalLabel: "$0.00",
+    transactionCount: 1,
+    debitTransactionCount: 1,
+    creditTransactionCount: 0,
+    ruleIds: [],
+    limitations: [],
   };
 }
