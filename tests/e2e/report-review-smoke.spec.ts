@@ -256,6 +256,12 @@ test.describe("private report review smoke", () => {
     const nav = page.getByRole("navigation", { name: "On this page" });
     await expect(nav).toBeVisible();
 
+    // Jumping to a plain (non-disclosure) narrative section scrolls it into view.
+    await nav.getByRole("button", { name: "What you own and owe" }).click();
+    await expect(
+      page.getByTestId("asset-liability-breakdown"),
+    ).toBeInViewport();
+
     // Jumping to a collapsed disclosure opens it and scrolls it into view.
     const balance = page.locator("#portfolio");
     await expect(balance.locator("xpath=ancestor::details[1]")).toHaveJSProperty(

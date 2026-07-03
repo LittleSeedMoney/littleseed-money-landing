@@ -9,6 +9,7 @@ import { revealAnchor } from "@/lib/report-review/reveal-anchor";
  */
 const MONEY_SECTIONS: { id: string; label: string }[] = [
   { id: "net-worth", label: "Net worth" },
+  { id: "breakdown", label: "What you own and owe" },
   { id: "spending-detail", label: "This month's spending" },
   { id: "charge-inspector", label: "Charge Inspector" },
   { id: "report-findings-details", label: "Report & findings" },
