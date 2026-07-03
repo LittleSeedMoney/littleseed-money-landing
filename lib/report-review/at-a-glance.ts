@@ -8,17 +8,20 @@ import type { SummaryMetric } from "@/data/report-review-sample";
  * When a metric is absent from the response, its row is omitted rather than
  * shown as a fabricated zero.
  */
+/**
+ * Semantic icon key for a question. The UI owns the actual mark (an app-drawn
+ * SVG in Seed/Earth geometry), so the data layer stays presentation-agnostic and
+ * cross-platform consistent rather than depending on OS emoji rendering.
+ */
+export type AtAGlanceIcon = "cash-flow" | "resilience" | "debt" | "net-worth";
+
 export type AtAGlanceQuestion = {
   /** Stable id for the question row (e.g. for keys and test hooks). */
   id: string;
   /** The plain household question this row answers. */
   question: string;
-  /**
-   * Decorative, deterministic glyph for the question. Warmth only — it carries
-   * no status or judgment (a green-leaning seed/earth motif per the design
-   * system), mirroring the decorative topic icons in `education-section.tsx`.
-   */
-  glyph: string;
+  /** Decorative, deterministic icon key. Warmth only — no status or judgment. */
+  icon: AtAGlanceIcon;
   /** The `summaryMetrics` id whose value answers the question. */
   metricId: string;
 };
@@ -27,25 +30,25 @@ export const AT_A_GLANCE_QUESTIONS: AtAGlanceQuestion[] = [
   {
     id: "money-left",
     question: "Money left this month",
-    glyph: "🌿",
+    icon: "cash-flow",
     metricId: "monthly_cash_flow",
   },
   {
     id: "income-resilience",
     question: "Income cushion",
-    glyph: "☂️",
+    icon: "resilience",
     metricId: "emergency_coverage",
   },
   {
     id: "debt-pressure",
     question: "Debt on the books",
-    glyph: "⚖️",
+    icon: "debt",
     metricId: "debt_pressure",
   },
   {
     id: "own-owe",
     question: "Net worth",
-    glyph: "🌳",
+    icon: "net-worth",
     metricId: "net_worth",
   },
 ];
@@ -53,7 +56,7 @@ export const AT_A_GLANCE_QUESTIONS: AtAGlanceQuestion[] = [
 export type AtAGlanceRow = {
   id: string;
   question: string;
-  glyph: string;
+  icon: AtAGlanceIcon;
   metric: SummaryMetric;
 };
 
@@ -74,7 +77,7 @@ export function buildAtAGlanceRows(
       rows.push({
         id: question.id,
         question: question.question,
-        glyph: question.glyph,
+        icon: question.icon,
         metric,
       });
     }

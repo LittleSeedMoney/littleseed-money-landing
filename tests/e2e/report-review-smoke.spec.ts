@@ -118,7 +118,10 @@ test.describe("private report review smoke", () => {
   }) => {
     await page.goto(`${reportReviewPath}#money`);
 
-    const atAGlance = page.getByTestId("at-a-glance");
+    // At-a-glance renders twice for responsive placement (mobile narrative vs
+    // desktop rail); exactly one is displayed per viewport. Target the visible one.
+    const atAGlance = page.locator('[data-testid="at-a-glance"]:visible');
+    await expect(atAGlance).toHaveCount(1);
     await expect(atAGlance).toBeVisible();
 
     // The sample carries all four question metrics, in fixed order.

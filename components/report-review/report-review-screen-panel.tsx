@@ -18,6 +18,7 @@ import {
   MoneyBalanceDetails,
   MoneySpendingDetail,
 } from "./asset-portfolio-section";
+import { AtAGlanceSection } from "./at-a-glance-section";
 import { ChargeInspectorSection } from "./charge-inspector-section";
 import { EducationSection } from "./education-section";
 import { EvidenceSection } from "./evidence-section";
@@ -137,11 +138,12 @@ export function ReportReviewScreenPanel({
   //
   // Narrative order (Phase 5.5.1 skeleton):
   //   1. Net-worth hero (chart + composition + tiles)
+  //   1b. At-a-glance answers (Q1–Q4) — mobile only here, keeping the
+  //       question-first order; on lg+ they render in the sticky right rail
+  //       (see the shell) and this copy is hidden.
   //   [5.5.3 slot: asset & liability grouped breakdown]
   //   [5.5.4 slot: things to look at]
   //   2. This month's spending disclosure  ← monthly table content
-  // At-a-glance answers (Q1–Q4) render in the right rail (see the shell), not
-  // in this main column.
   //   3. Charge Inspector disclosure
   //   4. Report & findings disclosure
   //   5. Balance details disclosure  ← asset/liability lists + profile inputs
@@ -178,6 +180,10 @@ export function ReportReviewScreenPanel({
   return (
     <SnapshotViewProvider>
       <MoneyHero report={report} topGoalSummary={topGoalSummary} />
+      <AtAGlanceSection
+        className="lg:hidden"
+        summaryMetrics={report.summaryMetrics}
+      />
       {hasReport ? (
         <>
           <ReviewDisclosure

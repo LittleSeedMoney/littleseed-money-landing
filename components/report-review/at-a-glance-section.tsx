@@ -1,25 +1,34 @@
 "use client";
 
+import type { ReactElement } from "react";
+
 import type { SummaryMetric } from "@/data/report-review-sample";
 import {
   atAGlanceMetricAnchor,
   buildAtAGlanceRows,
+  type AtAGlanceIcon,
 } from "@/lib/report-review/at-a-glance";
 import { revealAnchor } from "@/lib/report-review/reveal-anchor";
 
-import { provenanceLabels, reviewPanelClass } from "./shared";
+import { joinClasses, provenanceLabels, reviewPanelClass } from "./shared";
 
 /**
  * Compact restatement of the household questions using existing
- * `summaryMetrics`, sized for the right rail. An emoji-led answer list: the
- * question is a quiet lead-in and the already-computed value reads as the
- * answer. Provenance stays visible as light inline text and an info control
- * deep-links to the metric's full provenance card. Renders nothing when no
- * answerable metric is present, so a data-less session shows no empty console.
+ * `summaryMetrics`. An icon-led answer list: the question is a quiet lead-in and
+ * the already-computed value reads as the answer. Provenance stays visible as a
+ * light caption and an info control deep-links to the metric's full provenance
+ * card. Renders nothing when no answerable metric is present.
+ *
+ * The section uses `aria-label` (not a heading id) so it can be rendered twice
+ * for responsive placement — a mobile instance in the Money narrative and a
+ * desktop instance in the sticky rail — without duplicate DOM ids; each instance
+ * is display-toggled by breakpoint so only one is in the accessibility tree.
  */
 export function AtAGlanceSection({
+  className,
   summaryMetrics,
 }: {
+  className?: string;
   summaryMetrics: SummaryMetric[];
 }) {
   const rows = buildAtAGlanceRows(summaryMetrics);
@@ -30,23 +39,17 @@ export function AtAGlanceSection({
 
   return (
     <section
-      aria-labelledby="at-a-glance-heading"
-      className={reviewPanelClass("scroll-mt-24 p-4")}
+      aria-label="At a glance"
+      className={joinClasses(reviewPanelClass("scroll-mt-24 p-4"), className)}
       data-testid="at-a-glance"
-      id="at-a-glance"
     >
-      <h2
-        className="text-sm font-semibold text-seed-950"
-        id="at-a-glance-heading"
-      >
-        At a glance
-      </h2>
+      <h2 className="text-sm font-semibold text-seed-950">At a glance</h2>
 
       <dl className="mt-2 divide-y divide-stone-100">
         {rows.map((row) => (
           <AtAGlanceRow
             key={row.id}
-            glyph={row.glyph}
+            icon={row.icon}
             metric={row.metric}
             question={row.question}
             rowId={row.id}
@@ -58,12 +61,12 @@ export function AtAGlanceSection({
 }
 
 function AtAGlanceRow({
-  glyph,
+  icon,
   metric,
   question,
   rowId,
 }: {
-  glyph: string;
+  icon: AtAGlanceIcon;
   metric: SummaryMetric;
   question: string;
   rowId: string;
@@ -77,11 +80,8 @@ function AtAGlanceRow({
       data-question={rowId}
     >
       <dt className="flex items-center gap-2">
-        <span
-          aria-hidden="true"
-          className="grid size-7 shrink-0 place-items-center rounded-full bg-seed-50 text-sm"
-        >
-          {glyph}
+        <span className="grid size-7 shrink-0 place-items-center rounded-full bg-seed-50 text-seed-700">
+          <AtAGlanceGlyph icon={icon} />
         </span>
         <span className="min-w-0 flex-1 text-xs font-semibold leading-4 text-seed-950">
           {question}
@@ -107,13 +107,63 @@ function AtAGlanceRow({
             <InfoIcon />
           </button>
         </div>
-        {/* Provenance stays disclosed as a light caption under the value,
-            left-aligned so it never wraps against the value. */}
+        {/* Provenance stays disclosed as a light caption under the value. */}
         <span className="mt-0.5 block text-[11px] font-medium text-earth-500">
           {provenanceLabels[metric.provenance]}
         </span>
       </dd>
     </div>
+  );
+}
+
+/**
+ * App-drawn decorative mark per question, in Seed/Earth line geometry (inherits
+ * `currentColor`). Decorative only — `aria-hidden`, no status meaning.
+ */
+function AtAGlanceGlyph({ icon }: { icon: AtAGlanceIcon }) {
+  const paths: Record<AtAGlanceIcon, ReactElement> = {
+    // Sprout — what's left, growing.
+    "cash-flow": (
+      <>
+        <path d="M12 21v-9" strokeLinecap="round" />
+        <path d="M12 13c-3 0-5-1.8-5-4.8 3 0 5 1.8 5 4.8Z" />
+        <path d="M12 11.5c0-2.8 2-4.6 4.8-4.6 0 2.8-2 4.6-4.8 4.6Z" />
+      </>
+    ),
+    // Shield — a cushion against an income gap.
+    resilience: (
+      <path d="M12 3.5l6.5 2.6v4.4c0 3.7-2.7 6.4-6.5 8.2-3.8-1.8-6.5-4.5-6.5-8.2V6.1L12 3.5Z" />
+    ),
+    // Balance — obligations weighed.
+    debt: (
+      <>
+        <path d="M12 4.5v15" strokeLinecap="round" />
+        <path d="M6 8.5h12" strokeLinecap="round" />
+        <path d="M6 8.5l-2.5 4.5a2.5 2.5 0 005 0L6 8.5Z" />
+        <path d="M18 8.5l-2.5 4.5a2.5 2.5 0 005 0L18 8.5Z" />
+        <path d="M8.5 19.5h7" strokeLinecap="round" />
+      </>
+    ),
+    // Concentric circles — accumulated worth, the seed-growth motif.
+    "net-worth": (
+      <>
+        <circle cx="12" cy="12" r="8" />
+        <circle cx="12" cy="12" r="3.4" />
+      </>
+    ),
+  };
+
+  return (
+    <svg
+      aria-hidden="true"
+      className="size-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      viewBox="0 0 24 24"
+    >
+      {paths[icon]}
+    </svg>
   );
 }
 

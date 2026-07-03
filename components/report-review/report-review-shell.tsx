@@ -57,7 +57,13 @@ export function ReportReviewShell({
 
           {isMoney ? (
             <div className="space-y-4 lg:sticky lg:top-4 lg:self-start">
-              <AtAGlanceSection summaryMetrics={report.summaryMetrics} />
+              {/* Desktop-only: on mobile the answers render in the Money
+                  narrative (before the disclosures) via the screen panel, so the
+                  question-first order holds; this rail copy is hidden below lg. */}
+              <AtAGlanceSection
+                className="hidden lg:block"
+                summaryMetrics={report.summaryMetrics}
+              />
               <ReviewRail report={report} />
             </div>
           ) : (
