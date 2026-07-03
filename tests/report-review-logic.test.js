@@ -114,6 +114,10 @@ const {
   buildAtAGlanceRows,
 } = require("../lib/report-review/at-a-glance.ts");
 const {
+  buildSnapshotBreakdown,
+  parseSnapshotValue,
+} = require("../lib/report-review/asset-breakdown.ts");
+const {
   joinClasses,
 } = require("../components/report-review/class-names.ts");
 
@@ -4163,3 +4167,68 @@ test("at-a-glance metric anchor matches the overview metric card id scheme", () 
     );
   }
 });
+
+test("snapshot breakdown groups by category in first-seen order with subtotals", () => {
+  const groups = buildSnapshotBreakdown([
+    snapshotItem("a1", "Fidelity 401(k)", "Retirement", "$30,000"),
+    snapshotItem("a2", "Checking", "Cash", "$12,000"),
+    snapshotItem("a3", "SoFi 401(k)", "Retirement", "$15,000"),
+  ]);
+
+  assert.deepEqual(
+    groups.map((group) => group.category),
+    ["Retirement", "Cash"],
+  );
+
+  const retirement = groups[0];
+  assert.equal(retirement.items.length, 2);
+  assert.equal(retirement.single, false);
+  assert.equal(retirement.subtotal, 45000);
+  assert.equal(retirement.hasMissing, false);
+  assert.deepEqual(
+    retirement.items.map((item) => item.name),
+    ["Fidelity 401(k)", "SoFi 401(k)"],
+  );
+
+  const cash = groups[1];
+  assert.equal(cash.single, true);
+  assert.equal(cash.subtotal, 12000);
+});
+
+test("snapshot breakdown labels missing balances and excludes them from subtotal", () => {
+  const groups = buildSnapshotBreakdown([
+    snapshotItem("b1", "Brokerage", "Brokerage", "$8,000"),
+    snapshotItem("b2", "Angel investment", "Brokerage", "TBD"),
+  ]);
+
+  const brokerage = groups[0];
+  assert.equal(brokerage.hasMissing, true);
+  assert.equal(brokerage.subtotal, 8000); // missing item excluded, never zeroed into a false total
+  const missingItem = brokerage.items.find((item) => item.name === "Angel investment");
+  assert.equal(missingItem.missing, true);
+  assert.equal(missingItem.valueNumber, null);
+});
+
+test("snapshot breakdown omits empty input rather than emitting a zero group", () => {
+  assert.deepEqual(buildSnapshotBreakdown([]), []);
+});
+
+test("snapshot value parser returns null for unparseable balances, not zero", () => {
+  assert.equal(parseSnapshotValue("$12,000"), 12000);
+  assert.equal(parseSnapshotValue("-$1,500"), -1500);
+  assert.equal(parseSnapshotValue(""), null);
+  assert.equal(parseSnapshotValue("—"), null);
+  assert.equal(parseSnapshotValue("pending"), null);
+});
+
+function snapshotItem(id, name, category, value) {
+  return {
+    id,
+    name,
+    category,
+    value,
+    liquidity: "cash",
+    provenance: "user-entered",
+    emergencyEligible: false,
+  };
+}
