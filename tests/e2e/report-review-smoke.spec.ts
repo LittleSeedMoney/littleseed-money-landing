@@ -113,6 +113,103 @@ test.describe("private report review smoke", () => {
     await expect(page).toHaveURL(/#saving-goal-draft$/);
   });
 
+  test("asset & liability breakdown groups holdings and subtotals a multi-holding category", async ({
+    page,
+  }) => {
+    // A report where Retirement holds two named 401(k)s, so the grouped view has
+    // a real subtotal to show; Cash stays a single-holding row.
+    const groupedReport = {
+      ...reportReviewSample,
+      assetPortfolio: {
+        ...reportReviewSample.assetPortfolio,
+        assets: [
+          {
+            category: "Cash",
+            emergencyEligible: true,
+            id: "cash-1",
+            liquidity: "cash",
+            name: "Checking and savings",
+            provenance: "user-entered",
+            value: "$12,000",
+          },
+          {
+            category: "Retirement",
+            emergencyEligible: false,
+            id: "ret-1",
+            liquidity: "invested",
+            name: "Fidelity 401(k)",
+            provenance: "user-entered",
+            value: "$30,000",
+          },
+          {
+            category: "Retirement",
+            emergencyEligible: false,
+            id: "ret-2",
+            liquidity: "invested",
+            name: "SoFi 401(k)",
+            provenance: "user-entered",
+            value: "$15,000",
+          },
+        ],
+      },
+    };
+    await page.route(
+      "**/private/report-review/workspace-report",
+      async (route) => {
+        await route.fulfill({
+          contentType: "application/json",
+          json: { report: groupedReport },
+          status: 200,
+        });
+      },
+    );
+
+    await page.goto(`${reportReviewPath}#money`);
+
+    const breakdown = page.getByTestId("asset-liability-breakdown");
+    await expect(breakdown).toBeVisible();
+    await expect(breakdown).toContainText("What you own");
+    await expect(breakdown).toContainText("What you owe");
+
+    // Sample assets start as single-holding groups (no subtotal shown yet).
+    const assets = page.getByTestId("breakdown-assets");
+    await expect(
+      assets.getByTestId("breakdown-subtotal"),
+    ).toHaveCount(0);
+
+    // Swap in the grouped report via a manual save (mocked above).
+    await ensureBalanceDetailsOpen(page);
+    await page.getByText("Your profile inputs", { exact: true }).click();
+    const profileCard = page.locator(
+      'form[aria-labelledby="profile-values-heading"]',
+    );
+    await profileCard
+      .getByRole("button", { name: "Edit Monthly take-home income" })
+      .click();
+    await profileCard
+      .getByRole("spinbutton", { name: "Monthly take-home income" })
+      .fill("5300");
+    await profileCard.getByRole("button", { name: "Save profile" }).click();
+
+    // Retirement now groups two holdings with a $45,000 subtotal; Cash stays a
+    // single row without a redundant subtotal.
+    const retirement = assets
+      .getByTestId("breakdown-group")
+      .filter({ hasText: "Retirement" });
+    await expect(retirement.getByTestId("breakdown-subtotal")).toHaveText(
+      "$45,000",
+    );
+    await retirement.locator("summary").click();
+    await expect(retirement).toContainText("Fidelity 401(k)");
+    await expect(retirement).toContainText("SoFi 401(k)");
+
+    const cash = assets
+      .getByTestId("breakdown-group")
+      .filter({ hasText: "Checking and savings" });
+    await expect(cash.getByTestId("breakdown-subtotal")).toHaveCount(0);
+    await expect(cash).toContainText("$12,000");
+  });
+
   test("at-a-glance answers restate the four questions and deep-link to provenance", async ({
     page,
   }) => {
