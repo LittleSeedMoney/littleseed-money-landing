@@ -4367,3 +4367,103 @@ function monthlyCategory(month, category, label, debitTotalCents) {
     limitations: [],
   };
 }
+
+const {
+  MONEY_BLOCK_IDS,
+  defaultMoneyArrangement,
+  hideMoneyBlock,
+  isDefaultMoneyArrangement,
+  isMoneyBlockId,
+  moveMoneyBlock,
+  showMoneyBlock,
+} = require("../lib/report-review/money-arrangement.ts");
+
+test("money arrangement starts at the default order with nothing hidden", () => {
+  const arrangement = defaultMoneyArrangement();
+
+  assert.deepEqual(arrangement.order, [...MONEY_BLOCK_IDS]);
+  assert.deepEqual(arrangement.hidden, []);
+  assert.equal(isDefaultMoneyArrangement(arrangement), true);
+  assert.equal(isMoneyBlockId("breakdown"), true);
+  assert.equal(isMoneyBlockId("net-worth-hero"), false);
+});
+
+test("money arrangement move swaps adjacent visible blocks and stops at the edges", () => {
+  const start = defaultMoneyArrangement();
+
+  // First visible block cannot move further up; last cannot move down.
+  assert.equal(moveMoneyBlock(start, "breakdown", "up", MONEY_BLOCK_IDS), start);
+  assert.equal(
+    moveMoneyBlock(start, "review-support", "down", MONEY_BLOCK_IDS),
+    start,
+  );
+
+  const moved = moveMoneyBlock(
+    start,
+    "things-to-look-at",
+    "up",
+    MONEY_BLOCK_IDS,
+  );
+  assert.deepEqual(moved.order.slice(0, 2), ["things-to-look-at", "breakdown"]);
+  assert.equal(isDefaultMoneyArrangement(moved), false);
+});
+
+test("money arrangement move skips hidden and absent blocks", () => {
+  // Hide the block between breakdown and spending detail, and treat the
+  // disclosures as absent (no-report mode) except spending detail.
+  const present = [
+    "breakdown",
+    "things-to-look-at",
+    "at-a-glance",
+    "spending-detail",
+  ];
+  let arrangement = defaultMoneyArrangement();
+  arrangement = hideMoneyBlock(arrangement, "things-to-look-at");
+  arrangement = hideMoneyBlock(arrangement, "at-a-glance");
+
+  // Visible neighbours are breakdown and spending-detail; moving spending
+  // detail up must swap across both hidden blocks, not with them.
+  const moved = moveMoneyBlock(arrangement, "spending-detail", "up", present);
+  const visible = moved.order.filter(
+    (id) => present.includes(id) && !moved.hidden.includes(id),
+  );
+  assert.deepEqual(visible, ["spending-detail", "breakdown"]);
+
+  // Moving a block that is not visible is a no-op.
+  assert.equal(
+    moveMoneyBlock(arrangement, "things-to-look-at", "up", present),
+    arrangement,
+  );
+});
+
+test("money arrangement hide is restorable and keeps the block's position", () => {
+  const start = defaultMoneyArrangement();
+
+  const hidden = hideMoneyBlock(start, "breakdown");
+  assert.deepEqual(hidden.hidden, ["breakdown"]);
+  // Hiding never reorders; the block keeps its slot for restore.
+  assert.deepEqual(hidden.order, start.order);
+  assert.equal(hideMoneyBlock(hidden, "breakdown"), hidden);
+
+  const shown = showMoneyBlock(hidden, "breakdown");
+  assert.deepEqual(shown.hidden, []);
+  assert.deepEqual(shown.order, start.order);
+  assert.equal(isDefaultMoneyArrangement(shown), true);
+  assert.equal(showMoneyBlock(shown, "breakdown"), shown);
+});
+
+test("money arrangement reset restores the default after moves and hides", () => {
+  let arrangement = defaultMoneyArrangement();
+  arrangement = moveMoneyBlock(
+    arrangement,
+    "review-support",
+    "up",
+    MONEY_BLOCK_IDS,
+  );
+  arrangement = hideMoneyBlock(arrangement, "charge-inspector");
+  assert.equal(isDefaultMoneyArrangement(arrangement), false);
+
+  const reset = defaultMoneyArrangement();
+  assert.equal(isDefaultMoneyArrangement(reset), true);
+  assert.deepEqual(reset.order, [...MONEY_BLOCK_IDS]);
+});
