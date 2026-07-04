@@ -1,5 +1,7 @@
 "use client";
 
+import type { ReactNode } from "react";
+
 import type { ReportReviewSample } from "@/data/report-review-sample";
 import type { GoalPlanningSummary } from "@/lib/report-review/goal-planning";
 import {
@@ -9,6 +11,7 @@ import {
 import { revealAnchor } from "@/lib/report-review/reveal-anchor";
 
 import { NetWorthChart } from "./net-worth-chart";
+import { SproutMark } from "./sprout-mark";
 import { useSnapshotView } from "./snapshot-view-context";
 
 /**
@@ -170,6 +173,8 @@ type HeroTile = {
   caption?: string;
   /** Machine month backing the tile, used by deep-link actions. */
   month?: string;
+  /** Optional decorative mark rendered beside the label (e.g. sprout stage). */
+  mark?: ReactNode;
   detail: string;
 };
 
@@ -183,7 +188,10 @@ function HeroTileCard({
   const body = (
     <>
       <p className="flex items-start justify-between gap-2 text-xs font-semibold text-earth-600">
-        {tile.label}
+        <span className="inline-flex min-w-0 items-center gap-1.5">
+          {tile.label}
+          {tile.mark ?? null}
+        </span>
         {onActivate ? (
           <span aria-hidden="true" className="text-earth-300">
             ›
@@ -392,6 +400,9 @@ function topGoalTile(summary: GoalPlanningSummary | null): HeroTile | null {
   return {
     id: "top-goal",
     label: `Goal #1 · ${summary.name}`,
+    // Decorative seed-growth mark restating the progress stage; the number
+    // and status chip stay the real information.
+    mark: <SproutMark progressPercent={summary.progressPercent} />,
     value: `${Math.round(summary.progressPercent)}%`,
     chip: {
       label: summary.statusLabel,

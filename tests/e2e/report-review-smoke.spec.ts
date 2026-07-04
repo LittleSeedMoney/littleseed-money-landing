@@ -180,6 +180,26 @@ test.describe("private report review smoke", () => {
     ]);
   });
 
+  test("goal progress shows the decorative sprout stage", async ({ page }) => {
+    // The sample first-priority goal sits at 60% — deterministic stage 2
+    // (first leaf). The mark is decoration: aria-hidden, no status meaning.
+    await page.goto(`${reportReviewPath}#goals`);
+    const goalMark = page
+      .locator('[data-testid="goal-planning-row"]')
+      .first()
+      .getByTestId("sprout-mark");
+    await expect(goalMark).toBeVisible();
+    await expect(goalMark).toHaveAttribute("data-sprout-stage", "2");
+
+    // The hero's top-goal tile carries the same stage mark.
+    await page.goto(`${reportReviewPath}#money`);
+    await expect(
+      page
+        .getByTestId("money-hero-tile-top-goal")
+        .getByTestId("sprout-mark"),
+    ).toHaveAttribute("data-sprout-stage", "2");
+  });
+
   test("a touch long-press on a block enters arrange mode", async ({
     page,
   }) => {
@@ -694,6 +714,13 @@ test.describe("private report review smoke", () => {
     ).toHaveCount(0);
     await expect(profileCard.locator("input, select")).toHaveCount(0);
     await expect(profileCard.getByText("$5,300")).toBeVisible();
+
+    // Phase 5.5.7: a brief soft check acknowledges the successful apply, with
+    // session-honest copy ("updated", never "saved"), then leaves on its own.
+    const softCheck = page.getByTestId("soft-check");
+    await expect(softCheck).toBeVisible();
+    await expect(softCheck).toContainText("Updated for this session");
+    await expect(softCheck).toHaveCount(0, { timeout: 6000 });
 
     const assetsSection = page.locator(
       'section[aria-describedby="assets-snapshot-description"]',

@@ -21,6 +21,7 @@ import {
   reviewSubtlePanelClass,
   StatusPill,
 } from "./shared";
+import { SproutMark } from "./sprout-mark";
 
 export function GoalPlanningScreen({
   asOfMonth,
@@ -183,6 +184,9 @@ function GoalPlanningRowEditor({
             <h3 className="text-[15px] font-bold text-seed-950">
               {summary.name}
             </h3>
+            {/* Decorative seed-growth stage beside the status; the label and
+                percentage stay the real information. */}
+            <SproutMark progressPercent={summary.progressPercent} />
             <StatusPill
               label={summary.statusLabel}
               tone={goalStatusTone(summary.status)}

@@ -57,6 +57,7 @@ import {
   reviewPanelClass,
   ReviewSectionHeading,
   reviewSubtlePanelClass,
+  SoftCheckAcknowledgement,
   StatusPill,
 } from "./shared";
 import {
@@ -176,15 +177,37 @@ export function MoneyBalanceDetails({
   const [editBaseline, setEditBaseline] =
     useState<SnapshotEditBaseline | null>(null);
   const wasSubmittingRef = useRef(false);
+  // Momentary acknowledgement after a successful apply (Phase 5.5.7). A nonce
+  // rather than a boolean so a second success inside the display window resets
+  // the timer and remounts the status node (re-running the settle and the
+  // role="status" announcement). The copy says "updated", never "saved" — the
+  // values live in this session only.
+  const [softCheckNonce, setSoftCheckNonce] = useState(0);
 
   useEffect(() => {
     if (wasSubmittingRef.current && requestState === "idle" && !errorMessage) {
       setEditBaseline(null);
       setActivePortfolioEdit(null);
       setActiveProfileField(null);
+      setSoftCheckNonce((nonce) => nonce + 1);
     }
     wasSubmittingRef.current = requestState === "submitting";
   }, [errorMessage, requestState]);
+
+  useEffect(() => {
+    if (softCheckNonce === 0) {
+      return;
+    }
+    const timer = window.setTimeout(() => setSoftCheckNonce(0), 2600);
+    return () => window.clearTimeout(timer);
+  }, [softCheckNonce]);
+
+  const softCheck =
+    softCheckNonce > 0 ? (
+      <div className="flex justify-end" key={softCheckNonce}>
+        <SoftCheckAcknowledgement label="Updated for this session" />
+      </div>
+    ) : null;
 
   const assetItems = manualAssetSnapshotItems(values.assets, portfolio.assets);
   const liabilityItems = manualDebtSnapshotItems(
@@ -197,6 +220,7 @@ export function MoneyBalanceDetails({
   if (!hasReportContent) {
     return (
       <>
+        {softCheck}
         <section className={reviewPanelClass("space-y-5 p-4")}>
           <h3
             className="text-sm font-semibold text-seed-950"
@@ -253,6 +277,7 @@ export function MoneyBalanceDetails({
 
   return (
     <>
+      {softCheck}
       <SnapshotOverviewTab
         activeField={activeProfileField}
         activePortfolioEdit={activePortfolioEdit}
