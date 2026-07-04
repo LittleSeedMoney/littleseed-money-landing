@@ -122,29 +122,18 @@ export function NetWorthChart({
       className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-5"
       data-testid="net-worth-chart"
     >
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="text-[10.5px] font-bold uppercase tracking-[0.13em] text-earth-500">
-            Net worth
-          </p>
-          <p className="mt-1 font-serif text-2xl font-bold tabular-nums text-seed-950">
-            {formatNetWorthMoney(change.last)}
-          </p>
-          <p className="mt-1 text-sm font-semibold text-seed-600">
-            {arrow} {changeLabel}
-            {change.percent !== null ? (
-              <span className="font-medium text-earth-600">
-                {" "}
-                ({change.percent >= 0 ? "+" : ""}
-                {change.percent}%) {rangeWord}
-              </span>
-            ) : (
-              <span className="font-medium text-earth-600"> {rangeWord}</span>
-            )}
-          </p>
-        </div>
+      {/* The range toggle shares the first row with the small caps label only.
+          The value and change copy below vary in width per range ("this year"
+          vs "in 6 months"), and on narrow screens a shared wrapping row made
+          the toggle jump lines right under the user's finger. Keeping the
+          toggle beside the short fixed-width label pins it in place across
+          every range. */}
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-[10.5px] font-bold uppercase tracking-[0.13em] text-earth-500">
+          Net worth
+        </p>
         <div
-          className="inline-flex gap-0.5 rounded-lg border border-seed-100 bg-seed-50 p-0.5"
+          className="inline-flex shrink-0 gap-0.5 rounded-lg border border-seed-100 bg-seed-50 p-0.5"
           role="group"
           aria-label="Time range"
         >
@@ -168,6 +157,23 @@ export function NetWorthChart({
             );
           })}
         </div>
+      </div>
+      <div>
+        <p className="mt-1 font-serif text-2xl font-bold tabular-nums text-seed-950">
+          {formatNetWorthMoney(change.last)}
+        </p>
+        <p className="mt-1 text-sm font-semibold text-seed-600">
+          {arrow} {changeLabel}
+          {change.percent !== null ? (
+            <span className="font-medium text-earth-600">
+              {" "}
+              ({change.percent >= 0 ? "+" : ""}
+              {change.percent}%) {rangeWord}
+            </span>
+          ) : (
+            <span className="font-medium text-earth-600"> {rangeWord}</span>
+          )}
+        </p>
       </div>
 
       <div className="relative mt-3">
