@@ -101,7 +101,7 @@ export function GoalPlanningScreen({
             "Calculates remaining amount, progress, and monthly math from the values you enter.",
             "Uses your row order as the priority shown in Snapshot.",
             "Keeps edits in the current browser session only.",
-            "Does not save goals, connect accounts, automate transfers, recommend priority, or send local goal state to AI.",
+            "Does not save goals, connect accounts, make transfers, recommend priority, or send local goal state to AI.",
           ]}
         />
       </div>

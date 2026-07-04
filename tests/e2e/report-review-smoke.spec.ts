@@ -64,6 +64,37 @@ test.describe("private report review smoke", () => {
     }
   });
 
+  test("consumer surface shows no automation vocabulary and keeps the reframed goal boundary", async ({
+    page,
+  }) => {
+    // Phase 5.5.5 boundary: the budget-automation readiness/judgment/review-queue
+    // chain stays internal/dev-only, so no consumer screen may render the words
+    // "automate"/"automation" (or their inflections). The pattern intentionally
+    // excludes "automatic"/"automatically", which are ordinary words the surface
+    // legitimately uses for data behaviour (for example "balances are not
+    // refreshed automatically") and are not the blocked automation-feature
+    // vocabulary. The check reads textContent (not visible innerText) so text
+    // behind a collapsed disclosure counts too — an openable disclosure must not
+    // be able to smuggle the word back onto the consumer surface. The AI dev flag
+    // is off by default here, so the internal "Automation readiness/judgment"
+    // version labels never render.
+    const blockedAutomationWord = /automat(?:e|es|ed|ing|ion|ions)/i;
+    for (const screen of smokeScreens) {
+      await page.goto(`${reportReviewPath}#${screen.hash}`);
+      const panel = page.locator(`#report-review-screen-${screen.screen}`);
+      await expect(panel).toBeVisible();
+      expect(await panel.textContent()).not.toMatch(blockedAutomationWord);
+    }
+
+    // The goals "Planning limits" disclosure still discloses that the app moves no
+    // money on the user's behalf — now without the word "automate".
+    await page.goto(`${reportReviewPath}#goals`);
+    const goals = page.locator("#report-review-screen-goals");
+    expect(await goals.textContent()).toContain(
+      "Does not save goals, connect accounts, make transfers, recommend priority, or send local goal state to AI.",
+    );
+  });
+
   test("legacy snapshot, input, and report links open the Money screen", async ({
     page,
   }) => {
