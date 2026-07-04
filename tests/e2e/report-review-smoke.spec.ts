@@ -210,6 +210,99 @@ test.describe("private report review smoke", () => {
     await expect(cash).toContainText("$12,000");
   });
 
+  test("things to look at lists the evidence-linked finding as an observation", async ({
+    page,
+  }) => {
+    await page.goto(`${reportReviewPath}#money`);
+
+    const things = page.getByTestId("things-to-look-at");
+    await expect(things).toBeVisible();
+
+    // The default sample carries one evidence-linked finding (high-interest
+    // debt). Emergency coverage (3.46) is within the 3-6 range, so it stays
+    // quiet.
+    const items = things.getByTestId("things-to-look-at-item");
+    const debtItem = items.filter({ hasText: "High-interest debt" });
+    await expect(debtItem).toHaveCount(1);
+    await expect(debtItem).toHaveAttribute("data-kind", "finding");
+
+    // "what we observed" opens the Report & findings disclosure and scrolls to it.
+    const findings = page.locator("#report-findings-details");
+    await expect(findings.locator("xpath=ancestor::details[1]")).toHaveJSProperty(
+      "open",
+      false,
+    );
+    await debtItem
+      .getByTestId("things-to-look-at-observed-link")
+      .click();
+    await expect(findings.locator("xpath=ancestor::details[1]")).toHaveJSProperty(
+      "open",
+      true,
+    );
+    await expect(findings).toBeInViewport();
+  });
+
+  test("things to look at surfaces low emergency coverage and a spending jump", async ({
+    page,
+  }) => {
+    // A report with coverage below the baseline and a >20% dining jump.
+    const flaggedReport = {
+      ...reportReviewSample,
+      decisionReadiness: {
+        ...reportReviewSample.decisionReadiness,
+        resultMetrics: reportReviewSample.decisionReadiness.resultMetrics.map(
+          (metric) =>
+            metric.id === "current_months_covered"
+              ? { ...metric, value: "1.80 months" }
+              : metric,
+        ),
+      },
+      chargeInspector: {
+        ...reportReviewSample.chargeInspector,
+        categoryMonthlySummary: [
+          monthlyCategoryRow("2026-04", "dining", "Dining", 10000),
+          monthlyCategoryRow("2026-05", "dining", "Dining", 15000),
+        ],
+      },
+    };
+    await page.route(
+      "**/private/report-review/workspace-report",
+      async (route) => {
+        await route.fulfill({
+          contentType: "application/json",
+          json: { report: flaggedReport },
+          status: 200,
+        });
+      },
+    );
+
+    await page.goto(`${reportReviewPath}#money`);
+    await ensureBalanceDetailsOpen(page);
+    await page.getByText("Your profile inputs", { exact: true }).click();
+    const profileCard = page.locator(
+      'form[aria-labelledby="profile-values-heading"]',
+    );
+    await profileCard
+      .getByRole("button", { name: "Edit Monthly take-home income" })
+      .click();
+    await profileCard
+      .getByRole("spinbutton", { name: "Monthly take-home income" })
+      .fill("5300");
+    await profileCard.getByRole("button", { name: "Save profile" }).click();
+
+    const things = page.getByTestId("things-to-look-at");
+    const readiness = things
+      .getByTestId("things-to-look-at-item")
+      .filter({ hasText: "Emergency coverage" });
+    await expect(readiness).toHaveAttribute("data-kind", "readiness");
+    await expect(readiness).toContainText("below the 3–6 month baseline");
+
+    const spending = things
+      .getByTestId("things-to-look-at-item")
+      .filter({ hasText: "Dining up 50%" });
+    await expect(spending).toHaveAttribute("data-kind", "spending-change");
+  });
+
   test("at-a-glance answers restate the four questions and deep-link to provenance", async ({
     page,
   }) => {
@@ -1026,6 +1119,28 @@ function labelFor(page: Page, text: string) {
 
 function chargeInspectorFindings(page: Page) {
   return page.getByTestId("charge-inspector-finding");
+}
+
+function monthlyCategoryRow(
+  month: string,
+  category: string,
+  label: string,
+  debitTotalCents: number,
+) {
+  return {
+    month,
+    category,
+    label,
+    debitTotalCents,
+    debitTotalLabel: `$${(debitTotalCents / 100).toFixed(2)}`,
+    creditTotalCents: 0,
+    creditTotalLabel: "$0.00",
+    transactionCount: 1,
+    debitTransactionCount: 1,
+    creditTransactionCount: 0,
+    ruleIds: [],
+    limitations: [],
+  };
 }
 
 // The "Report & findings" disclosure auto-opens on #report navigation via a

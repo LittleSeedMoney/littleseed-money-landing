@@ -97,6 +97,11 @@ export type Finding = {
   limitations: string[];
   educationTopics: string[];
   evidenceSourceIds: string[];
+  /**
+   * How many accounts the finding covers, when the platform already asserts
+   * it (e.g. the confirmed high-interest debt list length). Never inferred.
+   */
+  accountCount?: number;
 };
 
 export type EvidenceSource = {
@@ -575,6 +580,7 @@ export const reportReviewSample: ReportReviewSample = {
     {
       id: "high_interest_debt_detected",
       title: "High-interest debt was identified",
+      accountCount: 1,
       summary:
         "The sample credit-card debt meets the current high-interest review rule.",
       whyItMatters:

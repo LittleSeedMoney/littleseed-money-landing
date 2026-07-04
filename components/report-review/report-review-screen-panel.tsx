@@ -33,6 +33,7 @@ import { MoneyHero } from "./money-hero";
 import { OverviewSection } from "./overview-section";
 import { ReportSections } from "./report-sections";
 import { ReviewDisclosure } from "./shared";
+import { ThingsToLookAtSection } from "./things-to-look-at-section";
 import { SnapshotSupportDetails } from "./snapshot-screen";
 import { SnapshotViewProvider } from "./snapshot-view-context";
 
@@ -140,10 +141,10 @@ export function ReportReviewScreenPanel({
   // Narrative order (Phase 5.5.1 skeleton):
   //   1. Net-worth hero (chart + composition + tiles)
   //   1a. Asset & liability grouped breakdown (own / owe by category)
-  //   1b. At-a-glance answers (Q1–Q4) — mobile only here, keeping the
+  //   1b. Things to look at (deterministic observations)
+  //   1c. At-a-glance answers (Q1–Q4) — mobile only here, keeping the
   //       question-first order; on lg+ they render in the sticky right rail
   //       (see the shell) and this copy is hidden.
-  //   [5.5.4 slot: things to look at]
   //   2. This month's spending disclosure  ← monthly table content
   //   3. Charge Inspector disclosure
   //   4. Report & findings disclosure
@@ -182,6 +183,7 @@ export function ReportReviewScreenPanel({
     <SnapshotViewProvider>
       <MoneyHero report={report} topGoalSummary={topGoalSummary} />
       <AssetLiabilityBreakdown portfolio={report.assetPortfolio} />
+      <ThingsToLookAtSection report={report} />
       <AtAGlanceSection
         className="lg:hidden"
         summaryMetrics={report.summaryMetrics}
