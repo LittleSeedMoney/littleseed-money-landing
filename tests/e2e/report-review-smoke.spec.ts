@@ -42,6 +42,25 @@ const editableProfileFields = [
 ] as const;
 
 test.describe("private report review smoke", () => {
+  test("net-worth chart keeps its fluid-height and one-pass line-draw visual contract", async ({
+    page,
+  }) => {
+    // Phase 5.5.7a polish that is otherwise invisible to the flow tests: the
+    // chart height is fluid (clamp/dvh, bounded) and the line draws in once
+    // with a reduced-motion fallback. Assert the contract so a future edit
+    // cannot silently drop it.
+    await page.goto(`${reportReviewPath}#money`);
+
+    const svg = page.getByTestId("net-worth-chart").locator("svg");
+    await expect(svg).toHaveClass(/h-\[clamp\(13rem,34dvh,22rem\)\]/);
+    await expect(svg).toHaveClass(/sm:h-\[clamp\(15rem,36dvh,22rem\)\]/);
+
+    const line = svg.locator("path.animate-\\[money-line-draw_900ms_ease-out\\]");
+    await expect(line).toHaveClass(/motion-reduce:animate-none/);
+    await expect(line).toHaveClass(/motion-reduce:\[stroke-dasharray:none\]/);
+    await expect(line).toHaveAttribute("pathLength", "1");
+  });
+
   test("deep links render the critical screens without page-level horizontal overflow", async ({
     page,
   }) => {
