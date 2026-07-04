@@ -541,9 +541,13 @@ test.describe("private report review smoke", () => {
     await expect(atAGlance).toHaveCount(1);
     await expect(atAGlance).toBeVisible();
 
-    // The sample carries all four question metrics, in fixed order.
+    // The sample carries all four question metrics, in fixed order — so the
+    // "needs a bit more" list stays empty (Phase 5.5.7b).
     const rows = atAGlance.getByTestId("at-a-glance-row");
     await expect(rows).toHaveCount(4);
+    await expect(
+      atAGlance.getByTestId("at-a-glance-needs-row"),
+    ).toHaveCount(0);
     await expect(rows.nth(0)).toContainText("Money left this month");
     await expect(rows.nth(0)).toContainText("$1,280 left");
     await expect(rows.nth(1)).toContainText("3.46 months");
@@ -561,6 +565,55 @@ test.describe("private report review smoke", () => {
     await atAGlance.getByTestId("at-a-glance-provenance-link").click();
     await expect(overview).toBeInViewport();
     await expect(page.locator("#metric-debt_pressure")).toBeVisible();
+  });
+
+  test("at-a-glance leads with answerable questions and lists the rest under needs a bit more", async ({
+    page,
+  }) => {
+    // A response missing the debt-pressure metric: three questions stay
+    // answerable, and the fourth states what is needed instead of vanishing
+    // silently or showing a fabricated zero (Phase 5.5.7b).
+    const debtlessReport = {
+      ...reportReviewSample,
+      summaryMetrics: reportReviewSample.summaryMetrics.filter(
+        (metric) => metric.id !== "debt_pressure",
+      ),
+    };
+    await page.route(
+      "**/private/report-review/workspace-report",
+      async (route) => {
+        await route.fulfill({
+          contentType: "application/json",
+          json: { report: debtlessReport },
+          status: 200,
+        });
+      },
+    );
+
+    await page.goto(`${reportReviewPath}#snapshot`);
+    await ensureBalanceDetailsOpen(page);
+    await page.getByText("Your profile inputs", { exact: true }).click();
+    const profileCard = page.locator(
+      'form[aria-labelledby="profile-values-heading"]',
+    );
+    await profileCard
+      .getByRole("button", { name: "Edit Monthly take-home income" })
+      .click();
+    await profileCard
+      .getByRole("spinbutton", { name: "Monthly take-home income" })
+      .fill("5300");
+    await profileCard.getByRole("button", { name: "Save profile" }).click();
+
+    const atAGlance = page.locator('[data-testid="at-a-glance"]:visible');
+    await expect(atAGlance.getByTestId("at-a-glance-row")).toHaveCount(3);
+    const needsRow = atAGlance.getByTestId("at-a-glance-needs-row");
+    await expect(needsRow).toHaveCount(1);
+    await expect(needsRow).toContainText("Debt on the books");
+    await expect(needsRow).toContainText("Add debts to see debt pressure.");
+    // Answered rows keep their provenance deep link.
+    await expect(
+      atAGlance.getByTestId("at-a-glance-provenance-link"),
+    ).toHaveCount(1);
   });
 
   test("money layout offers the left section navigator on wide viewports", async ({

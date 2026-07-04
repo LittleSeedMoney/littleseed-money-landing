@@ -4488,3 +4488,30 @@ test("sprout stage maps progress to fixed quartile stages", () => {
   assert.equal(sproutStageForProgress(null), null);
   assert.equal(sproutStageForProgress(Number.NaN), null);
 });
+
+const {
+  atAGlanceNeedsHints,
+} = require("../lib/report-review/at-a-glance.ts");
+
+test("at-a-glance needs hints list only the unanswerable questions in fixed order", () => {
+  // The full sample answers all four questions — nothing is needed.
+  assert.deepEqual(atAGlanceNeedsHints(reportReviewSample.summaryMetrics), []);
+
+  // Missing debt pressure yields exactly its factual hint.
+  const withoutDebt = reportReviewSample.summaryMetrics.filter(
+    (metric) => metric.id !== "debt_pressure",
+  );
+  assert.deepEqual(
+    atAGlanceNeedsHints(withoutDebt).map((need) => [need.id, need.hint]),
+    [["debt-pressure", "Add debts to see debt pressure."]],
+  );
+
+  // No metrics at all: every question appears, in the fixed question order,
+  // each with a needs statement — never a fabricated zero row.
+  const allNeeds = atAGlanceNeedsHints([]);
+  assert.deepEqual(
+    allNeeds.map((need) => need.id),
+    ["money-left", "income-resilience", "debt-pressure", "own-owe"],
+  );
+  assert.ok(allNeeds.every((need) => need.hint.length > 0));
+});
