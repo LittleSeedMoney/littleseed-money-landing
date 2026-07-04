@@ -27,6 +27,7 @@ import {
   type GoalPlanningRow,
 } from "@/lib/report-review/goal-planning";
 import { MONEY_BLOCK_SHOW_EVENT } from "@/lib/report-review/money-arrangement";
+import { scrollOnceShown } from "@/lib/report-review/reveal-anchor";
 import {
   reportReviewRevealTargetForHash,
   reportReviewScreenFromHash,
@@ -152,11 +153,9 @@ export function ReportReviewWorkspace({
       element.closest("details")?.setAttribute("open", "");
 
       if (hiddenBlock) {
-        requestAnimationFrame(() =>
-          requestAnimationFrame(() =>
-            element.scrollIntoView({ behavior: "smooth", block: "start" }),
-          ),
-        );
+        // Scroll only once the block has re-rendered visible; a scroll issued
+        // against a display:none subtree is silently ignored.
+        scrollOnceShown(element, "start");
         return;
       }
       element.scrollIntoView({ behavior: "smooth", block: "start" });

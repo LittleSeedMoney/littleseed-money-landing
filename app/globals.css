@@ -51,3 +51,18 @@ body {
     font-family: Georgia, "Times New Roman", serif;
   }
 }
+
+/* One-time "breath" when the Money arrange mode opens: the blocks settle from
+   a hair smaller into place, signalling "you can pick these up now" — the
+   restrained cousin of the home-screen jiggle. Plays once (no loop, no
+   wobble); arrange-mode wrappers pair it with `motion-reduce:animate-none`. */
+@keyframes money-arrange-breathe {
+  from {
+    transform: scale(0.992);
+    opacity: 0.85;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}

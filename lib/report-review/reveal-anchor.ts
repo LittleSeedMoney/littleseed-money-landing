@@ -12,8 +12,9 @@ import { MONEY_BLOCK_SHOW_EVENT } from "@/lib/report-review/money-arrangement";
  *
  * The target can also live inside a Money block the user hid in this session
  * (Phase 5.5.6). Hidden content must remain reachable, so ask the arrangement
- * owner to show the block again (bubbling CustomEvent) and defer the scroll a
- * couple of frames so React has re-rendered the block visible before scrolling.
+ * owner to show the block again (bubbling CustomEvent) and scroll only once
+ * React has re-rendered the block visible — a scroll issued while the wrapper
+ * is still `display: none` is silently ignored.
  */
 export function revealAnchor(
   id: string,
@@ -45,13 +46,31 @@ export function revealAnchor(
   }
 
   if (hiddenBlock) {
-    requestAnimationFrame(() =>
-      requestAnimationFrame(() =>
-        anchor.scrollIntoView({ behavior: "smooth", block }),
-      ),
-    );
+    scrollOnceShown(anchor, block);
     return;
   }
 
   anchor.scrollIntoView({ behavior: "smooth", block });
+}
+
+/**
+ * Scroll to `anchor` as soon as its Money-block wrapper is no longer hidden,
+ * polling one frame at a time. A fixed one-or-two-frame delay is a race: the
+ * React re-render that clears `hidden` can take longer, and `scrollIntoView`
+ * on a `display: none` subtree does nothing. Gives up quietly after ~1s.
+ */
+export function scrollOnceShown(
+  anchor: HTMLElement,
+  block: ScrollLogicalPosition,
+  framesLeft = 60,
+): void {
+  const host = anchor.closest("[data-money-block]");
+  if (!(host instanceof HTMLElement) || !host.hidden) {
+    anchor.scrollIntoView({ behavior: "smooth", block });
+    return;
+  }
+  if (framesLeft <= 0) {
+    return;
+  }
+  requestAnimationFrame(() => scrollOnceShown(anchor, block, framesLeft - 1));
 }

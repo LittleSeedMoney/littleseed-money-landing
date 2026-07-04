@@ -161,6 +161,47 @@ test.describe("private report review smoke", () => {
     ]);
   });
 
+  test("a touch long-press on a block enters arrange mode", async ({
+    page,
+  }) => {
+    await page.goto(`${reportReviewPath}#money`);
+
+    // The home-screen gesture: hold a movable block (touch/pen only; slop
+    // cancels a scroll). The button entry point remains the accessible path.
+    // Dispatching synthetic pointer events races hydration on the throttled
+    // mobile project (no handler attached yet), so retry the whole press until
+    // it takes.
+    const block = page.locator('[data-money-block="breakdown"]');
+    await expect(async () => {
+      await block.dispatchEvent("pointerdown", {
+        pointerType: "touch",
+        clientX: 200,
+        clientY: 300,
+      });
+      await page.waitForTimeout(650);
+      await block.dispatchEvent("pointerup", { pointerType: "touch" });
+      await expect(page.getByTestId("money-arrange-done")).toBeVisible({
+        timeout: 500,
+      });
+    }).toPass({ timeout: 15_000 });
+  });
+
+  test("the desktop gutter grip enters arrange mode", async ({
+    page,
+    viewport,
+  }) => {
+    test.skip(
+      !viewport || viewport.width < 1024,
+      "the hover grip only renders on lg+ viewports",
+    );
+    await page.goto(`${reportReviewPath}#money`);
+
+    await page.locator('[data-money-block="breakdown"]').hover();
+    await page.getByTestId("money-arrange-grip-breakdown").click();
+
+    await expect(page.getByTestId("money-arrange-done")).toBeVisible();
+  });
+
   test("the first move click always changes the visually visible order", async ({
     page,
   }) => {

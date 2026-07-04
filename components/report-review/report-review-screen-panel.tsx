@@ -427,6 +427,7 @@ export function ReportReviewScreenPanel({
             hidden={moneyArrangement.hidden.includes(id)}
             key={id}
             mobileOnly={id === "at-a-glance"}
+            onEnterArrange={() => setArrangeMode(true)}
             onHide={hideBlock}
             onMove={moveBlock}
           >
