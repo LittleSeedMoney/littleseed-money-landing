@@ -60,15 +60,30 @@ export function ReportReviewWorkspace({
   const [activeScreen, setActiveScreen] =
     useState<ReportReviewScreenId>("money");
 
-  const generatedAt = useMemo(
-    () =>
-      new Intl.DateTimeFormat("en", {
-        dateStyle: "medium",
-        timeStyle: "short",
-        timeZone: "UTC",
-      }).format(new Date(report.generatedAt)),
-    [report.generatedAt],
-  );
+  // Compose the date and time from explicit fields joined by a fixed literal.
+  // A single `dateStyle`/`timeStyle` formatter draws its date↔time connector
+  // from the runtime's ICU/CLDR data, which varies by version: Node renders
+  // "Jun 12, 2026 at 3:12 AM" while some browsers render "Jun 12, 2026, 3:12 AM".
+  // That difference makes the SSR HTML and the hydrating client tree disagree,
+  // triggering a hydration mismatch. Individual month/day/year/hour/minute
+  // fields carry no locale connector, so server and client always agree. The
+  // trailing " UTC" is appended by the caller (`OverviewSection`).
+  const generatedAt = useMemo(() => {
+    const generated = new Date(report.generatedAt);
+    const date = new Intl.DateTimeFormat("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      timeZone: "UTC",
+    }).format(generated);
+    const time = new Intl.DateTimeFormat("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+      timeZone: "UTC",
+    }).format(generated);
+    return `${date}, ${time}`;
+  }, [report.generatedAt]);
   const sourceById = useMemo(
     () => new Map(report.evidenceSources.map((source) => [source.id, source])),
     [report.evidenceSources],
