@@ -26,6 +26,7 @@ import {
   summarizeGoalPlan,
   type GoalPlanningRow,
 } from "@/lib/report-review/goal-planning";
+import { MONEY_BLOCK_SHOW_EVENT } from "@/lib/report-review/money-arrangement";
 import {
   reportReviewRevealTargetForHash,
   reportReviewScreenFromHash,
@@ -125,6 +126,20 @@ export function ReportReviewWorkspace({
         return;
       }
 
+      // The target can sit inside a Money block hidden by the in-session
+      // arrangement (Phase 5.5.6). Hidden content must remain reachable, so
+      // ask the arrangement owner to show the block and scroll a couple of
+      // frames later, after React has re-rendered it visible.
+      const hiddenBlock = element.closest("[data-money-block][hidden]");
+      if (hiddenBlock instanceof HTMLElement) {
+        hiddenBlock.dispatchEvent(
+          new CustomEvent(MONEY_BLOCK_SHOW_EVENT, {
+            bubbles: true,
+            detail: hiddenBlock.dataset.moneyBlock,
+          }),
+        );
+      }
+
       for (
         let node: HTMLElement | null = element;
         node;
@@ -135,6 +150,15 @@ export function ReportReviewWorkspace({
         }
       }
       element.closest("details")?.setAttribute("open", "");
+
+      if (hiddenBlock) {
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() =>
+            element.scrollIntoView({ behavior: "smooth", block: "start" }),
+          ),
+        );
+        return;
+      }
       element.scrollIntoView({ behavior: "smooth", block: "start" });
     });
 

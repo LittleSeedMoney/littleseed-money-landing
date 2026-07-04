@@ -95,6 +95,93 @@ test.describe("private report review smoke", () => {
     );
   });
 
+  test("money sections rearrange, hide, and reset in the current session only", async ({
+    page,
+  }) => {
+    await page.goto(`${reportReviewPath}#money`);
+
+    const visibleBlocks = () =>
+      page
+        .locator("[data-money-block]:not([hidden])")
+        .evaluateAll((elements) =>
+          elements.map((element) => element.getAttribute("data-money-block")),
+        );
+
+    expect((await visibleBlocks()).slice(0, 2)).toEqual([
+      "breakdown",
+      "things-to-look-at",
+    ]);
+
+    // Enter arrange mode from the quiet entry point under the hero.
+    await page.getByTestId("money-arrange-enter").click();
+    await expect(page.getByTestId("money-arrange-done")).toBeVisible();
+
+    // Keyboard-reachable move: things-to-look-at swaps above the breakdown.
+    await page.getByTestId("money-arrange-up-things-to-look-at").click();
+    expect((await visibleBlocks()).slice(0, 2)).toEqual([
+      "things-to-look-at",
+      "breakdown",
+    ]);
+
+    // Hiding never deletes: the block leaves the stack but stays restorable
+    // from the hidden-sections list (and stays in the DOM for deep links).
+    await page.getByTestId("money-arrange-hide-breakdown").click();
+    await expect(page.getByTestId("money-hidden-sections")).toContainText(
+      "What you own and owe",
+    );
+    await expect(
+      page.locator('[data-money-block="breakdown"]'),
+    ).toBeHidden();
+
+    // Done keeps the arrangement for the session; edit controls leave.
+    await page.getByTestId("money-arrange-done").click();
+    await expect(page.getByTestId("money-hidden-sections")).toHaveCount(0);
+    expect((await visibleBlocks())[0]).toBe("things-to-look-at");
+
+    // Reset restores the default order and visibility.
+    await page.getByTestId("money-arrange-enter").click();
+    await page.getByTestId("money-arrange-reset").click();
+    expect((await visibleBlocks()).slice(0, 2)).toEqual([
+      "breakdown",
+      "things-to-look-at",
+    ]);
+    await page.getByTestId("money-arrange-done").click();
+
+    // Nothing is persisted: rearrange again, reload, and the default returns.
+    await page.getByTestId("money-arrange-enter").click();
+    await page.getByTestId("money-arrange-hide-breakdown").click();
+    await page.getByTestId("money-arrange-done").click();
+    await page.reload();
+    await expect(
+      page.locator('[data-money-block="breakdown"]'),
+    ).toBeVisible();
+    expect((await visibleBlocks()).slice(0, 2)).toEqual([
+      "breakdown",
+      "things-to-look-at",
+    ]);
+  });
+
+  test("a hidden money section is shown again by its deep link", async ({
+    page,
+  }) => {
+    await page.goto(`${reportReviewPath}#money`);
+
+    await page.getByTestId("money-arrange-enter").click();
+    await page.getByTestId("money-arrange-hide-spending-detail").click();
+    await page.getByTestId("money-arrange-done").click();
+    await expect(
+      page.locator('[data-money-block="spending-detail"]'),
+    ).toBeHidden();
+
+    // The hero spending tile deep-links into the hidden disclosure; hidden
+    // content must remain reachable, so the block shows itself again.
+    await page.getByTestId("money-hero-tile-spending").click();
+    await expect(
+      page.locator('[data-money-block="spending-detail"]'),
+    ).toBeVisible();
+    await expect(page.locator("#spending-detail")).toBeInViewport();
+  });
+
   test("legacy snapshot, input, and report links open the Money screen", async ({
     page,
   }) => {

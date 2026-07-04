@@ -1,3 +1,5 @@
+import { MONEY_BLOCK_SHOW_EVENT } from "@/lib/report-review/money-arrangement";
+
 /**
  * Open the element with `id` in the Money screen and scroll it into view.
  *
@@ -7,6 +9,11 @@
  * open every ancestor `<details>` before scrolling. This runs on user
  * interaction (post-hydration), so it never causes a server/client `open`
  * mismatch — fragment *targets* still live on always-visible summaries.
+ *
+ * The target can also live inside a Money block the user hid in this session
+ * (Phase 5.5.6). Hidden content must remain reachable, so ask the arrangement
+ * owner to show the block again (bubbling CustomEvent) and defer the scroll a
+ * couple of frames so React has re-rendered the block visible before scrolling.
  */
 export function revealAnchor(
   id: string,
@@ -17,6 +24,16 @@ export function revealAnchor(
     return;
   }
 
+  const hiddenBlock = anchor.closest("[data-money-block][hidden]");
+  if (hiddenBlock instanceof HTMLElement) {
+    hiddenBlock.dispatchEvent(
+      new CustomEvent(MONEY_BLOCK_SHOW_EVENT, {
+        bubbles: true,
+        detail: hiddenBlock.dataset.moneyBlock,
+      }),
+    );
+  }
+
   for (
     let node: HTMLElement | null = anchor;
     node;
@@ -25,6 +42,15 @@ export function revealAnchor(
     if (node instanceof HTMLDetailsElement) {
       node.open = true;
     }
+  }
+
+  if (hiddenBlock) {
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() =>
+        anchor.scrollIntoView({ behavior: "smooth", block }),
+      ),
+    );
+    return;
   }
 
   anchor.scrollIntoView({ behavior: "smooth", block });
