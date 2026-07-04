@@ -179,7 +179,7 @@ export function NetWorthChart({
       <div className="relative mt-3">
         <svg
           aria-label={`Net worth ${changeLabel.toLowerCase()} ${rangeWord}, now ${formatNetWorthMoney(change.last)}`}
-          className="block h-32 w-full overflow-visible sm:h-40"
+          className="block h-44 w-full overflow-visible sm:h-56"
           onPointerLeave={() => setHoverIndex(null)}
           onPointerMove={handlePointerMove}
           preserveAspectRatio="none"
@@ -216,8 +216,10 @@ export function NetWorthChart({
 
           <path d={geometry.areaPath} fill="url(#net-worth-fill)" />
           <path
+            className="animate-[money-line-draw_900ms_ease-out] [stroke-dasharray:1] motion-reduce:animate-none motion-reduce:[stroke-dasharray:none]"
             d={geometry.linePath}
             fill="none"
+            pathLength={1}
             stroke="#3F562F"
             strokeLinecap="round"
             strokeLinejoin="round"

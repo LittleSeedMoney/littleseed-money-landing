@@ -66,3 +66,29 @@ body {
     opacity: 1;
   }
 }
+
+/* Net-worth line draws itself in once on first render (Phase 5.5.7 visual
+   pass). Uses a normalized pathLength so the dash math is length-independent;
+   plays a single pass, never idles. Paired with motion-reduce:animate-none. */
+@keyframes money-line-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Gentle settle for a disclosure body as it opens — a short fade-and-rise, one
+   pass. Native <details> reveals content instantly; this only softens the
+   open. Paired with motion-reduce:animate-none. */
+@keyframes money-disclosure-open {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

@@ -212,7 +212,7 @@ function HeroTileCard({
       ) : null}
       {tile.band ? (
         <div className="mt-3">
-          <div className="relative h-2 rounded-full bg-[linear-gradient(to_right,#EFDDB9_0%,#E9EEE0_55%,#4F6D38_100%)]">
+          <div className="relative h-2 rounded-full bg-[linear-gradient(to_right,#D9B570_0%,#E4E7D6_55%,#4F6D38_100%)]">
             <span
               aria-hidden="true"
               className="absolute top-1/2 h-4 w-1 -translate-y-1/2 rounded-full bg-seed-950 ring-2 ring-white"

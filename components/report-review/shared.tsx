@@ -164,7 +164,12 @@ export function ReviewDisclosure({
         <div className="min-w-0 flex-1">{summary}</div>
         <DisclosureChevron />
       </summary>
-      {children}
+      {/* Gentle one-pass settle as the body opens (Phase 5.5.7). Native
+          <details> reveals instantly; this only softens the reveal and is
+          skipped under reduced motion. */}
+      <div className="group-open:animate-[money-disclosure-open_220ms_ease-out] motion-reduce:animate-none">
+        {children}
+      </div>
     </details>
   );
 }
