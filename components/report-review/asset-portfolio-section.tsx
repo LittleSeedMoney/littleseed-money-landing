@@ -177,34 +177,37 @@ export function MoneyBalanceDetails({
   const [editBaseline, setEditBaseline] =
     useState<SnapshotEditBaseline | null>(null);
   const wasSubmittingRef = useRef(false);
-  // Momentary acknowledgement after a successful apply (Phase 5.5.7); cleared
-  // by the timer effect below. The copy says "updated", never "saved" — the
+  // Momentary acknowledgement after a successful apply (Phase 5.5.7). A nonce
+  // rather than a boolean so a second success inside the display window resets
+  // the timer and remounts the status node (re-running the settle and the
+  // role="status" announcement). The copy says "updated", never "saved" — the
   // values live in this session only.
-  const [justUpdated, setJustUpdated] = useState(false);
+  const [softCheckNonce, setSoftCheckNonce] = useState(0);
 
   useEffect(() => {
     if (wasSubmittingRef.current && requestState === "idle" && !errorMessage) {
       setEditBaseline(null);
       setActivePortfolioEdit(null);
       setActiveProfileField(null);
-      setJustUpdated(true);
+      setSoftCheckNonce((nonce) => nonce + 1);
     }
     wasSubmittingRef.current = requestState === "submitting";
   }, [errorMessage, requestState]);
 
   useEffect(() => {
-    if (!justUpdated) {
+    if (softCheckNonce === 0) {
       return;
     }
-    const timer = window.setTimeout(() => setJustUpdated(false), 2600);
+    const timer = window.setTimeout(() => setSoftCheckNonce(0), 2600);
     return () => window.clearTimeout(timer);
-  }, [justUpdated]);
+  }, [softCheckNonce]);
 
-  const softCheck = justUpdated ? (
-    <div className="flex justify-end">
-      <SoftCheckAcknowledgement label="Updated for this session" />
-    </div>
-  ) : null;
+  const softCheck =
+    softCheckNonce > 0 ? (
+      <div className="flex justify-end" key={softCheckNonce}>
+        <SoftCheckAcknowledgement label="Updated for this session" />
+      </div>
+    ) : null;
 
   const assetItems = manualAssetSnapshotItems(values.assets, portfolio.assets);
   const liabilityItems = manualDebtSnapshotItems(
