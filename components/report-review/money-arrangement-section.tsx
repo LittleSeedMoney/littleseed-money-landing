@@ -1,11 +1,13 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useRef, type PointerEvent, type ReactNode } from "react";
 
 import {
   MONEY_BLOCK_LABELS,
   type MoneyBlockId,
 } from "@/lib/report-review/money-arrangement";
+
+import { joinClasses } from "./class-names";
 
 /**
  * In-session arrangement UI for the Money narrative (Phase 5.5.6).
@@ -98,6 +100,10 @@ export function MoneyArrangeControls({
   );
 }
 
+/** Movement past this slop cancels a long-press (it was a scroll, not a hold). */
+const LONG_PRESS_SLOP_PX = 12;
+const LONG_PRESS_MS = 550;
+
 export function MoneyArrangeItem({
   arrangeMode,
   blockId,
@@ -106,6 +112,7 @@ export function MoneyArrangeItem({
   children,
   hidden,
   mobileOnly,
+  onEnterArrange,
   onHide,
   onMove,
 }: {
@@ -116,6 +123,7 @@ export function MoneyArrangeItem({
   children: ReactNode;
   hidden: boolean;
   mobileOnly: boolean;
+  onEnterArrange: () => void;
   onHide: (id: MoneyBlockId) => void;
   onMove: (id: MoneyBlockId, direction: "up" | "down") => void;
 }) {
@@ -123,6 +131,46 @@ export function MoneyArrangeItem({
   // Some blocks only render in the mobile narrative (at-a-glance moves to the
   // desktop right rail), so their arrange controls hide with them on lg+.
   const wrapperClass = mobileOnly ? "lg:hidden" : undefined;
+
+  // Long-press (touch/pen only) enters arrange mode right from the block the
+  // user wants to move — the home-screen gesture, minus the theatrics. Mouse
+  // users get the hover grip instead (a mouse hold fights text selection), and
+  // the "Arrange sections" button stays as the always-visible accessible path.
+  const pressTimer = useRef<number | null>(null);
+  const pressOrigin = useRef<{ x: number; y: number } | null>(null);
+
+  function clearPress() {
+    if (pressTimer.current !== null) {
+      window.clearTimeout(pressTimer.current);
+      pressTimer.current = null;
+    }
+    pressOrigin.current = null;
+  }
+
+  function handlePressStart(event: PointerEvent<HTMLDivElement>) {
+    if (event.pointerType === "mouse") {
+      return;
+    }
+    pressOrigin.current = { x: event.clientX, y: event.clientY };
+    pressTimer.current = window.setTimeout(() => {
+      clearPress();
+      onEnterArrange();
+    }, LONG_PRESS_MS);
+  }
+
+  function handlePressMove(event: PointerEvent<HTMLDivElement>) {
+    const origin = pressOrigin.current;
+    if (!origin) {
+      return;
+    }
+    const distance = Math.hypot(
+      event.clientX - origin.x,
+      event.clientY - origin.y,
+    );
+    if (distance > LONG_PRESS_SLOP_PX) {
+      clearPress();
+    }
+  }
 
   // Hidden blocks stay in the DOM (display: none via the `hidden` attribute) so
   // every existing deep link can find its target and ask for the block back —
@@ -137,14 +185,44 @@ export function MoneyArrangeItem({
 
   if (!arrangeMode) {
     return (
-      <div className={wrapperClass} data-money-block={blockId}>
+      <div
+        className={joinClasses("group relative", wrapperClass)}
+        data-money-block={blockId}
+        onPointerCancel={clearPress}
+        onPointerDown={handlePressStart}
+        onPointerLeave={clearPress}
+        onPointerMove={handlePressMove}
+        onPointerUp={clearPress}
+      >
         {children}
+        {/* Desktop-only hover grip in the gutter left of the block: appears on
+            hover (or keyboard focus), quiet otherwise, and opens arrange mode
+            starting from this block's neighbourhood. Rendered AFTER the block
+            content so `children` stays the first child in both the hidden and
+            visible branches — otherwise React re-mounts the block on
+            hide/show (position-based reconciliation), collapsing its open
+            <details> and breaking the deep-link scroll. */}
+        <button
+          aria-label={`Arrange sections (${label})`}
+          className="absolute -left-7 top-2 hidden size-6 place-items-center rounded-md text-earth-400 opacity-0 outline-none transition-opacity duration-150 hover:bg-seed-50 hover:text-seed-700 focus-visible:opacity-100 group-hover:opacity-100 motion-reduce:transition-none lg:grid"
+          data-testid={`money-arrange-grip-${blockId}`}
+          onClick={onEnterArrange}
+          type="button"
+        >
+          <GripIcon />
+        </button>
       </div>
     );
   }
 
   return (
-    <div className={wrapperClass} data-money-block={blockId}>
+    <div
+      className={joinClasses(
+        "animate-[money-arrange-breathe_180ms_ease-out] motion-reduce:animate-none",
+        wrapperClass,
+      )}
+      data-money-block={blockId}
+    >
       <div
         aria-label={`${label} section arrangement`}
         className="flex flex-wrap items-center justify-between gap-2 rounded-t-lg border border-b-0 border-seed-200 bg-seed-50 px-3 py-1.5"
@@ -252,6 +330,24 @@ function ChevronIcon({ direction }: { direction: "up" | "down" }) {
       ) : (
         <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
       )}
+    </svg>
+  );
+}
+
+function GripIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="size-4"
+      fill="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <circle cx="9" cy="6" r="1.5" />
+      <circle cx="15" cy="6" r="1.5" />
+      <circle cx="9" cy="12" r="1.5" />
+      <circle cx="15" cy="12" r="1.5" />
+      <circle cx="9" cy="18" r="1.5" />
+      <circle cx="15" cy="18" r="1.5" />
     </svg>
   );
 }
