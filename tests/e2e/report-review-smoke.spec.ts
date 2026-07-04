@@ -161,6 +161,35 @@ test.describe("private report review smoke", () => {
     ]);
   });
 
+  test("the first move click always changes the visually visible order", async ({
+    page,
+  }) => {
+    await page.goto(`${reportReviewPath}#money`);
+
+    // Order of blocks the user can actually see (skips user-hidden blocks and
+    // CSS-hidden ones like the mobile-only at-a-glance on desktop). Moving
+    // must swap with a *visible* neighbour on every viewport — a swap with an
+    // invisible block made the first click look like a no-op on desktop.
+    const visualOrder = () =>
+      page.locator("[data-money-block]").evaluateAll((elements) =>
+        elements
+          .filter(
+            (element) =>
+              !(element as HTMLElement).hidden &&
+              (element as HTMLElement).offsetParent !== null,
+          )
+          .map((element) => element.getAttribute("data-money-block")),
+      );
+
+    await page.getByTestId("money-arrange-enter").click();
+    const before = await visualOrder();
+    const beforeIndex = before.indexOf("spending-detail");
+
+    await page.getByTestId("money-arrange-up-spending-detail").click();
+    const after = await visualOrder();
+    expect(after.indexOf("spending-detail")).toBe(beforeIndex - 1);
+  });
+
   test("a hidden money section is shown again by its deep link", async ({
     page,
   }) => {

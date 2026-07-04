@@ -352,13 +352,23 @@ export function ReportReviewScreenPanel({
   );
 
   function moveBlock(id: MoneyBlockId, direction: "up" | "down") {
-    const next = moveMoneyBlock(moneyArrangement, id, direction, presentIds);
+    // Swap only with neighbours the user can actually see right now. The
+    // mobile-only at-a-glance block stays in the DOM on desktop (`lg:hidden`),
+    // and swapping with an invisible neighbour made the first click look like
+    // a no-op. Reading `offsetParent` inside the event handler keeps this in
+    // sync with whatever CSS hides (display: none) without hard-coding a
+    // breakpoint, and runs client-side only — no hydration concern.
+    const movableIds = presentIds.filter((block) => {
+      const host = document.querySelector(`[data-money-block="${block}"]`);
+      return !(host instanceof HTMLElement) || host.offsetParent !== null;
+    });
+    const next = moveMoneyBlock(moneyArrangement, id, direction, movableIds);
     if (next === moneyArrangement) {
       return;
     }
     setMoneyArrangement(next);
     const nextVisible = next.order.filter(
-      (block) => presentIds.includes(block) && !next.hidden.includes(block),
+      (block) => movableIds.includes(block) && !next.hidden.includes(block),
     );
     setArrangeLiveMessage(
       `${MONEY_BLOCK_LABELS[id]} moved to position ${
