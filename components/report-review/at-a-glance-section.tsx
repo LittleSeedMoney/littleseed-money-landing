@@ -4,7 +4,6 @@ import type { ReactElement } from "react";
 
 import type { SummaryMetric } from "@/data/report-review-sample";
 import {
-  atAGlanceMetricAnchor,
   buildAtAGlanceRows,
   type AtAGlanceIcon,
 } from "@/lib/report-review/at-a-glance";
@@ -16,8 +15,10 @@ import { joinClasses, provenanceLabels, reviewPanelClass } from "./shared";
  * Compact restatement of the household questions using existing
  * `summaryMetrics`. An icon-led answer list: the question is a quiet lead-in and
  * the already-computed value reads as the answer. Provenance stays visible as a
- * light caption and an info control deep-links to the metric's full provenance
- * card. Renders nothing when no answerable metric is present.
+ * light caption per row, and one section-level control deep-links to the full
+ * provenance cards in Report & findings — a per-row icon repeated four times
+ * read as duplicate noise (owner feedback), since every destination lives in
+ * the same disclosure. Renders nothing when no answerable metric is present.
  *
  * The section uses `aria-label` (not a heading id) so it can be rendered twice
  * for responsive placement — a mobile instance in the Money narrative and a
@@ -56,6 +57,19 @@ export function AtAGlanceSection({
           />
         ))}
       </dl>
+
+      {/* One deep link for the whole section: the metric provenance cards all
+          live together in the Report & findings overview. */}
+      <div className="mt-2 flex justify-end">
+        <button
+          className="inline-flex min-h-7 items-center text-xs font-medium text-seed-700 underline-offset-4 outline-none hover:underline focus:ring-2 focus:ring-seed-500"
+          data-testid="at-a-glance-provenance-link"
+          onClick={() => revealAnchor("overview")}
+          type="button"
+        >
+          What we counted →
+        </button>
+      </div>
     </section>
   );
 }
@@ -71,8 +85,6 @@ function AtAGlanceRow({
   question: string;
   rowId: string;
 }) {
-  const anchor = atAGlanceMetricAnchor(metric.id);
-
   return (
     <div
       className="py-2.5 first:pt-1 last:pb-1"
@@ -88,25 +100,9 @@ function AtAGlanceRow({
         </span>
       </dt>
       <dd className="mt-1 pl-9">
-        {/* Value left, info control right — a consistent column across rows so
-            the varying value widths don't leave the row ragged. */}
-        <div className="flex items-center justify-between gap-2">
-          <span className="font-serif text-xl font-bold tabular-nums leading-none text-seed-950">
-            {metric.value}
-          </span>
-          {/* Repeated "what we counted" text is replaced with one accessible
-              icon control (per the Phase 5.22 density pattern); it opens the
-              metric's full provenance card. */}
-          <button
-            aria-label={`What we counted for ${question}`}
-            className="grid size-6 shrink-0 place-items-center rounded-md text-earth-400 outline-none hover:bg-seed-50 hover:text-seed-700 focus:ring-2 focus:ring-seed-500"
-            data-testid="at-a-glance-provenance-link"
-            onClick={() => revealAnchor(anchor)}
-            type="button"
-          >
-            <InfoIcon />
-          </button>
-        </div>
+        <span className="font-serif text-xl font-bold tabular-nums leading-none text-seed-950">
+          {metric.value}
+        </span>
         {/* Provenance stays disclosed as a light caption under the value. */}
         <span className="mt-0.5 block text-[11px] font-medium text-earth-500">
           {provenanceLabels[metric.provenance]}
@@ -163,23 +159,6 @@ function AtAGlanceGlyph({ icon }: { icon: AtAGlanceIcon }) {
       viewBox="0 0 24 24"
     >
       {paths[icon]}
-    </svg>
-  );
-}
-
-function InfoIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      className="size-4"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.75"
-      viewBox="0 0 24 24"
-    >
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 11v5" strokeLinecap="round" />
-      <path d="M12 7.75h.01" strokeLinecap="round" />
     </svg>
   );
 }

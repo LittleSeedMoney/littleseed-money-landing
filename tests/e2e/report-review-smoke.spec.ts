@@ -441,17 +441,17 @@ test.describe("private report review smoke", () => {
     await expect(rows.nth(2)).toContainText("$35,000 debt");
     await expect(rows.nth(3)).toContainText("$33,000");
 
-    // The debt-pressure provenance control opens the Report & findings
-    // disclosure and reveals that metric's full card (nested in a collapsed
-    // <details>).
-    const metricCard = page.locator("#metric-debt_pressure");
-    await expect(metricCard).not.toBeInViewport();
-    await rows
-      .nth(2)
-      .getByTestId("at-a-glance-provenance-link")
-      .click();
-    await expect(metricCard).toBeVisible();
-    await expect(metricCard).toBeInViewport();
+    // One section-level provenance control (per-row icons read as duplicates —
+    // every destination lives in the same disclosure). It opens the Report &
+    // findings disclosure and reveals the metric provenance cards.
+    await expect(
+      atAGlance.getByTestId("at-a-glance-provenance-link"),
+    ).toHaveCount(1);
+    const overview = page.locator("#overview");
+    await expect(overview).not.toBeInViewport();
+    await atAGlance.getByTestId("at-a-glance-provenance-link").click();
+    await expect(overview).toBeInViewport();
+    await expect(page.locator("#metric-debt_pressure")).toBeVisible();
   });
 
   test("money layout offers the left section navigator on wide viewports", async ({
