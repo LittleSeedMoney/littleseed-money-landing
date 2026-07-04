@@ -338,3 +338,38 @@ export function InfoList({ title, items }: { title: string; items: string[] }) {
     </div>
   );
 }
+
+/**
+ * Brief acknowledgement that an input finished applying (Phase 5.5.7): a soft
+ * check with a short one-pass settle — never confetti, never a judgment of the
+ * value entered. `role="status"` announces the same text to assistive tech.
+ * The owner mounts it only for a moment after a successful apply; the copy
+ * keeps the session boundary honest ("updated", not "saved").
+ */
+export function SoftCheckAcknowledgement({ label }: { label: string }) {
+  return (
+    <p
+      className="inline-flex animate-[money-soft-check_240ms_ease-out] items-center gap-1.5 text-xs font-semibold text-seed-700 motion-reduce:animate-none"
+      data-testid="soft-check"
+      role="status"
+    >
+      <span
+        aria-hidden="true"
+        className="grid size-4 place-items-center rounded-full bg-seed-100 text-seed-700"
+      >
+        <svg
+          className="size-2.5"
+          fill="none"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="2.2"
+          viewBox="0 0 24 24"
+        >
+          <path d="M5 12.5l4.5 4.5L19 7.5" />
+        </svg>
+      </span>
+      {label}
+    </p>
+  );
+}

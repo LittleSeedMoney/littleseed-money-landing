@@ -57,6 +57,7 @@ import {
   reviewPanelClass,
   ReviewSectionHeading,
   reviewSubtlePanelClass,
+  SoftCheckAcknowledgement,
   StatusPill,
 } from "./shared";
 import {
@@ -176,15 +177,34 @@ export function MoneyBalanceDetails({
   const [editBaseline, setEditBaseline] =
     useState<SnapshotEditBaseline | null>(null);
   const wasSubmittingRef = useRef(false);
+  // Momentary acknowledgement after a successful apply (Phase 5.5.7); cleared
+  // by the timer effect below. The copy says "updated", never "saved" — the
+  // values live in this session only.
+  const [justUpdated, setJustUpdated] = useState(false);
 
   useEffect(() => {
     if (wasSubmittingRef.current && requestState === "idle" && !errorMessage) {
       setEditBaseline(null);
       setActivePortfolioEdit(null);
       setActiveProfileField(null);
+      setJustUpdated(true);
     }
     wasSubmittingRef.current = requestState === "submitting";
   }, [errorMessage, requestState]);
+
+  useEffect(() => {
+    if (!justUpdated) {
+      return;
+    }
+    const timer = window.setTimeout(() => setJustUpdated(false), 2600);
+    return () => window.clearTimeout(timer);
+  }, [justUpdated]);
+
+  const softCheck = justUpdated ? (
+    <div className="flex justify-end">
+      <SoftCheckAcknowledgement label="Updated for this session" />
+    </div>
+  ) : null;
 
   const assetItems = manualAssetSnapshotItems(values.assets, portfolio.assets);
   const liabilityItems = manualDebtSnapshotItems(
@@ -197,6 +217,7 @@ export function MoneyBalanceDetails({
   if (!hasReportContent) {
     return (
       <>
+        {softCheck}
         <section className={reviewPanelClass("space-y-5 p-4")}>
           <h3
             className="text-sm font-semibold text-seed-950"
@@ -253,6 +274,7 @@ export function MoneyBalanceDetails({
 
   return (
     <>
+      {softCheck}
       <SnapshotOverviewTab
         activeField={activeProfileField}
         activePortfolioEdit={activePortfolioEdit}

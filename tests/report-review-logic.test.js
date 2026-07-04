@@ -4467,3 +4467,24 @@ test("money arrangement reset restores the default after moves and hides", () =>
   assert.equal(isDefaultMoneyArrangement(reset), true);
   assert.deepEqual(reset.order, [...MONEY_BLOCK_IDS]);
 });
+
+const {
+  sproutStageForProgress,
+} = require("../lib/report-review/sprout-stage.ts");
+
+test("sprout stage maps progress to fixed quartile stages", () => {
+  // Boundaries are inclusive at each threshold.
+  assert.equal(sproutStageForProgress(0), 0);
+  assert.equal(sproutStageForProgress(24.9), 0);
+  assert.equal(sproutStageForProgress(25), 1);
+  assert.equal(sproutStageForProgress(49.9), 1);
+  assert.equal(sproutStageForProgress(50), 2);
+  assert.equal(sproutStageForProgress(74.9), 2);
+  assert.equal(sproutStageForProgress(75), 3);
+  assert.equal(sproutStageForProgress(99.9), 3);
+  assert.equal(sproutStageForProgress(100), 4);
+  // Over-target keeps the completed mark; missing progress renders nothing.
+  assert.equal(sproutStageForProgress(140), 4);
+  assert.equal(sproutStageForProgress(null), null);
+  assert.equal(sproutStageForProgress(Number.NaN), null);
+});
