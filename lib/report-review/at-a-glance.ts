@@ -5,8 +5,9 @@ import type { SummaryMetric } from "@/data/report-review-sample";
  * `docs/20_FINANCIAL_REPORT_UX.md` using metrics the platform already computed.
  * This layer adds no calculation: each row maps a question to an existing
  * `summaryMetrics` entry and deep-links to that metric's full provenance card.
- * When a metric is absent from the response, its row is omitted rather than
- * shown as a fabricated zero.
+ * When a metric is absent, its answered row is omitted and the UI may surface
+ * the question separately as a factual needs hint (`atAGlanceNeedsHints`)
+ * rather than a fabricated zero.
  */
 /**
  * Semantic icon key for a question. The UI owns the actual mark (an app-drawn
