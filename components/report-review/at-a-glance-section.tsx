@@ -4,6 +4,7 @@ import type { ReactElement } from "react";
 
 import type { SummaryMetric } from "@/data/report-review-sample";
 import {
+  atAGlanceNeedsHints,
   buildAtAGlanceRows,
   type AtAGlanceIcon,
 } from "@/lib/report-review/at-a-glance";
@@ -18,7 +19,9 @@ import { joinClasses, provenanceLabels, reviewPanelClass } from "./shared";
  * light caption per row, and one section-level control deep-links to the full
  * provenance cards in Report & findings — a per-row icon repeated four times
  * read as duplicate noise (owner feedback), since every destination lives in
- * the same disclosure. Renders nothing when no answerable metric is present.
+ * the same disclosure. Questions the response cannot answer yet follow the
+ * answered rows as a muted "needs a bit more" list stating the missing inputs
+ * (Phase 5.5.7b) — never a fabricated zero, never a directive about money.
  *
  * The section uses `aria-label` (not a heading id) so it can be rendered twice
  * for responsive placement — a mobile instance in the Money narrative and a
@@ -33,8 +36,12 @@ export function AtAGlanceSection({
   summaryMetrics: SummaryMetric[];
 }) {
   const rows = buildAtAGlanceRows(summaryMetrics);
+  // Questions this response cannot answer yet (Phase 5.5.7b). Answered rows
+  // lead; the rest state what is still needed instead of disappearing
+  // silently or rendering a fabricated zero.
+  const needs = atAGlanceNeedsHints(summaryMetrics);
 
-  if (rows.length === 0) {
+  if (rows.length === 0 && needs.length === 0) {
     return null;
   }
 
@@ -46,30 +53,69 @@ export function AtAGlanceSection({
     >
       <h2 className="text-sm font-semibold text-seed-950">At a glance</h2>
 
-      <dl className="mt-2 divide-y divide-stone-100">
-        {rows.map((row) => (
-          <AtAGlanceRow
-            key={row.id}
-            icon={row.icon}
-            metric={row.metric}
-            question={row.question}
-            rowId={row.id}
-          />
-        ))}
-      </dl>
+      {rows.length > 0 ? (
+        <dl className="mt-2 divide-y divide-stone-100">
+          {rows.map((row) => (
+            <AtAGlanceRow
+              key={row.id}
+              icon={row.icon}
+              metric={row.metric}
+              question={row.question}
+              rowId={row.id}
+            />
+          ))}
+        </dl>
+      ) : null}
+
+      {needs.length > 0 ? (
+        <div
+          className={
+            rows.length > 0 ? "mt-2 border-t border-stone-100 pt-3" : "mt-2"
+          }
+        >
+          <h3 className="text-[10.5px] font-bold uppercase tracking-[0.13em] text-earth-500">
+            Needs a bit more
+          </h3>
+          <ul className="mt-2 space-y-2.5">
+            {needs.map((need) => (
+              <li
+                className="flex items-start gap-2"
+                data-question={need.id}
+                data-testid="at-a-glance-needs-row"
+                key={need.id}
+              >
+                <span className="grid size-7 shrink-0 place-items-center rounded-full bg-stone-100 text-earth-400">
+                  <AtAGlanceGlyph icon={need.icon} />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold leading-4 text-earth-700">
+                    {need.question}
+                  </p>
+                  <p className="mt-0.5 text-[11px] leading-4 text-earth-500">
+                    {need.hint}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
       {/* One deep link for the whole section: the metric provenance cards all
-          live together in the Report & findings overview. */}
-      <div className="mt-2 flex justify-end">
-        <button
-          className="inline-flex min-h-7 items-center text-xs font-medium text-seed-700 underline-offset-4 outline-none hover:underline focus:ring-2 focus:ring-seed-500"
-          data-testid="at-a-glance-provenance-link"
-          onClick={() => revealAnchor("overview")}
-          type="button"
-        >
-          What we counted →
-        </button>
-      </div>
+          live together in the Report & findings overview. Only meaningful when
+          at least one metric is present. */}
+      {rows.length > 0 ? (
+        <div className="mt-2 flex justify-end">
+          <button
+            className="inline-flex min-h-7 items-center text-xs font-medium text-seed-700 underline-offset-4 outline-none hover:underline focus:ring-2 focus:ring-seed-500"
+            data-testid="at-a-glance-provenance-link"
+            onClick={() => revealAnchor("overview")}
+            type="button"
+          >
+            What we counted →
+          </button>
+        </div>
+      ) : null}
     </section>
   );
 }
