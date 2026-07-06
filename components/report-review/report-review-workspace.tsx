@@ -55,9 +55,11 @@ export function ReportReviewWorkspace({
   // Goal progress counts against the visitor's local calendar month (owner
   // decision: at UTC Jun 30 23:00 a KST visitor is already in July). The
   // server cannot know the visitor's timezone, so the first paint uses the
-  // UTC month — identical on server and client for the same instant, so
-  // hydration always matches — and the effect below adopts the local month
-  // after mount (it only differs for the few hours around a month boundary).
+  // UTC month: that removes timezone-offset SSR/CSR disagreement for the
+  // common path (a render/hydration straddle across 00:00 UTC on the first
+  // of a month is still a tiny residual race — avoiding it entirely would
+  // require serializing the server-computed month). The effect below adopts
+  // the visitor's local month after mount.
   const [goalPlanningAsOfMonth, setGoalPlanningAsOfMonth] = useState(() =>
     currentGoalPlanningAsOfMonthUTC(),
   );
