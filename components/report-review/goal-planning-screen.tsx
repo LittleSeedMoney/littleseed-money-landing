@@ -181,7 +181,7 @@ function GoalPlanningRowEditor({
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-[15px] font-bold text-seed-950">
+            <h3 className="text-base font-bold text-seed-950">
               {summary.name}
             </h3>
             {/* Decorative seed-growth stage beside the status; the label and

@@ -65,7 +65,7 @@ export function EducationSection({
               </span>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="text-[15px] font-bold text-seed-950">
+                  <h3 className="text-base font-bold text-seed-950">
                     {topic.title}
                   </h3>
                   <StatusPill
@@ -73,7 +73,7 @@ export function EducationSection({
                     tone="stone"
                   />
                 </div>
-                <p className="mt-0.5 text-[13px] leading-5 text-earth-700">
+                <p className="mt-0.5 text-sm leading-5 text-earth-700">
                   {topic.concept}
                 </p>
                 <p className="mt-1.5 text-[11px] text-earth-400">
