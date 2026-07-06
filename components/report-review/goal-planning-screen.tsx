@@ -290,8 +290,13 @@ function GoalPlanningRowEditor({
               {summary.name}
             </h3>
             {/* Decorative seed-growth stage beside the status; the label and
-                percentage stay the real information. */}
-            <SproutMark progressPercent={summary.progressPercent} />
+                percentage stay the real information. Sized up beside the goal
+                title (owner feedback) — the hero tile keeps the smaller
+                default next to its compact label. */}
+            <SproutMark
+              className="size-7 shrink-0 text-seed-600"
+              progressPercent={summary.progressPercent}
+            />
             <StatusPill
               label={summary.statusLabel}
               tone={goalStatusTone(summary.status)}
