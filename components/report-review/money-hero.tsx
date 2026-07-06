@@ -309,7 +309,11 @@ function emergencyFundTile(
   return {
     id: "emergency-fund",
     label: "Emergency fund",
-    value: months.toLocaleString("en-US", { maximumFractionDigits: 1 }),
+    // Show the platform's own figure verbatim ("3.46"), never a rounded
+    // restatement ("3.5") — the same metric renders elsewhere (at-a-glance,
+    // decision details) from the same source string, and two spellings of one
+    // number on one screen reads as an inconsistency on a provenance surface.
+    value: coverage?.value.match(/^\d+(?:\.\d+)?/)?.[0] ?? String(months),
     valueUnit: "months",
     chip,
     band: {

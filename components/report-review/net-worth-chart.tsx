@@ -367,13 +367,18 @@ export function NetWorthChart({
       </div>
 
       {target !== null ? (
-        <p className="mt-3 flex items-center gap-2 text-xs text-earth-600">
+        // items-start + a fixed-top marker keeps the dash aligned with the
+        // first line when the caption wraps on narrow screens (items-center
+        // floated it between the wrapped lines).
+        <p className="mt-3 flex items-start gap-2 text-xs leading-5 text-earth-600">
           <span
             aria-hidden="true"
-            className="inline-block w-5 border-t-2 border-dashed border-earth-500"
+            className="mt-[9px] inline-block w-5 shrink-0 border-t-2 border-dashed border-earth-500"
           />
-          Goal line {formatNetWorthMoney(target)} — your net-worth target, not a
-          recommendation.
+          <span className="min-w-0">
+            Goal line {formatNetWorthMoney(target)} — your net-worth target,
+            not a recommendation.
+          </span>
         </p>
       ) : null}
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, type ChangeEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 
 import {
   formatGoalPlanningMoney,
@@ -47,6 +47,67 @@ export function GoalPlanningScreen({
     [asOfMonth, goalRows],
   );
 
+  // Removal is deferred behind a short undo window: the remove button sits in
+  // the same control stack as move up/down, so a stray tap would otherwise
+  // destroy typed-in goal values with no recovery. The row is replaced in
+  // place by an undo bar (keeping the other rows' numbering stable), and the
+  // removal only reaches the workspace when the window elapses, a second
+  // removal starts, or the screen unmounts. Undo simply cancels the timer —
+  // nothing was deleted yet.
+  const [pendingRemoval, setPendingRemoval] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const pendingRef = useRef<{ id: string; timer: number } | null>(null);
+  const onGoalRemoveRef = useRef(onGoalRemove);
+  onGoalRemoveRef.current = onGoalRemove;
+
+  function finalizePendingRemoval() {
+    const pending = pendingRef.current;
+    if (!pending) {
+      return;
+    }
+    window.clearTimeout(pending.timer);
+    pendingRef.current = null;
+    setPendingRemoval(null);
+    onGoalRemoveRef.current(pending.id);
+  }
+
+  function requestGoalRemoval(id: string) {
+    const summary = summaries.find((entry) => entry.id === id);
+    if (!summary) {
+      return;
+    }
+    finalizePendingRemoval();
+    const timer = window.setTimeout(finalizePendingRemoval, 5000);
+    pendingRef.current = { id, timer };
+    setPendingRemoval({ id, name: summary.name });
+  }
+
+  function undoGoalRemoval() {
+    const pending = pendingRef.current;
+    if (!pending) {
+      return;
+    }
+    window.clearTimeout(pending.timer);
+    pendingRef.current = null;
+    setPendingRemoval(null);
+  }
+
+  // Leaving the screen finalizes a pending removal instead of silently
+  // resurrecting the goal on return.
+  useEffect(
+    () => () => {
+      const pending = pendingRef.current;
+      if (pending) {
+        window.clearTimeout(pending.timer);
+        pendingRef.current = null;
+        onGoalRemoveRef.current(pending.id);
+      }
+    },
+    [],
+  );
+
   return (
     <section
       aria-labelledby="goal-planning-heading"
@@ -82,19 +143,30 @@ export function GoalPlanningScreen({
         </div>
 
         <div className="divide-y divide-stone-100">
-          {summaries.map((summary, index) => (
-            <GoalPlanningRowEditor
-              canMoveDown={index < summaries.length - 1}
-              canMoveUp={index > 0}
-              canRemove={summaries.length > 1}
-              key={summary.id}
-              onGoalMove={onGoalMove}
-              onGoalRemove={onGoalRemove}
-              onGoalUpdate={onGoalUpdate}
-              asOfMonth={asOfMonth}
-              summary={summary}
-            />
-          ))}
+          {summaries.map((summary, index) =>
+            pendingRemoval?.id === summary.id ? (
+              <GoalRemovalUndoRow
+                key={summary.id}
+                name={pendingRemoval.name}
+                onUndo={undoGoalRemoval}
+              />
+            ) : (
+              <GoalPlanningRowEditor
+                canMoveDown={index < summaries.length - 1}
+                canMoveUp={index > 0}
+                // While one removal is pending, the effective row count is one
+                // lower — keep the last remaining goal unremovable through the
+                // window instead of letting two quick taps empty the list.
+                canRemove={summaries.length > (pendingRemoval ? 2 : 1)}
+                key={summary.id}
+                onGoalMove={onGoalMove}
+                onGoalRemove={requestGoalRemoval}
+                onGoalUpdate={onGoalUpdate}
+                asOfMonth={asOfMonth}
+                summary={summary}
+              />
+            ),
+          )}
         </div>
 
         <GoalPlanningLimits
@@ -111,6 +183,39 @@ export function GoalPlanningScreen({
 }
 
 export type GoalMoveDirection = "up" | "down";
+
+/**
+ * Stands in for a goal row while its removal waits out the undo window.
+ * role="status" announces the removal; Undo cancels the timer (nothing has
+ * been deleted yet), so the row returns exactly as it was.
+ */
+function GoalRemovalUndoRow({
+  name,
+  onUndo,
+}: {
+  name: string;
+  onUndo: () => void;
+}) {
+  return (
+    <div
+      className="flex items-center justify-between gap-3 py-4 first:pt-1 last:pb-1"
+      data-testid="goal-removal-undo"
+      role="status"
+    >
+      <p className="min-w-0 truncate text-sm text-earth-600">
+        Removed “{name}”.
+      </p>
+      <button
+        className="inline-flex min-h-8 shrink-0 items-center rounded-md border border-stone-300 bg-white px-3 text-xs font-semibold text-seed-700 shadow-sm outline-none hover:border-seed-400 focus:ring-2 focus:ring-seed-500"
+        data-testid="goal-removal-undo-button"
+        onClick={onUndo}
+        type="button"
+      >
+        Undo
+      </button>
+    </div>
+  );
+}
 
 function GoalPlanningLimits({ items }: { items: string[] }) {
   return (

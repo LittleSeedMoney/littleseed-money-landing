@@ -180,6 +180,53 @@ test.describe("private report review smoke", () => {
     ]);
   });
 
+  test("the emergency tile shows the platform coverage figure verbatim", async ({
+    page,
+  }) => {
+    // The same metric renders as "3.46 months" in at-a-glance and the decision
+    // details; the hero must not restate it rounded ("3.5") — one number, one
+    // spelling, everywhere on a provenance surface.
+    await page.goto(`${reportReviewPath}#money`);
+    const tile = page.getByTestId("money-hero-tile-emergency-fund");
+    await expect(tile).toContainText("3.46");
+    expect(await tile.textContent()).not.toContain("3.5");
+  });
+
+  test("removing a goal offers an undo window before it takes effect", async ({
+    page,
+  }) => {
+    await page.goto(`${reportReviewPath}#goals`);
+    const rows = page.getByTestId("goal-planning-row");
+    await expect(rows).toHaveCount(4);
+
+    // Remove replaces the row in place with an undo bar; nothing is deleted
+    // yet, so the surrounding rows keep their numbering.
+    await rows.nth(1).getByRole("button", { name: "Remove" }).click();
+    const undoBar = page.getByTestId("goal-removal-undo");
+    await expect(undoBar).toContainText("Removed");
+    await expect(undoBar).toContainText("House down payment");
+    await expect(rows).toHaveCount(3);
+
+    // Undo cancels the pending removal — the goal returns with its values.
+    await page.getByTestId("goal-removal-undo-button").click();
+    await expect(undoBar).toHaveCount(0);
+    await expect(rows).toHaveCount(4);
+    await expect(rows.nth(1)).toContainText("House down payment");
+
+    // Without undo, the removal lands once the window elapses.
+    await rows.nth(1).getByRole("button", { name: "Remove" }).click();
+    await expect(rows).toHaveCount(3);
+    await expect(undoBar).toHaveCount(1);
+    await page.waitForTimeout(5300);
+    await expect(undoBar).toHaveCount(0);
+    await expect(rows).toHaveCount(3);
+    await expect(
+      page
+        .getByTestId("goal-planning-row")
+        .filter({ hasText: "House down payment" }),
+    ).toHaveCount(0);
+  });
+
   test("goal progress shows the decorative sprout stage", async ({ page }) => {
     // The sample first-priority goal sits at 60% — deterministic stage 2
     // (first leaf). The mark is decoration: aria-hidden, no status meaning.
