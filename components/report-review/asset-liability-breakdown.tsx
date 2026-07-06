@@ -138,7 +138,7 @@ function BreakdownGroup({
         >
           {formatNetWorthMoney(group.subtotal)}
           {group.hasMissing ? (
-            <span className="ml-1 align-middle text-[10px] font-medium text-amber-700">
+            <span className="ml-1 align-middle text-[11px] font-medium text-amber-700">
               + missing
             </span>
           ) : null}

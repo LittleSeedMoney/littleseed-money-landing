@@ -198,7 +198,7 @@ function HeroTileCard({
           </span>
         ) : null}
       </p>
-      <p className="mt-1.5 font-serif text-[26px] font-bold leading-none tabular-nums text-seed-950">
+      <p className="mt-1.5 font-serif text-2xl font-bold leading-none tabular-nums text-seed-950">
         {tile.value}
         {tile.valueUnit ? (
           <span className="ml-1.5 font-sans text-xs font-semibold text-earth-500">
@@ -216,7 +216,7 @@ function HeroTileCard({
         </span>
       </p>
       {tile.caption ? (
-        <p className="mt-1.5 text-[10.5px] text-earth-400">{tile.caption}</p>
+        <p className="mt-1.5 text-[11px] text-earth-400">{tile.caption}</p>
       ) : null}
       {tile.band ? (
         <div className="mt-3">
@@ -229,7 +229,7 @@ function HeroTileCard({
               }}
             />
           </div>
-          <div className="mt-1 flex justify-between text-[10px] font-medium text-earth-500">
+          <div className="mt-1 flex justify-between text-[11px] font-medium text-earth-500">
             <span>{tile.band.leftLabel}</span>
             <span>{tile.band.rightLabel}</span>
           </div>
@@ -448,7 +448,7 @@ function CompositionBar({ own, owe }: { own: number; owe: number }) {
           style={{ flexGrow: total > 0 ? oweWeight : 1 }}
         />
       </div>
-      <div className="mt-2.5 flex flex-wrap items-center justify-between gap-3 text-[12.5px]">
+      <div className="mt-2.5 flex flex-wrap items-center justify-between gap-3 text-xs">
         <span className="flex items-center gap-2">
           <span
             aria-hidden="true"
