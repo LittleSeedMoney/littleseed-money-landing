@@ -258,9 +258,31 @@ export function formatGoalPlanningMonthCount(value: number | null) {
   return `${value} months`;
 }
 
+/**
+ * The visitor's calendar month ("what month is it for the user"). Owner
+ * decision: goal progress is counted against the user's local calendar —
+ * at UTC Jun 30 23:00 a KST visitor is already in July and should see July.
+ * Local-timezone APIs make this client-only truth: never call it during
+ * server render (the server cannot know the visitor's timezone). For the
+ * SSR-safe first paint use `currentGoalPlanningAsOfMonthUTC` and adopt this
+ * value after mount.
+ */
 export function currentGoalPlanningAsOfMonth(now = new Date()) {
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, "0");
+
+  return `${year}-${month}`;
+}
+
+/**
+ * The same instant read on the UTC calendar. Server and client agree on this
+ * for any given moment, which makes it the hydration-safe initial value; it
+ * only differs from the visitor's local month for the few hours around a
+ * month boundary, and the post-mount adoption of the local month covers that.
+ */
+export function currentGoalPlanningAsOfMonthUTC(now = new Date()) {
+  const year = now.getUTCFullYear();
+  const month = String(now.getUTCMonth() + 1).padStart(2, "0");
 
   return `${year}-${month}`;
 }
