@@ -22,6 +22,7 @@ import {
 } from "@/lib/report-review/manual-profile";
 import {
   currentGoalPlanningAsOfMonth,
+  currentGoalPlanningAsOfMonthUTC,
   defaultGoalPlanningRows,
   summarizeGoalPlan,
   type GoalPlanningRow,
@@ -51,9 +52,19 @@ export function ReportReviewWorkspace({
   const [report, setReport] = useState(initialReport);
   const [values, setValues] = useState(defaultManualProfileValues);
   const [goalRows, setGoalRows] = useState(defaultGoalPlanningRows);
-  const [goalPlanningAsOfMonth] = useState(() =>
-    currentGoalPlanningAsOfMonth(),
+  // Goal progress counts against the visitor's local calendar month (owner
+  // decision: at UTC Jun 30 23:00 a KST visitor is already in July). The
+  // server cannot know the visitor's timezone, so the first paint uses the
+  // UTC month — identical on server and client for the same instant, so
+  // hydration always matches — and the effect below adopts the local month
+  // after mount (it only differs for the few hours around a month boundary).
+  const [goalPlanningAsOfMonth, setGoalPlanningAsOfMonth] = useState(() =>
+    currentGoalPlanningAsOfMonthUTC(),
   );
+
+  useEffect(() => {
+    setGoalPlanningAsOfMonth(currentGoalPlanningAsOfMonth());
+  }, []);
   const [selectedPreset, setSelectedPreset] = useState<
     ManualProfilePresetId | "custom"
   >("sample");

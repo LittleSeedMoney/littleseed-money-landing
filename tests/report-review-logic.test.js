@@ -4515,3 +4515,27 @@ test("at-a-glance needs hints list only the unanswerable questions in fixed orde
   );
   assert.ok(allNeeds.every((need) => need.hint.length > 0));
 });
+
+const {
+  currentGoalPlanningAsOfMonthUTC,
+} = require("../lib/report-review/goal-planning.ts");
+
+test("goal planning UTC as-of month is instant-stable across the month boundary", () => {
+  // The hydration-safe first-paint value: the same instant reads the same on
+  // any machine. The owner-decided scenario — UTC Jun 30 23:00 is KST Jul 1
+  // 08:00 — starts as the UTC month and the client adopts the local month
+  // after mount.
+  assert.equal(
+    currentGoalPlanningAsOfMonthUTC(new Date("2026-06-30T23:00:00Z")),
+    "2026-06",
+  );
+  assert.equal(
+    currentGoalPlanningAsOfMonthUTC(new Date("2026-07-01T00:00:00Z")),
+    "2026-07",
+  );
+  // Single-digit months keep the zero-padded shape the planner parses.
+  assert.equal(
+    currentGoalPlanningAsOfMonthUTC(new Date("2027-02-15T12:00:00Z")),
+    "2027-02",
+  );
+});
