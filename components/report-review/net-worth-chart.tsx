@@ -241,79 +241,16 @@ export function NetWorthChart({
             />
           ) : null}
 
-          {selectable && selectableSet !== null
-            ? geometry.points.map((point) =>
-                selectableSet.has(point.month) &&
-                point.month !== selectedMonth &&
-                point.month !== geometry.endpoint?.month ? (
-                  <circle
-                    cx={point.x}
-                    cy={point.y}
-                    fill="#67894A"
-                    key={`dot-${point.month}`}
-                    r="3.5"
-                    stroke="#fff"
-                    strokeWidth="1.5"
-                  />
-                ) : null,
-              )
-            : null}
-
           {selected ? (
-            <>
-              <line
-                stroke="#C48A39"
-                strokeWidth="1.5"
-                x1={selected.x}
-                x2={selected.x}
-                y1="6"
-                y2={VIEW_H - 24}
-              />
-              <circle
-                cx={selected.x}
-                cy={selected.y}
-                fill="#C48A39"
-                r="6"
-                stroke="#fff"
-                strokeWidth="2.5"
-              />
-            </>
-          ) : null}
-
-          <circle
-            cx={geometry.endpoint?.x}
-            cy={geometry.endpoint?.y}
-            fill="#3F562F"
-            r="5"
-            stroke="#fff"
-            strokeWidth="2.5"
-          />
-          {active ? (
-            <circle
-              cx={active.x}
-              cy={active.y}
-              fill="#3F562F"
-              r="5"
-              stroke="#fff"
-              strokeWidth="2"
+            <line
+              stroke="#C48A39"
+              strokeWidth="1.5"
+              x1={selected.x}
+              x2={selected.x}
+              y1="6"
+              y2={VIEW_H - 24}
             />
           ) : null}
-
-          {geometry.points.map((point, index) =>
-            index % Math.ceil(geometry.points.length / 6) === 0 ||
-            index === geometry.points.length - 1 ? (
-              <text
-                className="fill-earth-400 font-sans"
-                fontSize="10.5"
-                key={point.month}
-                textAnchor="middle"
-                x={point.x}
-                y={VIEW_H - 6}
-              >
-                {shortMonth(point.month)}
-              </text>
-            ) : null,
-          )}
 
           {selectable
             ? geometry.points.map((point, index) => {
@@ -349,6 +286,75 @@ export function NetWorthChart({
               })
             : null}
         </svg>
+
+        {/* Dots and month labels live in an HTML overlay at the same
+            percentage coordinates the tooltip already uses:
+            preserveAspectRatio="none" scales the SVG non-uniformly once the
+            chart height went fluid, which squashed circles into ovals and
+            stretched text vertically (owner-reported). HTML keeps them
+            perfectly round and upright at any chart size; lines and fills
+            stay in the SVG where non-uniform scaling is harmless. */}
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+          {selectable && selectableSet !== null
+            ? geometry.points.map((point) =>
+                selectableSet.has(point.month) &&
+                point.month !== selectedMonth &&
+                point.month !== geometry.endpoint?.month ? (
+                  <span
+                    className="absolute size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-[1.5px] border-white bg-seed-500"
+                    key={`dot-${point.month}`}
+                    style={{
+                      left: `${(point.x / VIEW_W) * 100}%`,
+                      top: `${(point.y / VIEW_H) * 100}%`,
+                    }}
+                  />
+                ) : null,
+              )
+            : null}
+
+          {selected ? (
+            <span
+              className="absolute size-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-[2.5px] border-white bg-earth-500"
+              style={{
+                left: `${(selected.x / VIEW_W) * 100}%`,
+                top: `${(selected.y / VIEW_H) * 100}%`,
+              }}
+            />
+          ) : null}
+
+          {geometry.endpoint ? (
+            <span
+              className="absolute size-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-[2.5px] border-white bg-seed-700"
+              style={{
+                left: `${(geometry.endpoint.x / VIEW_W) * 100}%`,
+                top: `${(geometry.endpoint.y / VIEW_H) * 100}%`,
+              }}
+            />
+          ) : null}
+
+          {active ? (
+            <span
+              className="absolute size-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-seed-700"
+              style={{
+                left: `${(active.x / VIEW_W) * 100}%`,
+                top: `${(active.y / VIEW_H) * 100}%`,
+              }}
+            />
+          ) : null}
+
+          {geometry.points.map((point, index) =>
+            index % Math.ceil(geometry.points.length / 6) === 0 ||
+            index === geometry.points.length - 1 ? (
+              <span
+                className="absolute bottom-0.5 -translate-x-1/2 text-sm font-medium leading-none text-earth-500"
+                key={point.month}
+                style={{ left: `${(point.x / VIEW_W) * 100}%` }}
+              >
+                {shortMonth(point.month)}
+              </span>
+            ) : null,
+          )}
+        </div>
 
         {active ? (
           <div
