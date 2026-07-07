@@ -4539,3 +4539,22 @@ test("goal planning UTC as-of month is instant-stable across the month boundary"
     "2027-02",
   );
 });
+
+const {
+  breakdownColumnTotal,
+} = require("../lib/report-review/asset-breakdown.ts");
+
+test("breakdown column total sums group subtotals and flags missing", () => {
+  const groups = buildSnapshotBreakdown([
+    { id: "a", name: "A", category: "Cash", value: "$1,000", liquidity: "cash", provenance: "user-entered", emergencyEligible: true },
+    { id: "b", name: "B", category: "Retirement", value: "$2,500", liquidity: "invested", provenance: "sample", emergencyEligible: false },
+    { id: "c", name: "C", category: "Retirement", value: "n/a", liquidity: "invested", provenance: "sample", emergencyEligible: false },
+  ]);
+  // Provenance passes through for the per-account caption.
+  assert.equal(groups[0].items[0].provenance, "user-entered");
+  const column = breakdownColumnTotal(groups);
+  // Missing stays excluded (never zeroed) and flagged at the column level.
+  assert.equal(column.total, 3500);
+  assert.equal(column.hasMissing, true);
+  assert.deepEqual(breakdownColumnTotal([]), { total: 0, hasMissing: false });
+});

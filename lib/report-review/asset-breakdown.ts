@@ -1,4 +1,4 @@
-import type { SnapshotItem } from "@/data/report-review-sample";
+import type { Provenance, SnapshotItem } from "@/data/report-review-sample";
 
 /**
  * Grouped, presentation-only view of the flat asset / liability snapshot lists
@@ -21,6 +21,13 @@ export type AssetBreakdownItem = {
   /** Parsed numeric balance, or null when missing/unparseable. */
   valueNumber: number | null;
   missing: boolean;
+  /**
+   * Where the balance came from, passed through for the per-account caption.
+   * A real per-account "last updated" timestamp only exists once accounts are
+   * linked (Phase 6); until then the caption pairs this provenance with the
+   * session-freshness wording.
+   */
+  provenance: Provenance;
 };
 
 export type AssetBreakdownGroup = {
@@ -62,6 +69,7 @@ export function buildSnapshotBreakdown(
       valueLabel: item.value,
       valueNumber,
       missing: valueNumber === null,
+      provenance: item.provenance,
     };
 
     const existing = groups.get(item.category);
@@ -82,4 +90,26 @@ export function buildSnapshotBreakdown(
     single: groupItems.length === 1,
     hasMissing: groupItems.some((item) => item.missing),
   }));
+}
+
+export type BreakdownColumnTotal = {
+  /** Sum of every group subtotal (missing balances stay excluded). */
+  total: number;
+  /** True when any holding in the column has a missing balance. */
+  hasMissing: boolean;
+};
+
+/**
+ * Column total for "what you own" / "what you owe": the sum of the group
+ * subtotals the breakdown already derives. Same presentation-only arithmetic
+ * as the subtotals themselves — missing balances are excluded and flagged,
+ * never coerced to zero.
+ */
+export function breakdownColumnTotal(
+  groups: AssetBreakdownGroup[],
+): BreakdownColumnTotal {
+  return {
+    total: groups.reduce((sum, group) => sum + group.subtotal, 0),
+    hasMissing: groups.some((group) => group.hasMissing),
+  };
 }

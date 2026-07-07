@@ -465,23 +465,35 @@ test.describe("private report review smoke", () => {
       .fill("5300");
     await profileCard.getByRole("button", { name: "Save profile" }).click();
 
-    // Retirement now groups two holdings with a $45,000 subtotal; Cash stays a
-    // single row without a redundant subtotal.
+    // Retirement now groups two always-visible account rows under a $45,000
+    // category subtotal (the ledger restyle removed the tap-to-expand); Cash
+    // stays a single account row without a redundant subtotal, carrying its
+    // category in the caption.
     const retirement = assets
       .getByTestId("breakdown-group")
       .filter({ hasText: "Retirement" });
     await expect(retirement.getByTestId("breakdown-subtotal")).toHaveText(
       "$45,000",
     );
-    await retirement.locator("summary").click();
     await expect(retirement).toContainText("Fidelity 401(k)");
     await expect(retirement).toContainText("SoFi 401(k)");
+    // Every account row carries a provenance + session-freshness caption (the
+    // slot a linked-account "last updated" timestamp takes in Phase 6).
+    await expect(
+      retirement.getByTestId("breakdown-account").first(),
+    ).toContainText("User-entered · this session");
 
     const cash = assets
       .getByTestId("breakdown-group")
       .filter({ hasText: "Checking and savings" });
     await expect(cash.getByTestId("breakdown-subtotal")).toHaveCount(0);
     await expect(cash).toContainText("$12,000");
+    await expect(cash.getByTestId("breakdown-account")).toContainText(
+      "Cash · User-entered · this session",
+    );
+
+    // The column leads with its total — the sum of the group subtotals.
+    await expect(assets.getByTestId("breakdown-total")).toHaveText("$57,000");
   });
 
   test("things to look at lists the evidence-linked finding as an observation", async ({
