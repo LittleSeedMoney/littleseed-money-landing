@@ -396,6 +396,14 @@ test.describe("private report review smoke", () => {
       ...reportReviewSample,
       assetPortfolio: {
         ...reportReviewSample.assetPortfolio,
+        // Keep the canonical totals consistent with the mocked rows — the
+        // ledger header reads the canonical figure (same source as the hero),
+        // never a sum of visible rows.
+        totals: reportReviewSample.assetPortfolio.totals.map((metric) =>
+          metric.id === "total_assets"
+            ? { ...metric, value: "$57,000" }
+            : metric,
+        ),
         assets: [
           {
             category: "Cash",
@@ -445,11 +453,13 @@ test.describe("private report review smoke", () => {
     await expect(breakdown).toContainText("What you own");
     await expect(breakdown).toContainText("What you owe");
 
-    // Sample assets start as single-holding groups (no subtotal shown yet).
+    // Sample assets start as single-holding groups (no subtotal shown yet),
+    // and the ledger header shows the same canonical own total as the hero.
     const assets = page.getByTestId("breakdown-assets");
     await expect(
       assets.getByTestId("breakdown-subtotal"),
     ).toHaveCount(0);
+    await expect(assets.getByTestId("breakdown-total")).toHaveText("$68,000");
 
     // Swap in the grouped report via a manual save (mocked above).
     await ensureBalanceDetailsOpen(page);
@@ -492,7 +502,9 @@ test.describe("private report review smoke", () => {
       "Cash · User-entered · this session",
     );
 
-    // The column leads with its total — the sum of the group subtotals.
+    // The column header reads the canonical total (verbatim, same source as
+    // the hero) — never a sum of visible rows, which can diverge once the
+    // preserved linked/CSV row flow appends rows without touching totals.
     await expect(assets.getByTestId("breakdown-total")).toHaveText("$57,000");
   });
 

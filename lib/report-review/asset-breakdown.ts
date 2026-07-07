@@ -91,25 +91,3 @@ export function buildSnapshotBreakdown(
     hasMissing: groupItems.some((item) => item.missing),
   }));
 }
-
-export type BreakdownColumnTotal = {
-  /** Sum of every group subtotal (missing balances stay excluded). */
-  total: number;
-  /** True when any holding in the column has a missing balance. */
-  hasMissing: boolean;
-};
-
-/**
- * Column total for "what you own" / "what you owe": the sum of the group
- * subtotals the breakdown already derives. Same presentation-only arithmetic
- * as the subtotals themselves — missing balances are excluded and flagged,
- * never coerced to zero.
- */
-export function breakdownColumnTotal(
-  groups: AssetBreakdownGroup[],
-): BreakdownColumnTotal {
-  return {
-    total: groups.reduce((sum, group) => sum + group.subtotal, 0),
-    hasMissing: groups.some((group) => group.hasMissing),
-  };
-}

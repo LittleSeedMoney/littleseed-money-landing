@@ -1,6 +1,5 @@
 import type { ReportReviewSample } from "@/data/report-review-sample";
 import {
-  breakdownColumnTotal,
   buildSnapshotBreakdown,
   type AssetBreakdownGroup,
   type AssetBreakdownItem,
@@ -18,8 +17,13 @@ import { provenanceLabels, reviewPanelClass } from "./shared";
  * column leads with its total. Assets and liabilities stay visually distinct
  * (seed vs earth accents, mirroring the hero composition bar).
  *
- * Presentation only — the column totals are the same sum the group subtotals
- * already derive; missing balances stay labeled and excluded, never zeroed.
+ * Presentation only. The column header totals are the canonical
+ * `assetPortfolio.totals` figures — the same source the hero composition bar
+ * reads — shown verbatim, NOT a sum of the visible rows: the preserved
+ * linked/CSV row flow can append rows without updating the canonical totals,
+ * and one screen must never spell the same own/owe figure two ways (review
+ * catch on this PR). Group subtotals remain sums of their visible rows;
+ * missing balances stay labeled and excluded, never zeroed.
  * A real per-account "last updated" timestamp only exists once accounts are
  * linked (Phase 6); until then the caption pairs the existing provenance with
  * the session-freshness wording, and the linked-account timestamp can take
@@ -57,12 +61,14 @@ export function AssetLiabilityBreakdown({
           groups={assetGroups}
           testid="breakdown-assets"
           title="What you own"
+          totalLabel={canonicalTotal(portfolio, "total_assets")}
         />
         <BreakdownColumn
           accent="owe"
           groups={liabilityGroups}
           testid="breakdown-liabilities"
           title="What you owe"
+          totalLabel={canonicalTotal(portfolio, "total_liabilities")}
         />
       </div>
     </section>
@@ -74,11 +80,14 @@ function BreakdownColumn({
   groups,
   testid,
   title,
+  totalLabel,
 }: {
   accent: "own" | "owe";
   groups: AssetBreakdownGroup[];
   testid: string;
   title: string;
+  /** Canonical total (verbatim `assetPortfolio.totals` value), or null to omit. */
+  totalLabel: string | null;
 }) {
   if (groups.length === 0) {
     return null;
@@ -86,7 +95,6 @@ function BreakdownColumn({
 
   const dotClass = accent === "own" ? "bg-seed-600" : "bg-earth-500";
   const totalClass = accent === "own" ? "text-seed-800" : "text-earth-700";
-  const column = breakdownColumnTotal(groups);
 
   return (
     <section aria-label={title} data-testid={testid}>
@@ -98,17 +106,14 @@ function BreakdownColumn({
           />
           {title}
         </h3>
-        <span
-          className={`shrink-0 font-serif text-base font-bold tabular-nums ${totalClass}`}
-          data-testid="breakdown-total"
-        >
-          {formatNetWorthMoney(column.total)}
-          {column.hasMissing ? (
-            <span className="ml-1 align-middle text-[11px] font-medium text-amber-700">
-              + missing
-            </span>
-          ) : null}
-        </span>
+        {totalLabel !== null ? (
+          <span
+            className={`shrink-0 font-serif text-base font-bold tabular-nums ${totalClass}`}
+            data-testid="breakdown-total"
+          >
+            {totalLabel}
+          </span>
+        ) : null}
       </div>
 
       <div className="mt-2 overflow-hidden rounded-xl border border-stone-200 bg-white">
@@ -239,4 +244,16 @@ function AccountRow({
       )}
     </div>
   );
+}
+
+/**
+ * Verbatim canonical total from `assetPortfolio.totals` — the identical
+ * source string the hero composition bar derives from, so the ledger header
+ * and the hero can never disagree. Missing metric omits the header figure.
+ */
+function canonicalTotal(
+  portfolio: ReportReviewSample["assetPortfolio"],
+  id: string,
+): string | null {
+  return portfolio.totals.find((metric) => metric.id === id)?.value ?? null;
 }
