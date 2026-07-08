@@ -452,36 +452,17 @@ function GoalPlanningRowFields({
         />
       </div>
 
-      <dl className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <GoalMetric
-          detail="Target amount minus current saved."
-          label="Remaining"
-          value={formatGoalPlanningMoney(summary.remainingAmount)}
-        />
-        <GoalMetric
-          detail="Current saved divided by target amount."
-          label="Progress"
-          value={formatGoalPlanningPercent(summary.progressPercent)}
-        />
-        <GoalMetric
-          detail="Remaining amount divided by entered monthly input."
-          label="At monthly input"
-          value={formatGoalPlanningMonthCount(
-            summary.monthsAtCurrentContribution,
-          )}
-        />
-        <GoalMetric
-          detail="Remaining amount divided by months through the entered target month."
-          label="Needed for target month"
-          value={
-            summary.monthlyNeededForTarget === null
-              ? "Needs target month"
-              : `${formatGoalPlanningMoney(
-                  summary.monthlyNeededForTarget,
-                )} / month`
-          }
-        />
-      </dl>
+      {/* Owner-requested simplification: the four derived metric cards
+          duplicated the summary line above the editor (saved-of-target,
+          remaining, monthly input, months at pace). Only "needed for the
+          target month" had no other home, so it stays as one factual line. */}
+      {summary.monthlyNeededForTarget !== null ? (
+        <p className="mt-3 text-xs text-earth-600">
+          Reaching the target month takes{" "}
+          {formatGoalPlanningMoney(summary.monthlyNeededForTarget)}/month —
+          remaining amount divided by the months left.
+        </p>
+      ) : null}
     </>
   );
 }
@@ -609,25 +590,6 @@ function GoalFieldLabel({
   );
 }
 
-function GoalMetric({
-  detail,
-  label,
-  value,
-}: {
-  detail: string;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className={reviewSubtlePanelClass("p-3")} title={detail}>
-      <dt className="text-sm font-medium text-earth-700">{label}</dt>
-      <dd className="mt-1 text-lg font-semibold tabular-nums text-seed-950">
-        {value}
-      </dd>
-      <dd className="sr-only">{detail}</dd>
-    </div>
-  );
-}
 
 function goalActionClass(enabled: boolean) {
   const base =

@@ -1,4 +1,4 @@
-import type { SnapshotItem } from "@/data/report-review-sample";
+import type { Provenance, SnapshotItem } from "@/data/report-review-sample";
 
 /**
  * Grouped, presentation-only view of the flat asset / liability snapshot lists
@@ -21,6 +21,13 @@ export type AssetBreakdownItem = {
   /** Parsed numeric balance, or null when missing/unparseable. */
   valueNumber: number | null;
   missing: boolean;
+  /**
+   * Where the balance came from, passed through for the per-account caption.
+   * A real per-account "last updated" timestamp only exists once accounts are
+   * linked (Phase 6); until then the caption pairs this provenance with the
+   * session-freshness wording.
+   */
+  provenance: Provenance;
 };
 
 export type AssetBreakdownGroup = {
@@ -62,6 +69,7 @@ export function buildSnapshotBreakdown(
       valueLabel: item.value,
       valueNumber,
       missing: valueNumber === null,
+      provenance: item.provenance,
     };
 
     const existing = groups.get(item.category);

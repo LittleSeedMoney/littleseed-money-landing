@@ -2,16 +2,32 @@ import type { ReportReviewSample } from "@/data/report-review-sample";
 import {
   buildSnapshotBreakdown,
   type AssetBreakdownGroup,
+  type AssetBreakdownItem,
 } from "@/lib/report-review/asset-breakdown";
 import { formatNetWorthMoney } from "@/lib/report-review/net-worth-chart";
 
-import { reviewPanelClass, reviewSubtlePanelClass } from "./shared";
+import { provenanceLabels, reviewPanelClass } from "./shared";
 
 /**
- * Grouped, expandable breakdown of what the household owns and owes, from the
- * existing flat snapshot lists. Assets and liabilities stay visually distinct
- * (seed vs earth accents, mirroring the hero composition bar). Presentation
- * only — no new calculation, and missing balances are labeled, not zeroed.
+ * Grouped breakdown of what the household owns and owes, from the existing
+ * flat snapshot lists. Redesigned per owner feedback from the tile-like
+ * disclosure style to a flat account ledger: every account row is always
+ * visible under its category (no tap to expand), each carries a
+ * provenance-and-freshness caption, categories keep their subtotal, and each
+ * column leads with its total. Assets and liabilities stay visually distinct
+ * (seed vs earth accents, mirroring the hero composition bar).
+ *
+ * Presentation only. The column header totals are the canonical
+ * `assetPortfolio.totals` figures — the same source the hero composition bar
+ * reads — shown verbatim, NOT a sum of the visible rows: the preserved
+ * linked/CSV row flow can append rows without updating the canonical totals,
+ * and one screen must never spell the same own/owe figure two ways (review
+ * catch on this PR). Group subtotals remain sums of their visible rows;
+ * missing balances stay labeled and excluded, never zeroed.
+ * A real per-account "last updated" timestamp only exists once accounts are
+ * linked (Phase 6); until then the caption pairs the existing provenance with
+ * the session-freshness wording, and the linked-account timestamp can take
+ * this slot later.
  */
 export function AssetLiabilityBreakdown({
   portfolio,
@@ -45,12 +61,14 @@ export function AssetLiabilityBreakdown({
           groups={assetGroups}
           testid="breakdown-assets"
           title="What you own"
+          totalLabel={canonicalTotal(portfolio, "total_assets")}
         />
         <BreakdownColumn
           accent="owe"
           groups={liabilityGroups}
           testid="breakdown-liabilities"
           title="What you owe"
+          totalLabel={canonicalTotal(portfolio, "total_liabilities")}
         />
       </div>
     </section>
@@ -62,30 +80,50 @@ function BreakdownColumn({
   groups,
   testid,
   title,
+  totalLabel,
 }: {
   accent: "own" | "owe";
   groups: AssetBreakdownGroup[];
   testid: string;
   title: string;
+  /** Canonical total (verbatim `assetPortfolio.totals` value), or null to omit. */
+  totalLabel: string | null;
 }) {
   if (groups.length === 0) {
     return null;
   }
 
   const dotClass = accent === "own" ? "bg-seed-600" : "bg-earth-500";
+  const totalClass = accent === "own" ? "text-seed-800" : "text-earth-700";
 
   return (
     <section aria-label={title} data-testid={testid}>
-      <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.1em] text-earth-600">
-        <span
-          aria-hidden="true"
-          className={`inline-block size-2.5 rounded-sm ${dotClass}`}
-        />
-        {title}
-      </h3>
-      <div className="mt-2 space-y-2">
-        {groups.map((group) => (
-          <BreakdownGroup accent={accent} group={group} key={group.category} />
+      <div className="flex items-baseline justify-between gap-3">
+        <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.1em] text-earth-600">
+          <span
+            aria-hidden="true"
+            className={`inline-block size-2.5 rounded-sm ${dotClass}`}
+          />
+          {title}
+        </h3>
+        {totalLabel !== null ? (
+          <span
+            className={`shrink-0 font-serif text-base font-bold tabular-nums ${totalClass}`}
+            data-testid="breakdown-total"
+          >
+            {totalLabel}
+          </span>
+        ) : null}
+      </div>
+
+      <div className="mt-2 overflow-hidden rounded-xl border border-stone-200 bg-white">
+        {groups.map((group, index) => (
+          <BreakdownGroup
+            accent={accent}
+            first={index === 0}
+            group={group}
+            key={group.category}
+          />
         ))}
       </div>
     </section>
@@ -94,43 +132,44 @@ function BreakdownColumn({
 
 function BreakdownGroup({
   accent,
+  first,
   group,
 }: {
   accent: "own" | "owe";
+  first: boolean;
   group: AssetBreakdownGroup;
 }) {
-  const subtotalClass =
-    accent === "own" ? "text-seed-800" : "text-earth-700";
+  const subtotalClass = accent === "own" ? "text-seed-800" : "text-earth-700";
+  const railClass = accent === "own" ? "bg-seed-500" : "bg-earth-500";
 
-  // A single-holding group shows one row without a redundant subtotal.
+  // A single-holding category stays one row (no redundant subtotal): the
+  // account row itself carries the category in its caption.
   if (group.single) {
     const item = group.items[0]!;
     return (
       <div
-        className={reviewSubtlePanelClass("flex items-baseline justify-between gap-3 p-3")}
+        className={first ? undefined : "border-t border-stone-100"}
         data-category={group.category}
         data-testid="breakdown-group"
       >
-        <span className="min-w-0 text-sm font-medium text-seed-950">
-          {item.name}
-        </span>
-        <HoldingValue item={item} />
+        <AccountRow
+          categoryCaption={group.category}
+          item={item}
+          railClass={railClass}
+        />
       </div>
     );
   }
 
   return (
-    <details
-      className={reviewSubtlePanelClass("overflow-hidden p-0")}
+    <div
+      className={first ? undefined : "border-t border-stone-100"}
       data-category={group.category}
       data-testid="breakdown-group"
     >
-      <summary className="flex cursor-pointer list-none items-baseline justify-between gap-3 p-3 outline-none focus-visible:ring-2 focus-visible:ring-seed-500 [&::-webkit-details-marker]:hidden">
-        <span className="min-w-0 text-sm font-semibold text-seed-950">
+      <div className="flex items-baseline justify-between gap-3 bg-stone-50/70 px-3 py-2">
+        <span className="min-w-0 text-xs font-semibold uppercase tracking-[0.08em] text-earth-600">
           {group.category}
-          <span className="ml-1.5 text-xs font-normal text-earth-500">
-            {group.items.length} holdings
-          </span>
         </span>
         <span
           className={`shrink-0 font-serif text-sm font-bold tabular-nums ${subtotalClass}`}
@@ -143,37 +182,78 @@ function BreakdownGroup({
             </span>
           ) : null}
         </span>
-      </summary>
-      <ul className="divide-y divide-stone-100 border-t border-stone-100">
+      </div>
+      <ul className="divide-y divide-stone-100">
         {group.items.map((item) => (
-          <li
-            className="flex items-baseline justify-between gap-3 px-3 py-2"
-            key={item.id}
-          >
-            <span className="min-w-0 text-sm text-earth-800">{item.name}</span>
-            <HoldingValue item={item} />
+          <li key={item.id}>
+            <AccountRow item={item} railClass={railClass} />
           </li>
         ))}
       </ul>
-    </details>
+    </div>
   );
 }
 
-function HoldingValue({
+/**
+ * One account: name, a provenance-and-freshness caption, and the balance.
+ * The caption's freshness half is the session boundary until linked accounts
+ * (Phase 6) supply a real per-account timestamp for this slot.
+ */
+function AccountRow({
+  categoryCaption,
   item,
+  railClass,
 }: {
-  item: AssetBreakdownGroup["items"][number];
+  categoryCaption?: string;
+  item: AssetBreakdownItem;
+  railClass: string;
 }) {
-  if (item.missing) {
-    return (
-      <span className="shrink-0 text-xs font-medium text-amber-700">
-        Missing
-      </span>
-    );
-  }
+  const caption = [
+    categoryCaption,
+    provenanceLabels[item.provenance],
+    "this session",
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
   return (
-    <span className="shrink-0 font-serif text-sm font-bold tabular-nums text-seed-950">
-      {item.valueLabel}
-    </span>
+    <div
+      className="relative flex items-center justify-between gap-3 py-2.5 pl-4 pr-3"
+      data-testid="breakdown-account"
+    >
+      <span
+        aria-hidden="true"
+        className={`absolute bottom-2 left-1.5 top-2 w-[3px] rounded-full ${railClass} opacity-60`}
+      />
+      <span className="min-w-0">
+        <span className="block truncate text-sm font-medium text-seed-950">
+          {item.name}
+        </span>
+        <span className="mt-0.5 block text-[11px] text-earth-500">
+          {caption}
+        </span>
+      </span>
+      {item.missing ? (
+        <span className="shrink-0 text-xs font-medium text-amber-700">
+          Missing
+        </span>
+      ) : (
+        <span className="shrink-0 font-serif text-sm font-bold tabular-nums text-seed-950">
+          {item.valueLabel}
+        </span>
+      )}
+    </div>
   );
+}
+
+/**
+ * Verbatim canonical total from `assetPortfolio.totals` — the identical
+ * source string the hero composition bar derives from, so the ledger header
+ * and the hero can never disagree. Missing metric omits the header figure.
+ */
+function canonicalTotal(
+  portfolio: ReportReviewSample["assetPortfolio"],
+  id: string,
+): string | null {
+  return portfolio.totals.find((metric) => metric.id === id)?.value ?? null;
 }

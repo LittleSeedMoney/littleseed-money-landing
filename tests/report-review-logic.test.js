@@ -4539,3 +4539,15 @@ test("goal planning UTC as-of month is instant-stable across the month boundary"
     "2027-02",
   );
 });
+
+test("breakdown items carry provenance through for the account caption", () => {
+  const groups = buildSnapshotBreakdown([
+    { id: "a", name: "A", category: "Cash", value: "$1,000", liquidity: "cash", provenance: "user-entered", emergencyEligible: true },
+    { id: "b", name: "B", category: "Retirement", value: "n/a", liquidity: "invested", provenance: "sample", emergencyEligible: false },
+  ]);
+  assert.equal(groups[0].items[0].provenance, "user-entered");
+  assert.equal(groups[1].items[0].provenance, "sample");
+  // Missing stays labeled at the item, never zeroed into a subtotal.
+  assert.equal(groups[1].items[0].missing, true);
+  assert.equal(groups[1].subtotal, 0);
+});
