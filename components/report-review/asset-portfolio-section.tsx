@@ -904,7 +904,7 @@ function SnapshotMonthlyMetric({
       <div className="text-xs font-semibold uppercase text-earth-600">
         {label}
       </div>
-      <div className="mt-1 text-lg font-semibold tabular-nums text-seed-950">
+      <div className="mt-1 font-serif text-xl font-bold tabular-nums text-seed-950">
         {value}
       </div>
     </div>

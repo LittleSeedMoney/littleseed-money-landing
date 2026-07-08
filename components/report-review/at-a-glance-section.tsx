@@ -146,7 +146,7 @@ function AtAGlanceRow({
         </span>
       </dt>
       <dd className="mt-1 pl-9">
-        <span className="font-serif text-xl font-bold tabular-nums leading-none text-seed-950">
+        <span className="font-serif text-2xl font-bold tabular-nums leading-none text-seed-950">
           {metric.value}
         </span>
         {/* Provenance stays disclosed as a light caption under the value. */}

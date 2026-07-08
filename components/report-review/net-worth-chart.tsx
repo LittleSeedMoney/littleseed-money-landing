@@ -159,7 +159,7 @@ export function NetWorthChart({
         </div>
       </div>
       <div>
-        <p className="mt-1 font-serif text-2xl font-bold tabular-nums text-seed-950">
+        <p className="mt-1 font-serif text-3xl font-bold tabular-nums text-seed-950">
           {formatNetWorthMoney(change.last)}
         </p>
         <p className="mt-1 text-sm font-semibold text-seed-600">
