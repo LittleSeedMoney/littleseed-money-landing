@@ -177,7 +177,7 @@ function BreakdownGroup({
         >
           {formatNetWorthMoney(group.subtotal)}
           {group.hasMissing ? (
-            <span className="ml-1 align-middle text-[11px] font-medium text-amber-700">
+            <span className="ml-1 align-middle text-[12px] font-medium text-amber-700">
               + missing
             </span>
           ) : null}
@@ -229,7 +229,7 @@ function AccountRow({
         <span className="block truncate text-sm font-medium text-seed-950">
           {item.name}
         </span>
-        <span className="mt-0.5 block text-[11px] text-earth-500">
+        <span className="mt-0.5 block text-[12px] text-earth-600">
           {caption}
         </span>
       </span>

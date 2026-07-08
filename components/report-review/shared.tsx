@@ -269,7 +269,7 @@ export function ReviewEvidenceRowList({ rows }: { rows: ReviewEvidenceRow[] }) {
 export function MetaItem({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-xs font-medium text-earth-500">{label}</dt>
+      <dt className="text-xs font-medium text-earth-600">{label}</dt>
       <dd className="mt-1 break-words font-medium text-earth-900">{value}</dd>
     </div>
   );

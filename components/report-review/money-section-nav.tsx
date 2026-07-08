@@ -22,7 +22,7 @@ export function MoneySectionNav({ className }: { className?: string }) {
   return (
     <nav aria-label="On this page" className={className}>
       <div className="lg:sticky lg:top-4">
-        <p className="px-2 text-[10.5px] font-bold uppercase tracking-[0.13em] text-earth-500">
+        <p className="px-2 text-[11px] font-bold uppercase tracking-[0.13em] text-earth-600">
           On this page
         </p>
         <ul className="mt-2 space-y-0.5">

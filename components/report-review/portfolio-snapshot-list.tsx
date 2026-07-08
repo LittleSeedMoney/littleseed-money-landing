@@ -51,7 +51,7 @@ export function PortfolioSnapshotList({
 
       <div
         aria-hidden="true"
-        className="mt-3 hidden rounded-t-md border border-b-0 border-stone-200 bg-white px-3 py-2 text-xs font-semibold text-earth-500 md:grid md:grid-cols-[minmax(0,1.4fr)_112px_96px_136px_128px_40px] md:gap-3"
+        className="mt-3 hidden rounded-t-md border border-b-0 border-stone-200 bg-white px-3 py-2 text-xs font-semibold text-earth-600 md:grid md:grid-cols-[minmax(0,1.4fr)_112px_96px_136px_128px_40px] md:gap-3"
       >
         <span>Name</span>
         <span className="text-right">Value</span>

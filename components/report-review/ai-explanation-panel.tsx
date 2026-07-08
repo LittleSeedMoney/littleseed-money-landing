@@ -307,7 +307,7 @@ function AiReportReviewExplanationPanel({
             </p>
           </div>
           <button
-            className="min-h-10 rounded-md border border-stone-200 bg-white px-3 text-sm font-semibold text-earth-500"
+            className="min-h-10 rounded-md border border-stone-200 bg-white px-3 text-sm font-semibold text-earth-600"
             disabled
             type="button"
           >
@@ -480,7 +480,7 @@ function AiAnswerResult({ answer }: { answer: ReportReviewAiResponse }) {
 function AiList({ items, title }: { items: string[]; title: string }) {
   return (
     <div>
-      <h5 className="text-xs font-semibold uppercase text-earth-500">
+      <h5 className="text-xs font-semibold uppercase text-earth-600">
         {title}
       </h5>
       <ul className="mt-2 space-y-1 text-sm leading-6 text-earth-700">
@@ -495,7 +495,7 @@ function AiList({ items, title }: { items: string[]; title: string }) {
 function VersionItem({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="font-medium text-earth-500">{label}</dt>
+      <dt className="font-medium text-earth-600">{label}</dt>
       <dd className="mt-0.5 break-words text-earth-800">{value}</dd>
     </div>
   );

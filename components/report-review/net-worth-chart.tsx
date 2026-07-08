@@ -129,7 +129,7 @@ export function NetWorthChart({
           toggle beside the short fixed-width label pins it in place across
           every range. */}
       <div className="flex items-center justify-between gap-3">
-        <p className="text-[10.5px] font-bold uppercase tracking-[0.13em] text-earth-500">
+        <p className="text-[11px] font-bold uppercase tracking-[0.13em] text-earth-600">
           Net worth
         </p>
         <div
@@ -346,7 +346,7 @@ export function NetWorthChart({
             index % Math.ceil(geometry.points.length / 6) === 0 ||
             index === geometry.points.length - 1 ? (
               <span
-                className="absolute bottom-0.5 -translate-x-1/2 text-sm font-medium leading-none text-earth-500"
+                className="absolute bottom-0.5 -translate-x-1/2 text-sm font-medium leading-none text-earth-600"
                 key={point.month}
                 style={{ left: `${(point.x / VIEW_W) * 100}%` }}
               >
@@ -388,7 +388,7 @@ export function NetWorthChart({
         </p>
       ) : null}
 
-      <p className="mt-2 text-[11px] text-earth-400">
+      <p className="mt-2 text-[12px] text-earth-500">
         Sample history for this session. Nothing here is saved.
       </p>
     </section>

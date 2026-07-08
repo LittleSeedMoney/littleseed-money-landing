@@ -171,7 +171,7 @@ function MetricDisclosureDetails({
 function DetailItem({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <dt className="text-xs font-semibold text-earth-500">{label}</dt>
+      <dt className="text-xs font-semibold text-earth-600">{label}</dt>
       <dd className="mt-1 text-earth-700">{value}</dd>
     </div>
   );
@@ -180,7 +180,7 @@ function DetailItem({ label, value }: { label: string; value: string }) {
 function DetailList({ label, values }: { label: string; values: string[] }) {
   return (
     <div>
-      <dt className="text-xs font-semibold text-earth-500">{label}</dt>
+      <dt className="text-xs font-semibold text-earth-600">{label}</dt>
       <dd className="mt-1">
         <ul className="space-y-1 text-earth-700">
           {values.map((value, index) => (

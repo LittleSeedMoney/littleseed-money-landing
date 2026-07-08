@@ -92,7 +92,7 @@ function DataSourceCard({ source }: { source: ReviewDataSource }) {
       <dl className="mt-4 grid gap-3 text-sm">
         <MetaItem label="Freshness" value={source.freshnessLabel} />
         <div>
-          <dt className="text-xs font-medium text-earth-500">Coverage</dt>
+          <dt className="text-xs font-medium text-earth-600">Coverage</dt>
           <dd className="mt-2 flex flex-wrap gap-2">
             {source.coverage.map((item) => (
               <span
@@ -218,7 +218,7 @@ function PolicyRuleGroup({
 function PolicyItem({ label, value }: { label: string; value: string }) {
   return (
     <div className={reviewPanelClass("rounded-md p-3 shadow-none")}>
-      <dt className="text-xs font-medium text-earth-500">{label}</dt>
+      <dt className="text-xs font-medium text-earth-600">{label}</dt>
       <dd className="mt-1 text-sm leading-6 text-earth-800">{value}</dd>
     </div>
   );

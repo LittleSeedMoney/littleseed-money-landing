@@ -96,7 +96,7 @@ export function MoneyHero({
         >
           {hasChart ? null : (
             <div className="mb-4">
-              <p className="text-[10.5px] font-bold uppercase tracking-[0.13em] text-earth-500">
+              <p className="text-[11px] font-bold uppercase tracking-[0.13em] text-earth-600">
                 Net worth
               </p>
               <p className="mt-1 font-serif text-3xl font-bold tabular-nums text-seed-950">
@@ -111,7 +111,7 @@ export function MoneyHero({
           <CompositionBar own={composition.own} owe={composition.owe} />
           {hasChart ? null : (
             <p
-              className="mt-3 border-t border-stone-100 pt-3 text-[11px] text-earth-400"
+              className="mt-3 border-t border-stone-100 pt-3 text-[12px] text-earth-500"
               data-testid="money-hero-no-trend-note"
             >
               A month-by-month net-worth trend shows here when this review
@@ -125,7 +125,7 @@ export function MoneyHero({
           className="rounded-2xl border border-dashed border-stone-300 bg-white p-5 text-center shadow-sm"
           data-testid="money-hero-empty"
         >
-          <p className="text-[10.5px] font-bold uppercase tracking-[0.13em] text-earth-500">
+          <p className="text-[11px] font-bold uppercase tracking-[0.13em] text-earth-600">
             Net worth
           </p>
           <p className="mt-2 text-sm text-earth-600">
@@ -150,7 +150,7 @@ export function MoneyHero({
         </div>
       ) : null}
 
-      <p className="text-[11px] text-earth-400">
+      <p className="text-[12px] text-earth-500">
         Nothing here is saved. This stays in your browser for this session.
       </p>
     </div>
@@ -201,7 +201,7 @@ function HeroTileCard({
       <p className="mt-1.5 font-serif text-3xl font-bold leading-none tabular-nums text-seed-950">
         {tile.value}
         {tile.valueUnit ? (
-          <span className="ml-1.5 font-sans text-xs font-semibold text-earth-500">
+          <span className="ml-1.5 font-sans text-xs font-semibold text-earth-600">
             {tile.valueUnit}
           </span>
         ) : null}
@@ -216,7 +216,7 @@ function HeroTileCard({
         </span>
       </p>
       {tile.caption ? (
-        <p className="mt-1.5 text-[11px] text-earth-400">{tile.caption}</p>
+        <p className="mt-1.5 text-[12px] text-earth-500">{tile.caption}</p>
       ) : null}
       {tile.band ? (
         <div className="mt-3">
@@ -229,7 +229,7 @@ function HeroTileCard({
               }}
             />
           </div>
-          <div className="mt-1 flex justify-between text-[11px] font-medium text-earth-500">
+          <div className="mt-1 flex justify-between text-[12px] font-medium text-earth-600">
             <span>{tile.band.leftLabel}</span>
             <span>{tile.band.rightLabel}</span>
           </div>
@@ -267,7 +267,7 @@ function HeroTileCard({
 
 function tileChipClass(tone: "seed" | "earth" | "stone") {
   const base =
-    "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-bold";
+    "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[12px] font-bold";
   if (tone === "seed") {
     return `${base} bg-seed-100 text-seed-800`;
   }
