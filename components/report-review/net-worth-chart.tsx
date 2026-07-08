@@ -129,7 +129,7 @@ export function NetWorthChart({
           toggle beside the short fixed-width label pins it in place across
           every range. */}
       <div className="flex items-center justify-between gap-3">
-        <p className="text-[10.5px] font-bold uppercase tracking-[0.13em] text-earth-600">
+        <p className="text-[11px] font-bold uppercase tracking-[0.13em] text-earth-600">
           Net worth
         </p>
         <div
@@ -388,7 +388,7 @@ export function NetWorthChart({
         </p>
       ) : null}
 
-      <p className="mt-2 text-[11px] text-earth-500">
+      <p className="mt-2 text-[12px] text-earth-500">
         Sample history for this session. Nothing here is saved.
       </p>
     </section>

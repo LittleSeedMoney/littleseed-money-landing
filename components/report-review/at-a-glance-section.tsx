@@ -73,7 +73,7 @@ export function AtAGlanceSection({
             rows.length > 0 ? "mt-2 border-t border-stone-100 pt-3" : "mt-2"
           }
         >
-          <h3 className="text-[10.5px] font-bold uppercase tracking-[0.13em] text-earth-600">
+          <h3 className="text-[11px] font-bold uppercase tracking-[0.13em] text-earth-600">
             Needs a bit more
           </h3>
           <ul className="mt-2 space-y-2.5">
@@ -91,7 +91,7 @@ export function AtAGlanceSection({
                   <p className="text-xs font-semibold leading-4 text-earth-700">
                     {need.question}
                   </p>
-                  <p className="mt-0.5 text-[11px] leading-4 text-earth-600">
+                  <p className="mt-0.5 text-[12px] leading-4 text-earth-600">
                     {need.hint}
                   </p>
                 </div>
@@ -150,7 +150,7 @@ function AtAGlanceRow({
           {metric.value}
         </span>
         {/* Provenance stays disclosed as a light caption under the value. */}
-        <span className="mt-0.5 block text-[11px] font-medium text-earth-600">
+        <span className="mt-0.5 block text-[12px] font-medium text-earth-600">
           {provenanceLabels[metric.provenance]}
         </span>
       </dd>

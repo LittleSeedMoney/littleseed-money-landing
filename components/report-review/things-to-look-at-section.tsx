@@ -69,7 +69,7 @@ export function ThingsToLookAtSection({
           Things to look at
         </h2>
         {hasItems ? (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-100 px-2.5 py-0.5 text-[11px] font-semibold text-amber-900">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-100 px-2.5 py-0.5 text-[12px] font-semibold text-amber-900">
             <span
               aria-hidden="true"
               className="inline-block size-1.5 rounded-full bg-amber-500"

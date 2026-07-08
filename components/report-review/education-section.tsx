@@ -76,7 +76,7 @@ export function EducationSection({
                 <p className="mt-0.5 text-sm leading-5 text-earth-700">
                   {topic.concept}
                 </p>
-                <p className="mt-1.5 text-[11px] text-earth-500">
+                <p className="mt-1.5 text-[12px] text-earth-500">
                   From {context.labels.join(" · ")}
                 </p>
                 <span className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
@@ -104,7 +104,7 @@ export function EducationSection({
         })}
       </div>
 
-      <p className="text-[11px] text-earth-500">
+      <p className="text-[12px] text-earth-500">
         Every explainer names its source below — nothing here is personalized
         advice.
       </p>
