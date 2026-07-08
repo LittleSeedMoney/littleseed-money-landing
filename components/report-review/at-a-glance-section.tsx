@@ -73,7 +73,7 @@ export function AtAGlanceSection({
             rows.length > 0 ? "mt-2 border-t border-stone-100 pt-3" : "mt-2"
           }
         >
-          <h3 className="text-[10.5px] font-bold uppercase tracking-[0.13em] text-earth-500">
+          <h3 className="text-[10.5px] font-bold uppercase tracking-[0.13em] text-earth-600">
             Needs a bit more
           </h3>
           <ul className="mt-2 space-y-2.5">
@@ -84,14 +84,14 @@ export function AtAGlanceSection({
                 data-testid="at-a-glance-needs-row"
                 key={need.id}
               >
-                <span className="grid size-7 shrink-0 place-items-center rounded-full bg-stone-100 text-earth-400">
+                <span className="grid size-7 shrink-0 place-items-center rounded-full bg-stone-100 text-earth-500">
                   <AtAGlanceGlyph icon={need.icon} />
                 </span>
                 <div className="min-w-0">
                   <p className="text-xs font-semibold leading-4 text-earth-700">
                     {need.question}
                   </p>
-                  <p className="mt-0.5 text-[11px] leading-4 text-earth-500">
+                  <p className="mt-0.5 text-[11px] leading-4 text-earth-600">
                     {need.hint}
                   </p>
                 </div>
@@ -150,7 +150,7 @@ function AtAGlanceRow({
           {metric.value}
         </span>
         {/* Provenance stays disclosed as a light caption under the value. */}
-        <span className="mt-0.5 block text-[11px] font-medium text-earth-500">
+        <span className="mt-0.5 block text-[11px] font-medium text-earth-600">
           {provenanceLabels[metric.provenance]}
         </span>
       </dd>

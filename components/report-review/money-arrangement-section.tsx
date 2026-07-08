@@ -204,7 +204,7 @@ export function MoneyArrangeItem({
             <details> and breaking the deep-link scroll. */}
         <button
           aria-label={`Arrange sections (${label})`}
-          className="absolute -left-7 top-2 hidden size-6 place-items-center rounded-md text-earth-400 opacity-0 outline-none transition-opacity duration-150 hover:bg-seed-50 hover:text-seed-700 focus-visible:opacity-100 group-hover:opacity-100 motion-reduce:transition-none lg:grid"
+          className="absolute -left-7 top-2 hidden size-6 place-items-center rounded-md text-earth-500 opacity-0 outline-none transition-opacity duration-150 hover:bg-seed-50 hover:text-seed-700 focus-visible:opacity-100 group-hover:opacity-100 motion-reduce:transition-none lg:grid"
           data-testid={`money-arrange-grip-${blockId}`}
           onClick={onEnterArrange}
           type="button"

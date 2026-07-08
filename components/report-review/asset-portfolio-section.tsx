@@ -1054,7 +1054,7 @@ function ExpenseMonthTable({
                     </td>
                     <td className="px-3 py-2">
                       {isReferenceOnly ? (
-                        <span className="text-earth-500">Reference only</span>
+                        <span className="text-earth-600">Reference only</span>
                       ) : isEditing ? (
                         <div className="flex items-center gap-1.5">
                           <label>
@@ -1062,7 +1062,7 @@ function ExpenseMonthTable({
                               Target for {row.label}
                             </span>
                             <input
-                              className="h-9 w-32 rounded-md border border-stone-300 bg-white px-2 text-sm tabular-nums text-earth-900 outline-none placeholder:text-earth-400 focus:border-seed-500 focus:ring-2 focus:ring-seed-500"
+                              className="h-9 w-32 rounded-md border border-stone-300 bg-white px-2 text-sm tabular-nums text-earth-900 outline-none placeholder:text-earth-500 focus:border-seed-500 focus:ring-2 focus:ring-seed-500"
                               data-testid="snapshot-expense-category-target"
                               inputMode="decimal"
                               onChange={(event) =>
@@ -1483,7 +1483,7 @@ function EditIconButton({
       aria-label={label}
       className={
         isCompact
-          ? "inline-flex h-5 w-5 items-center justify-center rounded-sm text-earth-500 hover:bg-stone-100 hover:text-seed-800 focus:outline-none focus:ring-2 focus:ring-seed-500"
+          ? "inline-flex h-5 w-5 items-center justify-center rounded-sm text-earth-600 hover:bg-stone-100 hover:text-seed-800 focus:outline-none focus:ring-2 focus:ring-seed-500"
           : "inline-flex h-8 w-8 items-center justify-center rounded-md text-earth-700 hover:bg-stone-100 hover:text-seed-800 focus:outline-none focus:ring-2 focus:ring-seed-500"
       }
       onClick={onClick}

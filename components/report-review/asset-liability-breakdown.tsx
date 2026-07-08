@@ -229,7 +229,7 @@ function AccountRow({
         <span className="block truncate text-sm font-medium text-seed-950">
           {item.name}
         </span>
-        <span className="mt-0.5 block text-[11px] text-earth-500">
+        <span className="mt-0.5 block text-[11px] text-earth-600">
           {caption}
         </span>
       </span>
