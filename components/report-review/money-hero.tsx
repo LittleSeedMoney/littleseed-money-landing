@@ -198,7 +198,7 @@ function HeroTileCard({
           </span>
         ) : null}
       </p>
-      <p className="mt-1.5 font-serif text-2xl font-bold leading-none tabular-nums text-seed-950">
+      <p className="mt-1.5 font-serif text-3xl font-bold leading-none tabular-nums text-seed-950">
         {tile.value}
         {tile.valueUnit ? (
           <span className="ml-1.5 font-sans text-xs font-semibold text-earth-500">

@@ -108,7 +108,7 @@ function BreakdownColumn({
         </h3>
         {totalLabel !== null ? (
           <span
-            className={`shrink-0 font-serif text-base font-bold tabular-nums ${totalClass}`}
+            className={`shrink-0 font-serif text-xl font-bold tabular-nums ${totalClass}`}
             data-testid="breakdown-total"
           >
             {totalLabel}
@@ -172,7 +172,7 @@ function BreakdownGroup({
           {group.category}
         </span>
         <span
-          className={`shrink-0 font-serif text-sm font-bold tabular-nums ${subtotalClass}`}
+          className={`shrink-0 font-serif text-base font-bold tabular-nums ${subtotalClass}`}
           data-testid="breakdown-subtotal"
         >
           {formatNetWorthMoney(group.subtotal)}
@@ -238,7 +238,7 @@ function AccountRow({
           Missing
         </span>
       ) : (
-        <span className="shrink-0 font-serif text-sm font-bold tabular-nums text-seed-950">
+        <span className="shrink-0 font-serif text-base font-bold tabular-nums text-seed-950">
           {item.valueLabel}
         </span>
       )}

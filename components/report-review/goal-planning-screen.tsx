@@ -324,7 +324,7 @@ function GoalPlanningRowEditor({
         </div>
 
         {progress !== null ? (
-          <span className="mt-0.5 flex-none font-serif text-lg font-bold tabular-nums text-seed-950">
+          <span className="mt-0.5 flex-none font-serif text-xl font-bold tabular-nums text-seed-950">
             {formatGoalPlanningPercent(summary.progressPercent)}
           </span>
         ) : null}
